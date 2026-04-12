@@ -8,7 +8,6 @@ import {
   MockWebSocket,
   installGlobalMocks,
   mockAudioTrack,
-  mockScreenStream,
   mockScreenTrack,
   mockStream,
   mockVideoTrack,
