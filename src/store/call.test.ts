@@ -29,4 +29,13 @@ describe("useCallStore", () => {
     const state = useCallStore.getState();
     expect(typeof state.peerId).toBe("string");
   });
+
+  it('reset restores initial state', () => {
+    useCallStore.setState({ status: 'connected', error: 'oops', role: 'caller' })
+    useCallStore.getState().reset()
+    const state = useCallStore.getState()
+    expect(state.status).toBe('idle')
+    expect(state.error).toBeNull()
+    expect(state.role).toBeNull()
+  })
 });
