@@ -30,6 +30,7 @@ function renderHome() {
 describe('Home page', () => {
   beforeEach(() => {
     mockNavigate.mockClear()
+    vi.mocked(parseRoomInput).mockReset()
   })
 
   it('renders a Create Room button', () => {
