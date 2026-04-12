@@ -19,7 +19,7 @@ export default function Home() {
     if (joinError) setJoinError(null)
   }
 
-  function handleJoin(e: React.FormEvent) {
+  function handleJoin(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     const roomId = parseRoomInput(joinInput)
     if (!roomId) {
