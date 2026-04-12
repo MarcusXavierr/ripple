@@ -365,3 +365,133 @@ describe('ICE connection state changes', () => {
     expect(MockRTCPeerConnection.lastInstance!.restartIce).toHaveBeenCalled()
   })
 })
+
+describe('mic/camera toggles', () => {
+  it('toggleMic disables the audio track and sets isMicMuted', async () => {
+    const { result } = renderUseWebRTC()
+    await waitFor(() => expect(useCallStore.getState().localStream).toBe(mockStream))
+    expect(result.current.isMicMuted).toBe(false)
+    act(() => result.current.toggleMic())
+    expect(result.current.isMicMuted).toBe(true)
+    expect(mockAudioTrack.enabled).toBe(false)
+  })
+
+  it('toggleCamera disables the video track and sets isCameraOff', async () => {
+    const { result } = renderUseWebRTC()
+    await waitFor(() => expect(useCallStore.getState().localStream).toBe(mockStream))
+    expect(result.current.isCameraOff).toBe(false)
+    act(() => result.current.toggleCamera())
+    expect(result.current.isCameraOff).toBe(true)
+    expect(mockVideoTrack.enabled).toBe(false)
+  })
+})
+
+describe('hangup', () => {
+  it('closes WS with code 1000 and navigates to /ended', async () => {
+    const { result } = renderUseWebRTC('test-room-01')
+    await waitFor(() => expect(MockWebSocket.lastInstance).not.toBeNull())
+    act(() => result.current.hangup())
+    expect(MockWebSocket.lastInstance!.close).toHaveBeenCalledWith(1000, 'hangup')
+    expect(mockNavigate).toHaveBeenCalledWith('/room/test-room-01/ended')
+  })
+
+  it('stops media tracks on hangup', async () => {
+    const { result } = renderUseWebRTC('test-room-01')
+    await waitFor(() => expect(useCallStore.getState().localStream).toBe(mockStream))
+    act(() => result.current.hangup())
+    expect(mockAudioTrack.stop).toHaveBeenCalled()
+    expect(mockVideoTrack.stop).toHaveBeenCalled()
+  })
+})
+
+describe('unmount', () => {
+  it('stops media tracks on unmount', async () => {
+    const { unmount } = renderUseWebRTC('test-room-01')
+    await waitFor(() => expect(useCallStore.getState().localStream).toBe(mockStream))
+    act(() => unmount())
+    expect(mockAudioTrack.stop).toHaveBeenCalled()
+    expect(mockVideoTrack.stop).toHaveBeenCalled()
+  })
+})
+
+describe('dismissError', () => {
+  it('clears the error', () => {
+    const { result } = renderUseWebRTC()
+    useCallStore.setState({ error: 'Some error' })
+    act(() => result.current.dismissError())
+    expect(useCallStore.getState().error).toBeNull()
+  })
+
+  it('navigates to home for room-full error', () => {
+    const { result } = renderUseWebRTC()
+    useCallStore.setState({ error: 'This room is full. Only two participants are allowed.' })
+    act(() => result.current.dismissError())
+    expect(mockNavigate).toHaveBeenCalledWith('/')
+  })
+
+  it('does not navigate for media-denied error', () => {
+    const { result } = renderUseWebRTC()
+    useCallStore.setState({
+      error: 'Camera and microphone access is required to join a call.',
+    })
+    act(() => result.current.dismissError())
+    expect(mockNavigate).not.toHaveBeenCalled()
+  })
+})
+
+describe('screen share', () => {
+  const mockScreenTrack = {
+    kind: 'video',
+    stop: vi.fn(),
+    onended: null as (() => void) | null,
+  }
+  const mockScreenStream = {
+    getVideoTracks: vi.fn().mockReturnValue([mockScreenTrack]),
+  }
+  const mockSender = {
+    track: { kind: 'video' },
+    replaceTrack: vi.fn().mockResolvedValue(undefined),
+  }
+
+  beforeEach(() => {
+    vi.mocked(navigator.mediaDevices.getDisplayMedia).mockResolvedValue(
+      mockScreenStream as unknown as MediaStream,
+    )
+  })
+
+  it('sets isScreenSharing to true on startScreenShare', async () => {
+    const { result } = renderUseWebRTC()
+    await waitFor(() => expect(MockWebSocket.lastInstance).not.toBeNull())
+    act(() => sendToHook({ type: 'onopen', role: 'caller', reconnect: false }))
+    await waitFor(() => expect(MockRTCPeerConnection.lastInstance).not.toBeNull())
+    MockRTCPeerConnection.lastInstance!.getSenders.mockReturnValue([mockSender])
+
+    await act(async () => {
+      await result.current.startScreenShare()
+    })
+    expect(useCallStore.getState().isScreenSharing).toBe(true)
+  })
+
+  it('calls replaceTrack on the video sender', async () => {
+    const { result } = renderUseWebRTC()
+    await waitFor(() => expect(MockWebSocket.lastInstance).not.toBeNull())
+    act(() => sendToHook({ type: 'onopen', role: 'caller', reconnect: false }))
+    await waitFor(() => expect(MockRTCPeerConnection.lastInstance).not.toBeNull())
+    MockRTCPeerConnection.lastInstance!.getSenders.mockReturnValue([mockSender])
+
+    await act(async () => {
+      await result.current.startScreenShare()
+    })
+    expect(mockSender.replaceTrack).toHaveBeenCalledWith(mockScreenTrack)
+  })
+
+  it('handles user cancellation of screen picker', async () => {
+    vi.mocked(navigator.mediaDevices.getDisplayMedia).mockRejectedValueOnce(new Error('cancelled'))
+    const { result } = renderUseWebRTC()
+
+    await act(async () => {
+      await result.current.startScreenShare()
+    })
+    expect(useCallStore.getState().isScreenSharing).toBe(false)
+  })
+})
