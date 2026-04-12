@@ -22,6 +22,7 @@ export function useWebRTC(roomId: string) {
   const reconnectDelay = useRef(1000)
   const wsAttempts = useRef(0)
   const isMounted = useRef(true)
+  const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const peerIdRef = useRef('')
 
   const [isMicMuted, setIsMicMuted] = useState(false)
@@ -68,7 +69,7 @@ export function useWebRTC(roomId: string) {
       return
     }
     useCallStore.setState({ status: 'reconnecting' })
-    setTimeout(() => {
+    reconnectTimer.current = setTimeout(() => {
       if (isMounted.current) connectWS()
     }, reconnectDelay.current)
     reconnectDelay.current = Math.min(reconnectDelay.current * 2, 30_000)
@@ -220,6 +221,7 @@ export function useWebRTC(roomId: string) {
       })
 
     return () => {
+      if (reconnectTimer.current) clearTimeout(reconnectTimer.current)
       isMounted.current = false
       cleanupMedia()
       wsRef.current?.close(1000, 'unmount')
