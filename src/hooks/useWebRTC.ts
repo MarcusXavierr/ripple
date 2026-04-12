@@ -46,6 +46,8 @@ export function useWebRTC(roomId: string) {
   }
 
   function setupPeerConnection(role: 'caller' | 'callee') {
+    remoteDescriptionSet.current = false
+    pendingCandidates.current = []
     const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS })
     pcRef.current = pc
     useCallStore.setState({ pc, role })
