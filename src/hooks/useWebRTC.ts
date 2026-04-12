@@ -1,12 +1,246 @@
-// Implementation in a later task
-export function useWebRTC(_roomId: string) {
+// src/hooks/useWebRTC.ts
+import { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useCallStore } from '@/store/call'
+import { getPeerId } from '@/lib/peerId'
+import { CLOSE_CODES } from '@/types/signaling'
+import type { ClientMessage, ReceivedMessage } from '@/types/signaling'
+
+const WS_URL = import.meta.env.VITE_WS_URL as string
+const ICE_SERVERS = [{ urls: 'stun:stun.l.google.com:19302' }]
+const MAX_WS_ATTEMPTS = 3
+
+export function useWebRTC(roomId: string) {
+  const navigate = useNavigate()
+
+  const wsRef = useRef<WebSocket | null>(null)
+  const pcRef = useRef<RTCPeerConnection | null>(null)
+  const pendingCandidates = useRef<RTCIceCandidateInit[]>([])
+  const remoteDescriptionSet = useRef(false)
+  const makingOffer = useRef(false)
+  const isPoliteRef = useRef(false)
+  const reconnectDelay = useRef(1000)
+  const wsAttempts = useRef(0)
+  const isMounted = useRef(true)
+  const peerIdRef = useRef('')
+
+  const [isMicMuted, setIsMicMuted] = useState(false)
+  const [isCameraOff, setIsCameraOff] = useState(false)
+
+  const { localStream, remoteStream, status, error, isScreenSharing } = useCallStore()
+
+  function send(msg: ClientMessage) {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify(msg))
+    }
+  }
+
+  async function drainCandidates() {
+    const pc = pcRef.current
+    if (!pc) return
+    for (const c of pendingCandidates.current) {
+      await pc.addIceCandidate(c)
+    }
+    pendingCandidates.current = []
+  }
+
+  // Stub in Task 4 — fully implemented in Task 5
+  function setupPeerConnection(role: 'caller' | 'callee') {
+    useCallStore.setState({ role })
+  }
+
+  async function handleOffer(_offer: RTCSessionDescriptionInit) {
+    // implemented in Task 5
+  }
+
+  async function handleAnswer(_answer: RTCSessionDescriptionInit) {
+    // implemented in Task 5
+  }
+
+  async function handleIceCandidate(_candidate: RTCIceCandidateInit) {
+    // implemented in Task 5
+  }
+
+  function scheduleReconnect() {
+    wsAttempts.current++
+    if (wsAttempts.current >= MAX_WS_ATTEMPTS) {
+      useCallStore.setState({ error: 'Unable to connect to the server.' })
+      return
+    }
+    useCallStore.setState({ status: 'reconnecting' })
+    setTimeout(() => {
+      if (isMounted.current) connectWS()
+    }, reconnectDelay.current)
+    reconnectDelay.current = Math.min(reconnectDelay.current * 2, 30_000)
+  }
+
+  function connectWS() {
+    const url = `${WS_URL}/ws?room=${roomId}&peerId=${peerIdRef.current}`
+    const ws = new WebSocket(url)
+    wsRef.current = ws
+    useCallStore.setState({ ws, status: 'connecting' })
+
+    ws.onopen = () => {
+      reconnectDelay.current = 1000
+      wsAttempts.current = 0
+    }
+
+    const MESSAGE_HANDLERS: Record<string, (msg: any) => void | Promise<void>> = {
+      'onopen': (msg) => {
+        setupPeerConnection(msg.role)
+        useCallStore.setState({ status: 'waiting' })
+      },
+      'enter': () => useCallStore.setState({ status: 'negotiating' }),
+      'peer-reconnected': () => {
+        useCallStore.setState({ status: 'negotiating' })
+        if (useCallStore.getState().role === 'caller') pcRef.current?.restartIce()
+      },
+      'ping': () => send({ type: 'pong' }),
+      'offer': (msg) => handleOffer(msg.offer),
+      'answer': (msg) => handleAnswer(msg.answer),
+      'ice-candidate': (msg) => handleIceCandidate(msg.candidate),
+    }
+
+    ws.onmessage = async (e: MessageEvent<string>) => {
+      const msg = JSON.parse(e.data) as ReceivedMessage
+      const handler = MESSAGE_HANDLERS[msg.type]
+      if (handler) await handler(msg)
+    }
+
+    const CLOSE_HANDLERS: Record<number, () => void> = {
+      [CLOSE_CODES.ROOM_FULL]: () => useCallStore.setState({ error: 'This room is full. Only two participants are allowed.' }),
+      [CLOSE_CODES.PEER_DISCONNECTED]: () => navigate(`/room/${roomId}/ended`),
+      [CLOSE_CODES.ROOM_NOT_FOUND]: () => useCallStore.setState({ error: "This room doesn't exist." }),
+      [CLOSE_CODES.DUPLICATE_SESSION]: () => useCallStore.setState({ error: "You're connected to this room from another tab." }),
+    }
+
+    ws.onclose = (e: CloseEvent) => {
+      if (e.code === 1000) return
+      const handler = CLOSE_HANDLERS[e.code]
+      if (handler) {
+        handler()
+      } else {
+        scheduleReconnect()
+      }
+    }
+  }
+
+  function dismissError() {
+    const err = useCallStore.getState().error
+    useCallStore.setState({ error: null })
+    if (
+      err?.includes('room is full') ||
+      err?.includes("doesn't exist") ||
+      err?.includes('another tab') ||
+      err?.includes('Unable to connect')
+    ) {
+      navigate('/')
+    }
+  }
+
+  async function startScreenShare() {
+    const pc = pcRef.current
+    if (!pc) return
+    try {
+      const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true })
+      const screenTrack = screenStream.getVideoTracks()[0]
+      const sender = pc.getSenders().find((s) => s.track?.kind === 'video')
+      if (sender) {
+        await sender.replaceTrack(screenTrack)
+      } else {
+        pc.addTrack(screenTrack, screenStream)
+      }
+      useCallStore.setState({ isScreenSharing: true })
+      screenTrack.onended = stopScreenShare
+    } catch (e) {
+      console.error('Failed to start screen share:', e)
+      // User cancelled picker
+    }
+  }
+
+  async function stopScreenShare() {
+    const pc = pcRef.current
+    if (!pc) return
+    const cameraTrack = useCallStore.getState().localStream?.getVideoTracks()[0] ?? null
+    const sender = pc.getSenders().find((s) => s.track?.kind === 'video')
+
+    const screenTrack = sender?.track
+    if (sender) await sender.replaceTrack(cameraTrack)
+
+    if (screenTrack && screenTrack !== cameraTrack) {
+      screenTrack.stop()
+    }
+
+    useCallStore.setState({ isScreenSharing: false })
+  }
+
+  function cleanupMedia() {
+    const { localStream, remoteStream } = useCallStore.getState()
+    localStream?.getTracks().forEach((track) => track.stop())
+    remoteStream?.getTracks().forEach((track) => track.stop())
+  }
+
+  function hangup() {
+    cleanupMedia()
+    wsRef.current?.close(1000, 'hangup')
+    pcRef.current?.close()
+    navigate(`/room/${roomId}/ended`)
+  }
+
+  function toggleMic() {
+    const track = useCallStore.getState().localStream?.getAudioTracks()[0]
+    if (!track) return
+    track.enabled = !track.enabled
+    setIsMicMuted(!track.enabled)
+  }
+
+  function toggleCamera() {
+    const track = useCallStore.getState().localStream?.getVideoTracks()[0]
+    if (!track) return
+    track.enabled = !track.enabled
+    setIsCameraOff(!track.enabled)
+  }
+
+  useEffect(() => {
+    isMounted.current = true
+    const peerId = getPeerId(roomId)
+    peerIdRef.current = peerId
+    useCallStore.setState({ peerId })
+
+    navigator.mediaDevices
+      .getUserMedia({ video: true, audio: true })
+      .then((stream) => {
+        useCallStore.setState({ localStream: stream as MediaStream })
+        connectWS()
+      })
+      .catch(() => {
+        useCallStore.setState({
+          error: 'Camera and microphone access is required to join a call.',
+        })
+      })
+
+    return () => {
+      isMounted.current = false
+      cleanupMedia()
+      wsRef.current?.close(1000, 'unmount')
+      pcRef.current?.close()
+      useCallStore.getState().reset()
+    }
+  }, [roomId])
+
   return {
-    localStream: null as MediaStream | null,
-    remoteStream: null as MediaStream | null,
-    status: "idle" as const,
-    error: null as string | null,
-    startScreenShare: async () => {},
-    stopScreenShare: async () => {},
-    hangup: () => {},
-  };
+    localStream,
+    remoteStream,
+    status,
+    error,
+    isScreenSharing,
+    isMicMuted,
+    isCameraOff,
+    startScreenShare,
+    stopScreenShare,
+    hangup,
+    toggleMic,
+    toggleCamera,
+    dismissError,
+  }
 }
