@@ -34,6 +34,7 @@ function renderRoom(roomId = 'coral-tiger-42') {
 }
 
 beforeEach(() => {
+  vi.clearAllMocks()
   vi.mocked(useWebRTC).mockReturnValue({ ...baseMock })
 })
 
