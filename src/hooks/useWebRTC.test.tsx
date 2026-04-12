@@ -263,6 +263,58 @@ describe('RTCPeerConnection setup', () => {
   })
 })
 
+describe('enter message', () => {
+  it('calls restartIce on the PeerConnection when role is caller', async () => {
+    renderUseWebRTC()
+    await waitFor(() => expect(MockWebSocket.lastInstance).not.toBeNull())
+    act(() => sendToHook({ type: 'onopen', role: 'caller', reconnect: false }))
+    await waitFor(() => expect(MockRTCPeerConnection.lastInstance).not.toBeNull())
+
+    act(() => sendToHook({ type: 'enter' }))
+
+    expect(MockRTCPeerConnection.lastInstance!.restartIce).toHaveBeenCalled()
+  })
+
+  it('rolls back local description before restartIce when in have-local-offer state', async () => {
+    renderUseWebRTC()
+    await waitFor(() => expect(MockWebSocket.lastInstance).not.toBeNull())
+    act(() => sendToHook({ type: 'onopen', role: 'caller', reconnect: false }))
+    await waitFor(() => expect(MockRTCPeerConnection.lastInstance).not.toBeNull())
+
+    // Simulate PC stuck in have-local-offer (offer sent, no answer yet)
+    MockRTCPeerConnection.lastInstance!.signalingState = 'have-local-offer'
+
+    await act(async () => {
+      sendToHook({ type: 'enter' })
+    })
+
+    expect(MockRTCPeerConnection.lastInstance!.setLocalDescription).toHaveBeenCalledWith({ type: 'rollback' })
+    expect(MockRTCPeerConnection.lastInstance!.restartIce).toHaveBeenCalled()
+  })
+
+  it('does not call restartIce when role is callee', async () => {
+    renderUseWebRTC()
+    await waitFor(() => expect(MockWebSocket.lastInstance).not.toBeNull())
+    act(() => sendToHook({ type: 'onopen', role: 'callee', reconnect: false }))
+    await waitFor(() => expect(MockRTCPeerConnection.lastInstance).not.toBeNull())
+
+    act(() => sendToHook({ type: 'enter' }))
+
+    expect(MockRTCPeerConnection.lastInstance!.restartIce).not.toHaveBeenCalled()
+  })
+
+  it('sets status to negotiating', async () => {
+    renderUseWebRTC()
+    await waitFor(() => expect(MockWebSocket.lastInstance).not.toBeNull())
+    act(() => sendToHook({ type: 'onopen', role: 'caller', reconnect: false }))
+    await waitFor(() => expect(MockRTCPeerConnection.lastInstance).not.toBeNull())
+
+    act(() => sendToHook({ type: 'enter' }))
+
+    expect(useCallStore.getState().status).toBe('negotiating')
+  })
+})
+
 describe('ICE candidate queuing', () => {
   it('queues candidates that arrive before remote description is set', async () => {
     renderUseWebRTC()

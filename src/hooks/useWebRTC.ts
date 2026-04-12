@@ -133,7 +133,7 @@ export function useWebRTC(roomId: string) {
   }
 
   function connectWS() {
-    const url = `${WS_URL}/ws?room=${roomId}&peerId=${peerIdRef.current}`
+    const url = `${WS_URL}?room=${roomId}&peerId=${peerIdRef.current}`
     const ws = new WebSocket(url)
     wsRef.current = ws
     useCallStore.setState({ ws, status: 'connecting' })
@@ -148,7 +148,16 @@ export function useWebRTC(roomId: string) {
         setupPeerConnection(msg.role)
         useCallStore.setState({ status: 'waiting' })
       },
-      'enter': () => useCallStore.setState({ status: 'negotiating' }),
+      'enter': async () => {
+        useCallStore.setState({ status: 'negotiating' })
+        const pc = pcRef.current
+        if (pc && useCallStore.getState().role === 'caller') {
+          if (pc.signalingState !== 'stable') {
+            await pc.setLocalDescription({ type: 'rollback' })
+          }
+          pc.restartIce()
+        }
+      },
       'peer-reconnected': () => {
         useCallStore.setState({ status: 'negotiating' })
         if (useCallStore.getState().role === 'caller') pcRef.current?.restartIce()
