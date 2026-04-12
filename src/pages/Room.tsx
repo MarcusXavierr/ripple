@@ -65,7 +65,7 @@ export default function Room() {
         autoPlay
         playsInline
         data-testid="remote-video"
-        className="absolute inset-0 h-full w-full object-cover"
+        className="absolute inset-0 h-full w-full object-contain"
       />
 
       {/* Waiting overlay */}
