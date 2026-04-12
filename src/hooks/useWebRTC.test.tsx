@@ -244,3 +244,124 @@ describe('WebSocket close codes', () => {
     expect(useCallStore.getState().error).toBeNull()
   })
 })
+
+describe('RTCPeerConnection setup', () => {
+  it('creates RTCPeerConnection after receiving onopen', async () => {
+    renderUseWebRTC()
+    await waitFor(() => expect(MockWebSocket.lastInstance).not.toBeNull())
+    act(() => sendToHook({ type: 'onopen', role: 'caller', reconnect: false }))
+    await waitFor(() => expect(MockRTCPeerConnection.lastInstance).not.toBeNull())
+  })
+
+  it('adds local stream tracks to the PeerConnection', async () => {
+    renderUseWebRTC()
+    await waitFor(() => expect(MockWebSocket.lastInstance).not.toBeNull())
+    act(() => sendToHook({ type: 'onopen', role: 'caller', reconnect: false }))
+    await waitFor(() => expect(MockRTCPeerConnection.lastInstance).not.toBeNull())
+    // audio + video track = 2 calls
+    expect(MockRTCPeerConnection.lastInstance!.addTrack).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('ICE candidate queuing', () => {
+  it('queues candidates that arrive before remote description is set', async () => {
+    renderUseWebRTC()
+    await waitFor(() => expect(MockWebSocket.lastInstance).not.toBeNull())
+    act(() => sendToHook({ type: 'onopen', role: 'callee', reconnect: false }))
+    await waitFor(() => expect(MockRTCPeerConnection.lastInstance).not.toBeNull())
+
+    act(() =>
+      sendToHook({
+        type: 'ice-candidate',
+        candidate: { candidate: 'c1', sdpMid: '0', sdpMLineIndex: 0 },
+      }),
+    )
+    // No remote desc set yet
+    expect(MockRTCPeerConnection.lastInstance!.addIceCandidate).not.toHaveBeenCalled()
+  })
+
+  it('drains queued candidates after setRemoteDescription (via offer)', async () => {
+    renderUseWebRTC()
+    await waitFor(() => expect(MockWebSocket.lastInstance).not.toBeNull())
+    act(() => sendToHook({ type: 'onopen', role: 'callee', reconnect: false }))
+    await waitFor(() => expect(MockRTCPeerConnection.lastInstance).not.toBeNull())
+
+    act(() =>
+      sendToHook({
+        type: 'ice-candidate',
+        candidate: { candidate: 'c1', sdpMid: '0', sdpMLineIndex: 0 },
+      }),
+    )
+    await act(async () => {
+      sendToHook({ type: 'offer', offer: { type: 'offer', sdp: 'remote' } })
+    })
+    await waitFor(() =>
+      expect(MockRTCPeerConnection.lastInstance!.addIceCandidate).toHaveBeenCalledWith({
+        candidate: 'c1',
+        sdpMid: '0',
+        sdpMLineIndex: 0,
+      }),
+    )
+  })
+})
+
+describe('offer/answer flow (callee)', () => {
+  async function setupCallee() {
+    renderUseWebRTC()
+    await waitFor(() => expect(MockWebSocket.lastInstance).not.toBeNull())
+    act(() => sendToHook({ type: 'onopen', role: 'callee', reconnect: false }))
+    await waitFor(() => expect(MockRTCPeerConnection.lastInstance).not.toBeNull())
+  }
+
+  it('calls setRemoteDescription with the offer', async () => {
+    await setupCallee()
+    await act(async () => {
+      sendToHook({ type: 'offer', offer: { type: 'offer', sdp: 'remote-sdp' } })
+    })
+    await waitFor(() =>
+      expect(MockRTCPeerConnection.lastInstance!.setRemoteDescription).toHaveBeenCalledWith({
+        type: 'offer',
+        sdp: 'remote-sdp',
+      }),
+    )
+  })
+
+  it('sends an answer after receiving offer', async () => {
+    await setupCallee()
+    await act(async () => {
+      sendToHook({ type: 'offer', offer: { type: 'offer', sdp: 'remote-sdp' } })
+    })
+    await waitFor(() => {
+      const calls = MockWebSocket.lastInstance!.send.mock.calls as string[][]
+      const answerCall = calls.find((c) => c[0].includes('"type":"answer"'))
+      expect(answerCall).toBeTruthy()
+    })
+  })
+})
+
+describe('ICE connection state changes', () => {
+  async function setupCaller() {
+    renderUseWebRTC()
+    await waitFor(() => expect(MockWebSocket.lastInstance).not.toBeNull())
+    act(() => sendToHook({ type: 'onopen', role: 'caller', reconnect: false }))
+    await waitFor(() => expect(MockRTCPeerConnection.lastInstance).not.toBeNull())
+  }
+
+  it('sets status to connected when ICE state is connected', async () => {
+    await setupCaller()
+    act(() => {
+      MockRTCPeerConnection.lastInstance!.iceConnectionState = 'connected'
+      MockRTCPeerConnection.lastInstance!.oniceconnectionstatechange!()
+    })
+    expect(useCallStore.getState().status).toBe('connected')
+  })
+
+  it('calls restartIce when ICE fails and role is caller', async () => {
+    await setupCaller()
+    act(() => {
+      MockRTCPeerConnection.lastInstance!.iceConnectionState = 'failed'
+      MockRTCPeerConnection.lastInstance!.oniceconnectionstatechange!()
+    })
+    expect(MockRTCPeerConnection.lastInstance!.restartIce).toHaveBeenCalled()
+  })
+})

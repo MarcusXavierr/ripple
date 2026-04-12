@@ -45,21 +45,76 @@ export function useWebRTC(roomId: string) {
     pendingCandidates.current = []
   }
 
-  // Stub in Task 4 — fully implemented in Task 5
   function setupPeerConnection(role: 'caller' | 'callee') {
-    useCallStore.setState({ role })
+    const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS })
+    pcRef.current = pc
+    useCallStore.setState({ pc, role })
+
+    const stream = useCallStore.getState().localStream
+    if (stream) {
+      for (const track of stream.getTracks()) {
+        pc.addTrack(track, stream)
+      }
+    }
+
+    pc.onicecandidate = (e) => {
+      if (e.candidate) {
+        send({ type: 'ice-candidate', candidate: e.candidate.toJSON() })
+      }
+    }
+
+    pc.ontrack = (e) => {
+      useCallStore.setState({ remoteStream: e.streams[0] ?? null })
+    }
+
+    pc.oniceconnectionstatechange = () => {
+      if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
+        useCallStore.setState({ status: 'connected' })
+      } else if (pc.iceConnectionState === 'failed') {
+        useCallStore.setState({ status: 'reconnecting' })
+        if (role === 'caller') pc.restartIce()
+      }
+    }
+
+    isPoliteRef.current = role === 'callee'
+
+    pc.onnegotiationneeded = async () => {
+      try {
+        makingOffer.current = true
+        await pc.setLocalDescription()
+        send({ type: 'offer', offer: pc.localDescription! })
+      } finally {
+        makingOffer.current = false
+      }
+    }
   }
 
-  async function handleOffer(_offer: RTCSessionDescriptionInit) {
-    // implemented in Task 5
+  async function handleOffer(offer: RTCSessionDescriptionInit) {
+    const pc = pcRef.current
+    if (!pc) return
+    const collision = makingOffer.current || pc.signalingState !== 'stable'
+    if (!isPoliteRef.current && collision) return
+    await pc.setRemoteDescription(offer)
+    remoteDescriptionSet.current = true
+    await drainCandidates()
+    await pc.setLocalDescription()
+    send({ type: 'answer', answer: pc.localDescription! })
   }
 
-  async function handleAnswer(_answer: RTCSessionDescriptionInit) {
-    // implemented in Task 5
+  async function handleAnswer(answer: RTCSessionDescriptionInit) {
+    const pc = pcRef.current
+    if (!pc) return
+    await pc.setRemoteDescription(answer)
+    remoteDescriptionSet.current = true
+    await drainCandidates()
   }
 
-  async function handleIceCandidate(_candidate: RTCIceCandidateInit) {
-    // implemented in Task 5
+  async function handleIceCandidate(candidate: RTCIceCandidateInit) {
+    if (remoteDescriptionSet.current && pcRef.current) {
+      await pcRef.current.addIceCandidate(candidate)
+    } else {
+      pendingCandidates.current.push(candidate)
+    }
   }
 
   function scheduleReconnect() {
