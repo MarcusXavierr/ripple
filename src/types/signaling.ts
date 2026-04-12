@@ -24,3 +24,10 @@ export const CLOSE_CODES = {
   DUPLICATE_SESSION: 4004,
   PING_TIMEOUT: 4005,
 } as const;
+
+// Messages received from the server (server-emitted + relayed from other peer)
+export type ReceivedMessage =
+  | ServerMessage
+  | { type: 'offer'; offer: RTCSessionDescriptionInit }
+  | { type: 'answer'; answer: RTCSessionDescriptionInit }
+  | { type: 'ice-candidate'; candidate: RTCIceCandidateInit }
