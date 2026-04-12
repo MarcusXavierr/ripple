@@ -17,6 +17,8 @@ type CallStore = {
   localStream: MediaStream | null
   remoteStream: MediaStream | null
   isScreenSharing: boolean
+  isMicMuted: boolean
+  isCameraOff: boolean
   status: CallStatus
   error: string | null
   reset: () => void
@@ -30,6 +32,8 @@ const INITIAL_STATE = {
   localStream: null,
   remoteStream: null,
   isScreenSharing: false,
+  isMicMuted: false,
+  isCameraOff: false,
   status: 'idle' as CallStatus,
   error: null,
 }

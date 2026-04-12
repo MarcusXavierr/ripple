@@ -5,7 +5,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { useWebRTC } from '@/hooks/useWebRTC'
 import Room from './Room'
 
-vi.mock('@/hooks/useWebRTC')
+vi.mock('@/hooks/useWebRTC', () => ({ useWebRTC: vi.fn() }))
 
 const baseMock = {
   localStream: null as MediaStream | null,
@@ -33,9 +33,11 @@ function renderRoom(roomId = 'coral-tiger-42') {
   )
 }
 
+const useWebRTCMock = useWebRTC as ReturnType<typeof vi.fn>
+
 beforeEach(() => {
   vi.clearAllMocks()
-  vi.mocked(useWebRTC).mockReturnValue({ ...baseMock })
+  useWebRTCMock.mockReturnValue({ ...baseMock })
 })
 
 it('renders the room page', () => {
@@ -68,7 +70,7 @@ describe('status bar', () => {
   })
 
   it('shows "Connected" when status is connected', () => {
-    vi.mocked(useWebRTC).mockReturnValue({ ...baseMock, status: 'connected' })
+    useWebRTCMock.mockReturnValue({ ...baseMock, status: 'connected' })
     renderRoom()
     expect(screen.getByText('Connected')).toBeInTheDocument()
   })
@@ -102,27 +104,27 @@ describe('control bar', () => {
   })
 
   it('calls startScreenShare when not sharing', async () => {
-    vi.mocked(useWebRTC).mockReturnValue({ ...baseMock, isScreenSharing: false })
+    useWebRTCMock.mockReturnValue({ ...baseMock, isScreenSharing: false })
     renderRoom()
     await userEvent.click(screen.getByRole('button', { name: /share screen/i }))
     expect(baseMock.startScreenShare).toHaveBeenCalled()
   })
 
   it('calls stopScreenShare when sharing', async () => {
-    vi.mocked(useWebRTC).mockReturnValue({ ...baseMock, isScreenSharing: true })
+    useWebRTCMock.mockReturnValue({ ...baseMock, isScreenSharing: true })
     renderRoom()
     await userEvent.click(screen.getByRole('button', { name: /stop sharing/i }))
     expect(baseMock.stopScreenShare).toHaveBeenCalled()
   })
 
   it('shows Unmute label when mic is muted', () => {
-    vi.mocked(useWebRTC).mockReturnValue({ ...baseMock, isMicMuted: true })
+    useWebRTCMock.mockReturnValue({ ...baseMock, isMicMuted: true })
     renderRoom()
     expect(screen.getByRole('button', { name: /unmute/i })).toBeInTheDocument()
   })
 
   it('shows Enable camera label when camera is off', () => {
-    vi.mocked(useWebRTC).mockReturnValue({ ...baseMock, isCameraOff: true })
+    useWebRTCMock.mockReturnValue({ ...baseMock, isCameraOff: true })
     renderRoom()
     expect(screen.getByRole('button', { name: /enable camera/i })).toBeInTheDocument()
   })
@@ -130,7 +132,7 @@ describe('control bar', () => {
 
 describe('error modal', () => {
   it('shows dialog when error is set', () => {
-    vi.mocked(useWebRTC).mockReturnValue({ ...baseMock, error: 'This room is full.' })
+    useWebRTCMock.mockReturnValue({ ...baseMock, error: 'This room is full.' })
     renderRoom()
     expect(screen.getByRole('dialog')).toBeInTheDocument()
     expect(screen.getByText('This room is full.')).toBeInTheDocument()
@@ -142,7 +144,7 @@ describe('error modal', () => {
   })
 
   it('calls dismissError when OK is clicked', async () => {
-    vi.mocked(useWebRTC).mockReturnValue({ ...baseMock, error: 'This room is full.' })
+    useWebRTCMock.mockReturnValue({ ...baseMock, error: 'This room is full.' })
     renderRoom()
     await userEvent.click(screen.getByRole('button', { name: /ok/i }))
     expect(baseMock.dismissError).toHaveBeenCalled()
