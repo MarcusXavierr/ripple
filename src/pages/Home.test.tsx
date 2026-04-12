@@ -12,19 +12,12 @@ vi.mock('react-router-dom', async (importOriginal) => {
 
 // Mock slug generator so tests are deterministic
 vi.mock('@/lib/room', () => ({
-  generateRoomSlug: () => 'coral-tiger-42',
-  parseRoomInput: (input: string) => {
-    const trimmed = input.trim()
-    if (!trimmed) return null
-    if (trimmed.startsWith('http')) {
-      const match = trimmed.match(/\/room\/([^/?#]+)/)
-      return match ? match[1] : null
-    }
-    return trimmed
-  },
+  generateRoomSlug: vi.fn(() => 'coral-tiger-42'),
+  parseRoomInput: vi.fn(),
 }))
 
 import Home from './Home'
+import { parseRoomInput } from '@/lib/room'
 
 function renderHome() {
   render(
@@ -58,6 +51,7 @@ describe('Home page', () => {
   })
 
   it('navigates to the room when a valid ID is submitted', async () => {
+    vi.mocked(parseRoomInput).mockReturnValueOnce('amber-wolf-7')
     const user = userEvent.setup()
     renderHome()
     await user.type(screen.getByLabelText(/room id or link/i), 'amber-wolf-7')
@@ -66,6 +60,7 @@ describe('Home page', () => {
   })
 
   it('navigates when a full URL is submitted', async () => {
+    vi.mocked(parseRoomInput).mockReturnValueOnce('jade-hawk-3')
     const user = userEvent.setup()
     renderHome()
     await user.type(
