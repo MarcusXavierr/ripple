@@ -17,9 +17,6 @@ export type ClientMessage =
   | { type: "ice-candidate"; candidate: RTCIceCandidateInit }
   | { type: "pong" };
 
-// TODO: [Types] Esse aqui não é usado pra nada né. tnc
-export type MediaErrorMessage = { type: "error"; code: "ICE_FAILED" | "MEDIA_DENIED" };
-
 // TODO: [Constants] cara eu acho que as mensagens tbm poderiam ficar juntos dessas contantes
 export const CLOSE_CODES = {
   ROOM_FULL: 4001,
