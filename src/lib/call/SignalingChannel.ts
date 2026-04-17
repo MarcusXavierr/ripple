@@ -29,14 +29,65 @@ export class SignalingChannel {
   }
 
   connect(): void {
-    throw new Error('not implemented')
+    this.callbacks.onConnecting()
+    const ws = new WebSocket(this.url)
+    this.ws = ws
+
+    ws.onopen = () => {
+      this.reconnectDelay = 1000
+      this.wsAttempts = 0
+    }
+
+    ws.onmessage = async (e: MessageEvent<string>) => {
+      let msg: ReceivedMessage
+      try {
+        msg = JSON.parse(e.data) as ReceivedMessage
+      } catch (err) {
+        console.error('[WS] bad payload', e.data, err)
+        return
+      }
+      await this.callbacks.onMessage(msg)
+    }
+
+    ws.onclose = (e: CloseEvent) => {
+      if (!this.alive) return
+      if (e.code === 1000) return
+      if (e.code >= 4000) {
+        this.callbacks.onTerminalClose(e.code)
+        return
+      }
+      this.scheduleReconnect(`close code ${e.code}`)
+    }
   }
 
-  send(_msg: ClientMessage): void {
-    throw new Error('not implemented')
+  send(msg: ClientMessage): void {
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify(msg))
+    }
   }
 
-  close(_code = 1000, _reason?: string): void {
-    throw new Error('not implemented')
+  close(code = 1000, reason?: string): void {
+    this.alive = false
+    if (this.reconnectTimer !== undefined) clearTimeout(this.reconnectTimer)
+    this.ws?.close(code, reason)
+  }
+
+  get isAlive(): boolean {
+    return this.alive
+  }
+
+  private scheduleReconnect(reason: string): void {
+    this.wsAttempts++
+    if (this.wsAttempts >= this.maxAttempts) {
+      console.error('[WS] max reconnect attempts reached')
+      this.callbacks.onMaxRetriesExceeded()
+      return
+    }
+    console.warn('[WS] reconnecting', { attempt: this.wsAttempts, delay: this.reconnectDelay, reason })
+    this.callbacks.onReconnecting()
+    this.reconnectTimer = setTimeout(() => {
+      if (this.alive) this.connect()
+    }, this.reconnectDelay)
+    this.reconnectDelay = Math.min(this.reconnectDelay * 2, 8_000)
   }
 }
