@@ -11,9 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { useLocalMedia } from '@/hooks/useLocalMedia'
-import { useScreenShare } from '@/hooks/useScreenShare'
-import { useCallConnection } from '@/hooks/useCallConnection'
+import { useCallSession } from '@/hooks/useCallSession'
 import type { CallStatus } from '@/store/call'
 
 const STATUS_LABEL: Record<CallStatus, string> = {
@@ -28,9 +26,21 @@ const STATUS_LABEL: Record<CallStatus, string> = {
 
 export default function Room() {
   const { id: roomId } = useParams<{ id: string }>()
-  const { localStream, isMicMuted, isCameraOff, toggleMic, toggleCamera } = useLocalMedia(roomId!)
-  const { isScreenSharing, startScreenShare, stopScreenShare } = useScreenShare(roomId!)
-  const { status, error, remoteStream, hangup, dismissError } = useCallConnection(roomId!)
+  const {
+    localStream,
+    remoteStream,
+    status,
+    error,
+    isScreenSharing,
+    isMicMuted,
+    isCameraOff,
+    startScreenShare,
+    stopScreenShare,
+    hangup,
+    toggleMic,
+    toggleCamera,
+    dismissError,
+  } = useCallSession(roomId!)
 
   const localVideoRef = useRef<HTMLVideoElement>(null)
   const remoteVideoRef = useRef<HTMLVideoElement>(null)
