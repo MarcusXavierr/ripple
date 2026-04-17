@@ -9,9 +9,10 @@ export function useScreenShare(roomId: string) {
   const mediaRef = useRef<MediaController | null>(null)
 
   useEffect(() => {
-    const session = CallSession.acquire(roomId, navigate)
+    const session = new CallSession(roomId, navigate)
     mediaRef.current = session.media
-    return () => { session.release() }
+    session.start()
+    return () => { session.teardown() }
   }, [roomId, navigate])
 
   const isScreenSharing = useCallStore((s) => s.isScreenSharing)
