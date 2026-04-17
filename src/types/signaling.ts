@@ -3,9 +3,7 @@
 // Server → Client
 export type ServerMessage =
   | { type: "onopen"; role: "caller" | "callee"; reconnect: boolean }
-// TODO: [Types] Porra, esse enter é o de quando o oponente entra na sala né. não deveria ter um nome melhor?
   | { type: "enter" }
-// TODO: [Types] Esse onclose é mandado quando o oponente sai da sala ou quando nós saímos da sala? o oponente né
   | { type: "onclose"; message: string }
   | { type: "peer-reconnected" }
   | { type: "ping" };
@@ -38,7 +36,6 @@ export const MESSAGE_TYPES = {
 } as const;
 
 // Messages received from the server (server-emitted + relayed from other peer)
-// TODO: [Types] usai, essa porra tá duplicada?
 export type ReceivedMessage =
   | ServerMessage
   | { type: 'offer'; offer: RTCSessionDescriptionInit }
