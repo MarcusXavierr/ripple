@@ -11,7 +11,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { useWebRTC } from '@/hooks/useWebRTC'
+import { useLocalMedia } from '@/hooks/useLocalMedia'
+import { useScreenShare } from '@/hooks/useScreenShare'
+import { useCallConnection } from '@/hooks/useCallConnection'
 import type { CallStatus } from '@/store/call'
 
 const STATUS_LABEL: Record<CallStatus, string> = {
@@ -27,21 +29,9 @@ const STATUS_LABEL: Record<CallStatus, string> = {
 export default function Room() {
   const { id: roomId } = useParams<{ id: string }>()
   // TODO: [Room] não é uma má pratica um hook ter TANTAS coisas? mas eu ainda não li ele pra ver se faz sentido ter tudo aquilo junto ou se tem como quebrar
-  const {
-    localStream,
-    remoteStream,
-    status,
-    error,
-    isScreenSharing,
-    isMicMuted,
-    isCameraOff,
-    startScreenShare,
-    stopScreenShare,
-    hangup,
-    toggleMic,
-    toggleCamera,
-    dismissError,
-  } = useWebRTC(roomId!)
+  const { localStream, isMicMuted, isCameraOff, toggleMic, toggleCamera } = useLocalMedia(roomId!)
+  const { isScreenSharing, startScreenShare, stopScreenShare } = useScreenShare(roomId!)
+  const { status, error, remoteStream, hangup, dismissError } = useCallConnection(roomId!)
 
   const localVideoRef = useRef<HTMLVideoElement>(null)
   const remoteVideoRef = useRef<HTMLVideoElement>(null)
