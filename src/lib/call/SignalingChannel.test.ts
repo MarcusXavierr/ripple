@@ -278,3 +278,19 @@ describe('close()', () => {
     vi.useRealTimers()
   })
 })
+
+// ── isAlive ──────────────────────────────────────────────────────────────────
+
+describe('isAlive', () => {
+  it('is true before close()', () => {
+    const ch = new SignalingChannel(URL, createCallbacks())
+    expect(ch.isAlive).toBe(true)
+  })
+
+  it('is false after close()', () => {
+    const ch = new SignalingChannel(URL, createCallbacks())
+    ch.connect()
+    ch.close()
+    expect(ch.isAlive).toBe(false)
+  })
+})
