@@ -72,7 +72,6 @@ export class CallSession {
 
   // ── WebSocket ───────────────────────────────────────────────────────────────
 
-  // TODO: Cara, junto do handleMessage, esse método é um dos coraçÕes da sala né. É aqui que roda o "event loop" do websocket que faz tudo kkkkk
   private connectWS() {
     console.debug("[Websocket] We are connecting to the websocket")
     console.trace()
@@ -82,7 +81,6 @@ export class CallSession {
     this.ws = ws
     useCallStore.setState({ ws, status: 'connecting' })
 
-    // TODO: Esses são todos os hooks de websocket que setamos?
     ws.onopen = () => {
       this.reconnectDelay = 1000
       this.wsAttempts = 0
@@ -103,7 +101,6 @@ export class CallSession {
       console.debug("[Websocket] The websocket is closed", e.reason, e)
       if (e.code === 1000) return
       const handled = this.handleCloseCode(e.code)
-      // TODO: [Refactor] tem um bug aqui. Se por exemplo eu tomo um erro de que a sala tá cheia, pq eu vou chamar o scheduleReconnect? Não rola pq eu troco de pág lá em cima né. mas msm assim tá errado essa lógica do !handled
       if (!handled) this.scheduleReconnect(`close code ${e.code}`)
     }
   }
@@ -115,7 +112,6 @@ export class CallSession {
   }
 
   private scheduleReconnect(reason: string) {
-    // TODO: [Refactor] Nós precisamos logar que estamos reconectando. de preferencia sabendo o motivo de tal
     this.wsAttempts++
     if (this.wsAttempts >= MAX_WS_ATTEMPTS) {
       console.error("We can't connect to the server")
@@ -125,10 +121,8 @@ export class CallSession {
     console.warn('[WS] reconnecting', { attempt: this.wsAttempts, delay: this.reconnectDelay, reason })
     useCallStore.setState({ status: 'reconnecting' })
     this.reconnectTimer = setTimeout(() => {
-      // INFO: Interessante, sem o limit lá em cima essa porra poderia virar uma recursão infinita
       if (this.alive) this.connectWS()
     }, this.reconnectDelay)
-    // TODO: Nunca chega a 30s se o limite é 3x né. E porra, 30s é tempo pra caralho
     this.reconnectDelay = Math.min(this.reconnectDelay * 2, 8_000)
   }
 
@@ -143,7 +137,6 @@ export class CallSession {
       [CLOSE_CODES.DUPLICATE_SESSION]: () =>
         useCallStore.setState({ error: "You're connected to this room from another tab." }),
     }
-    // TODO: [Refactor] nós precisamos de uma lógica para botar uma mensagem padrão quando é um close code desconhecido. e precisamos logar isso no console tbm (ou no sentry, ainda não decidi como vou jogar os logs do client pra um agregador)
     const handler = handlers[code]
     if (handler) { handler(); return true }
     
@@ -221,7 +214,6 @@ export class CallSession {
 
   // ── RTCPeerConnection ───────────────────────────────────────────────────────
 
-  // TODO: Chamado quando o usuário entra na sala. Esse método contém todos os handlers webRTC. Parece com a ideia de handlers do websocket. Ou seja, me parece que essa classe aqui tá fazendo dms. tá rodando dois event loops de conceitos e camadas totalmente diferentes kkkk
   private setupPC(role: 'caller' | 'callee') {
     this.pc?.close()
     this.role = role
@@ -234,31 +226,25 @@ export class CallSession {
 
     this.media.attachPC(pc)
 
-    // TODO: [Debug] eu tô usando a mesma máquina pra testar tanto o caller quanto o callee, pode ser por isso que a porra do onicecandidate tá demorando tanto pra ser triggado pelo segundo otario que entra? o google (Stun server) tá vendo que já mandou essa porra e não manda mais
     pc.onicecandidate = (e) => {
       if (e.candidate) {
-        // TODO: Aqui que a coisa fica meio gambiarra, o websocket chama métodos q mexem com webRTC e metodos que chamam webRTC chamam metodos de websocket hahaha
         this.send({ type: 'ice-candidate', candidate: e.candidate.toJSON() })
       }
     }
 
     pc.ontrack = (e) => {
-      // TODO: [Question] Por que eu pego o streams[0]??? não tem streams[1]???
       useCallStore.setState({ remoteStream: e.streams[0] ?? null })
     }
 
     pc.oniceconnectionstatechange = () => {
-      // TODO: [Refactor] essa lógica tá meio confusa. na vdd tá simples de entender, mas eu gostaria de um jeito mais limpo de representar isso. tá mt escondido algo tão importante como o status da nossa conexão com o outro peer
       if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
         useCallStore.setState({ status: 'connected' })
       } else if (pc.iceConnectionState === 'failed') {
         useCallStore.setState({ status: 'reconnecting' })
-        // TODO: [Question] o que caralhos acontece quando restartamos o ice?
         if (role === 'caller') pc.restartIce()
       }
     }
 
-    // TODO: [Refactor] me parece que as mensagens do webRTC tbm têm uma certa lógica né. primeiro o onicecandidate, depois o onnegotiationneeded, depois o oniceconnectionstatechange. Seria legal trackear tbm a progressão desses estados, e pelo menos logar um erro quando foge deles? não sei, só tô pensando se faz sentido modelar isso como uma máquina de estados tbm. Mas me parece que essa porra é basicamente pra callers
     pc.onnegotiationneeded = async () => {
       if (this.role === 'callee') return
       try {
@@ -272,7 +258,6 @@ export class CallSession {
   }
 
   private async handleOffer(offer: RTCSessionDescriptionInit) {
-    // TODO: [Refactor] Dnv essa bosta retornando silenciosamente se PC é null. eu preciso de uma forma de tryGetPC sei lá (esse nome é horrivel) e logar e dar erro caso seja null. sei lá
     const pc = this.pc
     if (!pc) return
     const collision = this.makingOffer || pc.signalingState !== 'stable'
@@ -281,20 +266,17 @@ export class CallSession {
   }
 
   private async applyOffer(pc: RTCPeerConnection, offer: RTCSessionDescriptionInit) {
-    // TODO: Pode me explicar que porra é essa de signalingState stable e pq eu boto rollback no localDescription quando nao é stable? o que acontece?
     if (pc.signalingState !== 'stable') {
       await pc.setLocalDescription({ type: 'rollback' })
     }
     await pc.setRemoteDescription(offer)
     this.remoteDescriptionSet = true
-    // TODO: O que essa merda faz?
     await this.drainCandidates()
     await pc.setLocalDescription()
     this.send({ type: 'answer', answer: pc.localDescription! })
   }
 
   private async handleAnswer(answer: RTCSessionDescriptionInit) {
-    // TODO: [Refactor] Mais um método exclusivo do caller né. não tem nenhuma trava, mas somente o callee manda né. Será que não é bom ter uma trava pra não dar merda se por um acaso cair uma msg dessa pro callee?
     const pc = this.pc
     if (!pc) return
     await pc.setRemoteDescription(answer)
@@ -306,7 +288,6 @@ export class CallSession {
     if (this.remoteDescriptionSet && this.pc) {
       await this.pc.addIceCandidate(candidate)
     } else {
-      // TODO: Isso aqui é pra salvar os candidates pra depoi né. mas pela lógica, ele não salva em lugar nenhum e tenta aplicar de uma vez KKKKKKKKKK, essa porra não tá bugada não? parece que sim hein
       this.pendingCandidates.push(candidate)
     }
   }
