@@ -12,7 +12,6 @@ export type CallStatus =
 
 type CallStore = {
   peerId: string
-  ws: WebSocket | null
   pc: RTCPeerConnection | null
   role: 'caller' | 'callee' | null
   localStream: MediaStream | null
@@ -27,7 +26,6 @@ type CallStore = {
 
 const INITIAL_STATE = {
   peerId: '',
-  ws: null,
   pc: null,
   role: null,
   localStream: null,
