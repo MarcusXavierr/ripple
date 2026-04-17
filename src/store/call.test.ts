@@ -31,6 +31,12 @@ describe("useCallStore", () => {
     expect(typeof state.peerId).toBe("string");
   });
 
+  it('accepts ended as a valid status', () => {
+    useCallStore.setState({ status: 'ended' })
+    expect(useCallStore.getState().status).toBe('ended')
+    useCallStore.getState().reset()
+  })
+
   it('reset restores initial state', () => {
     useCallStore.setState({ status: 'connected', error: 'oops', role: 'caller' })
     useCallStore.getState().reset()
