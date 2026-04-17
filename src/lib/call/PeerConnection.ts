@@ -21,10 +21,13 @@ export class PeerConnection {
   private _makingOffer = false
   private role: 'caller' | 'callee' | null = null
 
-  constructor(
-    private readonly transport: PeerConnectionTransport,
-    private readonly callbacks: PeerConnectionCallbacks,
-  ) {}
+  private readonly transport: PeerConnectionTransport
+  private readonly callbacks: PeerConnectionCallbacks
+
+  constructor(transport: PeerConnectionTransport, callbacks: PeerConnectionCallbacks) {
+    this.transport = transport
+    this.callbacks = callbacks
+  }
 
   get raw(): RTCPeerConnection | null {
     return this.pc
