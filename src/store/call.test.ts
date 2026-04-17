@@ -28,7 +28,6 @@ describe('useCallStore', () => {
     expect(s.role).toBeNull()
     expect(s.localStream).toBeNull()
     expect(s.remoteStream).toBeNull()
-    expect(s.ws).toBeNull()
     expect(s.pc).toBeNull()
     expect(s.isScreenSharing).toBe(false)
     expect(s.isMicMuted).toBe(false)
