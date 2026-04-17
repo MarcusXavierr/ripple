@@ -11,7 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { useWebRTC } from '@/hooks/useWebRTC'
+import { useCallSession } from '@/hooks/useCallSession'
 import type { CallStatus } from '@/store/call'
 
 const STATUS_LABEL: Record<CallStatus, string> = {
@@ -40,7 +40,7 @@ export default function Room() {
     toggleMic,
     toggleCamera,
     dismissError,
-  } = useWebRTC(roomId!)
+  } = useCallSession(roomId!)
 
   const localVideoRef = useRef<HTMLVideoElement>(null)
   const remoteVideoRef = useRef<HTMLVideoElement>(null)
