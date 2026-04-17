@@ -1,5 +1,6 @@
 // src/lib/call/CallSession.ts
 import { MediaController } from './MediaController'
+import { PeerConnection } from './PeerConnection'
 import { useCallStore } from '@/store/call'
 import { getPeerId } from '@/lib/peerId'
 import { CLOSE_CODES } from '@/types/signaling'
@@ -10,7 +11,6 @@ import type { SignalingAction } from './signalingReducer'
 type NavigateFn = (path: string) => void
 
 const WS_URL = import.meta.env.VITE_WS_URL as string
-const ICE_SERVERS = [{ urls: 'stun:stun.l.google.com:19302' }]
 const MAX_WS_ATTEMPTS = 3
 
 // ── CallSession ───────────────────────────────────────────────────────────────
@@ -19,14 +19,9 @@ export class CallSession {
   readonly roomId: string
   readonly media: MediaController
   private readonly navigate: NavigateFn
+  private readonly peerConnection: PeerConnection
 
   private ws: WebSocket | null = null
-  private pc: RTCPeerConnection | null = null
-
-  private pendingCandidates: RTCIceCandidateInit[] = []
-  private remoteDescriptionSet = false
-  private makingOffer = false
-  private role: 'caller' | 'callee' | null = null
 
   private wsAttempts = 0
   private reconnectDelay = 1000
@@ -39,6 +34,13 @@ export class CallSession {
     this.roomId = roomId
     this.navigate = navigate
     this.media = new MediaController()
+    this.peerConnection = new PeerConnection(
+      { send: (msg) => this.send(msg) },
+      {
+        onRemoteStream: (stream) => useCallStore.setState({ remoteStream: stream }),
+        onStatusChange: (status) => useCallStore.setState({ status }),
+      },
+    )
   }
 
   async start() {
@@ -66,7 +68,7 @@ export class CallSession {
     remoteStream?.getTracks().forEach((t) => t.stop())
     this.media.teardown()
     this.ws?.close(1000, reason)
-    this.pc?.close()
+    this.peerConnection.close()
     useCallStore.getState().reset()
   }
 
@@ -152,11 +154,7 @@ export class CallSession {
   // ── Signaling message dispatch ──────────────────────────────────────────────
 
   private getSignalingState() {
-    return {
-      role: this.role,
-      makingOffer: this.makingOffer,
-      signalingState: this.pc?.signalingState ?? null,
-    }
+    return this.peerConnection.state
   }
 
   private runAction(action: SignalingAction): Promise<void> | void {
@@ -165,33 +163,31 @@ export class CallSession {
       return
     }
     if (action.type === 'SETUP_PC') {
-      this.setupPC(action.role)
+      this.peerConnection.setup(action.role)
+      const pc = this.peerConnection.raw!
+      useCallStore.setState({ pc, role: action.role })
+      this.media.attachPC(pc)
       return
     }
     if (action.type === 'RESTART_ICE') {
-      this.pc?.restartIce()
+      this.peerConnection.restartIce()
       return
     }
     if (action.type === 'ROLLBACK_AND_RESTART_ICE') {
-      if (this.pc) {
-        return this.pc.setLocalDescription({ type: 'rollback' }).then(() => {
-          this.pc?.restartIce()
-        })
-      }
-      return
+      return this.peerConnection.rollbackAndRestartIce()
     }
     if (action.type === 'SEND_WS') {
       this.send(action.msg)
       return
     }
     if (action.type === 'HANDLE_OFFER') {
-      return this.handleOffer(action.offer)
+      return this.peerConnection.handleOffer(action.offer)
     }
     if (action.type === 'HANDLE_ANSWER') {
-      return this.handleAnswer(action.answer)
+      return this.peerConnection.handleAnswer(action.answer)
     }
     if (action.type === 'HANDLE_ICE_CANDIDATE') {
-      return this.handleIceCandidate(action.candidate)
+      return this.peerConnection.handleIceCandidate(action.candidate)
     }
     if (action.type === 'WARN') {
       console.warn('[Signaling]', action.message)
@@ -210,98 +206,6 @@ export class CallSession {
         await result
       }
     }
-  }
-
-  // ── RTCPeerConnection ───────────────────────────────────────────────────────
-
-  private setupPC(role: 'caller' | 'callee') {
-    this.pc?.close()
-    this.role = role
-    this.remoteDescriptionSet = false
-    this.pendingCandidates = []
-
-    const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS })
-    this.pc = pc
-    useCallStore.setState({ pc, role })
-
-    this.media.attachPC(pc)
-
-    pc.onicecandidate = (e) => {
-      if (e.candidate) {
-        this.send({ type: 'ice-candidate', candidate: e.candidate.toJSON() })
-      }
-    }
-
-    pc.ontrack = (e) => {
-      useCallStore.setState({ remoteStream: e.streams[0] ?? null })
-    }
-
-    pc.oniceconnectionstatechange = () => {
-      if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
-        useCallStore.setState({ status: 'connected' })
-      } else if (pc.iceConnectionState === 'failed') {
-        useCallStore.setState({ status: 'reconnecting' })
-        if (role === 'caller') pc.restartIce()
-      }
-    }
-
-    pc.onnegotiationneeded = async () => {
-      if (this.role === 'callee') return
-      try {
-        this.makingOffer = true
-        await pc.setLocalDescription()
-        this.send({ type: 'offer', offer: pc.localDescription! })
-      } finally {
-        this.makingOffer = false
-      }
-    }
-  }
-
-  private async handleOffer(offer: RTCSessionDescriptionInit) {
-    const pc = this.pc
-    if (!pc) return
-    const collision = this.makingOffer || pc.signalingState !== 'stable'
-    if (this.role !== 'callee' && collision) return
-    await this.applyOffer(pc, offer)
-  }
-
-  private async applyOffer(pc: RTCPeerConnection, offer: RTCSessionDescriptionInit) {
-    if (pc.signalingState !== 'stable') {
-      await pc.setLocalDescription({ type: 'rollback' })
-    }
-    await pc.setRemoteDescription(offer)
-    this.remoteDescriptionSet = true
-    await this.drainCandidates()
-    await pc.setLocalDescription()
-    this.send({ type: 'answer', answer: pc.localDescription! })
-  }
-
-  private async handleAnswer(answer: RTCSessionDescriptionInit) {
-    const pc = this.pc
-    if (!pc) return
-    await pc.setRemoteDescription(answer)
-    this.remoteDescriptionSet = true
-    await this.drainCandidates()
-  }
-
-  private async handleIceCandidate(candidate: RTCIceCandidateInit) {
-    if (this.remoteDescriptionSet && this.pc) {
-      await this.pc.addIceCandidate(candidate)
-    } else {
-      this.pendingCandidates.push(candidate)
-    }
-  }
-
-  private async drainCandidates() {
-    if (!this.pc) return
-    for (const c of this.pendingCandidates) {
-      try {
-        await this.pc.addIceCandidate(c)
-      } catch {
-        // Stale candidate from a previous offer/answer (mismatched ICE ufrag) — safe to skip
-      }
-    }
-    this.pendingCandidates = []
   }
 
   // ── Public actions ──────────────────────────────────────────────────────────
