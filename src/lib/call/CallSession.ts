@@ -277,6 +277,10 @@ export class CallSession {
     if (!pc) return
     const collision = this.makingOffer || pc.signalingState !== 'stable'
     if (this.role !== 'callee' && collision) return
+    await this.applyOffer(pc, offer)
+  }
+
+  private async applyOffer(pc: RTCPeerConnection, offer: RTCSessionDescriptionInit) {
     // TODO: Pode me explicar que porra é essa de signalingState stable e pq eu boto rollback no localDescription quando nao é stable? o que acontece?
     if (pc.signalingState !== 'stable') {
       await pc.setLocalDescription({ type: 'rollback' })
