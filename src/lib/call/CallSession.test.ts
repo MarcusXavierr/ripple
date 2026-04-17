@@ -149,6 +149,18 @@ describe('WebSocket', () => {
     await flush()
     expect(() => send({ type: 'unknown-future-event' })).not.toThrow()
   })
+
+  it('does not throw and logs an error when an invalid JSON message is received', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    createSession()
+    await flush()
+    const ws = MockWebSocket.lastInstance!
+    // Bypass the receive() helper to inject raw invalid JSON
+    ws.onmessage!(new MessageEvent('message', { data: 'not valid json {{{' }))
+    await flush()
+    expect(consoleSpy).toHaveBeenCalledWith('[WS] bad payload', 'not valid json {{{', expect.any(SyntaxError))
+    consoleSpy.mockRestore()
+  })
 })
 
 // ── Close codes ───────────────────────────────────────────────────────────────

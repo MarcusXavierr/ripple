@@ -87,8 +87,13 @@ export class CallSession {
     }
 
     ws.onmessage = async (e: MessageEvent<string>) => {
-      // TODO: [Refactor] nós precisamos de uma lógica pra logar erro certinho quando nós não conseguimos parsear esse json aí
-      const msg = JSON.parse(e.data) as ReceivedMessage
+      let msg: ReceivedMessage
+      try {
+        msg = JSON.parse(e.data) as ReceivedMessage
+      } catch (err) {
+        console.error('[WS] bad payload', e.data, err)
+        return
+      }
       await this.handleMessage(msg)
     }
 
