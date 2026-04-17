@@ -1,4 +1,5 @@
 // src/lib/call/CallSession.ts
+import { MediaController } from './MediaController'
 import { useCallStore } from '@/store/call'
 import { getPeerId } from '@/lib/peerId'
 import { CLOSE_CODES } from '@/types/signaling'
@@ -24,6 +25,7 @@ const sessions = new Map<string, RegistryEntry>()
 
 export class CallSession {
   readonly roomId: string
+  readonly media: MediaController
   private readonly navigate: NavigateFn
 
   private ws: WebSocket | null = null
@@ -81,37 +83,33 @@ export class CallSession {
   private constructor(roomId: string, navigate: NavigateFn) {
     this.roomId = roomId
     this.navigate = navigate
+    this.media = new MediaController()
   }
 
   // INFO: Parece que antes de retornar pro hook, essa porra é chamada sync. nós vamos setar alguns estados importantes aqui, como o peerId, pegar as mídias do usuário (voz e video)
-  private start() {
-    // TODO: [Refactor] nós poderiamos usar async await aqui pre deixar esse código beeeeem mais limpo e bonito né kkkkk
+  private async start() {
     const peerId = getPeerId(this.roomId)
     useCallStore.setState({ peerId })
-    navigator.mediaDevices
-      .getUserMedia({ video: true, audio: true })
-      .then((stream) => {
-        // TODO: Dnv, pq essa porra de session é tão importante que quebra o fluxo ao não ser encontrada? Prevenir chamadas diretas pra esse metodo?
-        if (!sessions.has(this.roomId)) {
-          stream.getTracks().forEach((t) => t.stop())
-          console.debug("[Session] We didn't found the session, so we stop the stream")
-          return
-        }
-        useCallStore.setState({ localStream: stream as MediaStream })
-        this.connectWS()
-      })
-      .catch((e) => {
-        console.error("[Media Devices] We can't get the stream", e)
-        if (!sessions.has(this.roomId)) return
-        useCallStore.setState({ error: 'Camera and microphone access is required to join a call.' })
-      })
+    try {
+      const stream = await this.media.init()
+      if (!sessions.has(this.roomId)) {
+        this.media.teardown()
+        return
+      }
+      useCallStore.setState({ localStream: stream as MediaStream })
+      this.connectWS()
+    } catch (e) {
+      console.error("[Media Devices] We can't get the stream", e)
+      if (!sessions.has(this.roomId)) return
+      useCallStore.setState({ error: 'Camera and microphone access is required to join a call.' })
+    }
   }
 
   private teardown() {
     if (this.reconnectTimer !== undefined) clearTimeout(this.reconnectTimer)
-    const { localStream, remoteStream } = useCallStore.getState()
-    localStream?.getTracks().forEach((t) => t.stop())
+    const { remoteStream } = useCallStore.getState()
     remoteStream?.getTracks().forEach((t) => t.stop())
+    this.media.teardown()
     this.ws?.close(1000, 'unmount')
     this.pc?.close()
     useCallStore.getState().reset()
@@ -245,14 +243,7 @@ export class CallSession {
     this.pc = pc
     useCallStore.setState({ pc, role })
 
-    const stream = useCallStore.getState().localStream
-    if (stream) {
-      console.debug("[Stream] Found local stream, we're adding tracks to the peer connection")
-      for (const track of stream.getTracks()) {
-        console.debug("[Stream] We're adding track to the peer connection", track.label)
-        pc.addTrack(track, stream)
-      }
-    }
+    this.media.attachPC(pc)
 
     // TODO: [Debug] eu tô usando a mesma máquina pra testar tanto o caller quanto o callee, pode ser por isso que a porra do onicecandidate tá demorando tanto pra ser triggado pelo segundo otario que entra? o google (Stun server) tá vendo que já mandou essa porra e não manda mais
     pc.onicecandidate = (e) => {
@@ -341,58 +332,10 @@ export class CallSession {
 
   // ── Public actions ──────────────────────────────────────────────────────────
 
-  toggleMic() {
-    const track = useCallStore.getState().localStream?.getAudioTracks()[0]
-    if (!track) return
-    track.enabled = !track.enabled
-    useCallStore.setState({ isMicMuted: !track.enabled })
-  }
-
-  toggleCamera() {
-    const track = useCallStore.getState().localStream?.getVideoTracks()[0]
-    if (!track) return
-    track.enabled = !track.enabled
-    useCallStore.setState({ isCameraOff: !track.enabled })
-  }
-
-  async startScreenShare() {
-    const pc = this.pc
-    if (!pc) return
-    try {
-      const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true })
-      const screenTrack = screenStream.getVideoTracks()[0]
-      // TODO: Isso aqui tá meio alieningena. tu precisa explicar pra mim. pq se rtiver essa porra eu replaceTrack e se não tiver eu add? que porra é um sender, como tu sabe que o kind da track é video hardcoded assim? webRTC é tão media centered assim?
-      const sender = pc.getSenders().find((s) => s.track?.kind === 'video')
-      if (sender) {
-        await sender.replaceTrack(screenTrack)
-      } else {
-        pc.addTrack(screenTrack, screenStream)
-      }
-      useCallStore.setState({ isScreenSharing: true })
-      screenTrack.onended = () => this.stopScreenShare()
-    } catch {
-      // User cancelled picker — do nothing
-      // TODO: [Refactor]: POrra, outros tipos de erro podem acontecer aqui, não? eu gostaria de pelo menos logar eles filho da puta
-    }
-  }
-
-  // TODO: Outro método que poderia estar em outro lugar né. mexe mais com o stream do usuário de media e só toca webRTC pra trocar o que tá mandando pro usuário, certo?
-  async stopScreenShare() {
-    // TODO: [Refactor] Eu imagino que algum desses métodos possa quebrar, certo? e se quebrar o erro vai cascatear até o front, não vai? pq não botamos um try catch pra lidar com esses erros gracefully? also, só return com pc vazio me parece ruim. eu trato um problema de forma silenciosa
-    const pc = this.pc
-    if (!pc) return
-    const cameraTrack = useCallStore.getState().localStream?.getVideoTracks()[0] ?? null
-    const sender = pc.getSenders().find((s) => s.track?.kind === 'video')
-    const screenTrack = sender?.track ?? null
-    if (sender) await sender.replaceTrack(cameraTrack)
-    if (screenTrack && screenTrack !== cameraTrack) screenTrack.stop()
-    useCallStore.setState({ isScreenSharing: false })
-  }
-
   hangup() {
-    const { localStream, remoteStream } = useCallStore.getState()
-    localStream?.getTracks().forEach((t) => t.stop())
+    const { remoteStream } = useCallStore.getState()
     remoteStream?.getTracks().forEach((t) => t.stop())
+    this.media.teardown()
     this.ws?.close(1000, 'hangup')
     this.pc?.close()
     // Remove from registry so teardown doesn't double-close
