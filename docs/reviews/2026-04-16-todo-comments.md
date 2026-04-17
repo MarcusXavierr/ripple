@@ -3,25 +3,6 @@
 Gerado em 2026-04-16. Respostas organizadas por arquivo, na ordem em que aparecem no código.
 
 ---
-
-## `src/pages/Room.tsx`
-
-### 1. L29 — Hook monstro no Room
-
-[`src/pages/Room.tsx:29`](../../src/pages/Room.tsx#L29)
-
-> não é uma má pratica um hook ter TANTAS coisas? mas eu ainda não li ele pra ver se faz sentido ter tudo aquilo junto ou se tem como quebrar
-
-É um code smell mais do que uma má prática "hard". O `useWebRTC` hoje devolve 13 coisas porque está servindo de fachada única pra chamada inteira. Dá pra quebrar em hooks focados sem muito drama:
-
-- `useLocalMedia()` → `localStream`, `isMicMuted`, `isCameraOff`, `toggleMic`, `toggleCamera`, (futuro: escolher device).
-- `useScreenShare()` → `isScreenSharing`, `startScreenShare`, `stopScreenShare`.
-- `useCallConnection(roomId)` → `status`, `error`, `remoteStream`, `hangup`, `dismissError`.
-
-O Room compõe os três. Vantagem: cada hook testa e evolui isolado. Desvantagem: três `useCallStore()` selecionando slices diferentes — o que na real é bom pra re-render.
-
----
-
 ## `src/hooks/useWebRTC.ts`
 
 ### 2. L7 — Hook alimentado por CallSession + store
@@ -71,41 +52,6 @@ O hook cria o writer amarrando em `useCallStore.setState` e injeta. CallSession 
 
 **Decisão:** seguir com a **Opção B (writer)**. Event bus vira útil quando tem múltiplos consumidores; pro tamanho atual do app é exagero.
 
-### 4. L37 — Métodos de media não pertencem à CallSession
-
-[`src/hooks/useWebRTC.ts:37`](../../src/hooks/useWebRTC.ts#L37)
-
-> esses 4 métodos aqui lidam só com o localStream né. Tem nada a ver com webRTC ou com websocket
-
-**Quase.** `toggleMic`/`toggleCamera` de fato só mexem em `track.enabled` do `localStream`. Mas `startScreenShare`/`stopScreenShare` **tocam webRTC direto** (`pc.getSenders()`, `replaceTrack`) — não dá pra separar limpinho sem que o módulo de media peça o `pc` emprestado.
-
-**Solução: `MediaController` com PC injetada.**
-
-```ts
-class MediaController {
-  private pc: RTCPeerConnection | null = null
-  private stream: MediaStream | null = null
-
-  attachPC(pc: RTCPeerConnection) {
-    this.pc = pc
-    // re-registra tracks na PC nova (reconexão recria a PC)
-    this.stream?.getTracks().forEach(t => pc.addTrack(t, this.stream!))
-  }
-  async init() { this.stream = await getUserMedia(...); return this.stream }
-  toggleMic() { ... }
-  toggleCamera() { ... }
-  async startScreenShare() { /* usa this.pc */ }
-  async stopScreenShare() { /* usa this.pc */ }
-  teardown() { this.stream?.getTracks().forEach(t => t.stop()) }
-}
-```
-
-O loop `pc.addTrack` do `setupPC` (L251) sai de lá e vem pra cá — centraliza "tudo que é media" num lugar. A CallSession vira: signaling + PC lifecycle. MediaController: stream + tracks + screenshare.
-
-**Caveat:** `setupPC` pode ser chamado de novo (reconexão cria PC nova). `attachPC` precisa ser idempotente — re-chama, re-registra tracks.
-
-**Aberto:** `ontrack` (recebe remote) continua na CallSession porque é reação a evento da PC, não ação de media. Aceitável.
-
 ### 5. L43 — hangup vs release
 
 [`src/hooks/useWebRTC.ts:43`](../../src/hooks/useWebRTC.ts#L43)
@@ -148,15 +94,6 @@ Sim. `peer-joined` é o nome padrão da indústria (parelho com o `peer-reconnec
 
 Só do servidor pra nós, carregando uma mensagem. Na prática hoje **não é tratado** no `handleMessage` (sem case `onclose`), então o payload morre. Ou apaga o tipo ou implementa. Dado que `PEER_DISCONNECTED` já é sinalizado via close code, isso parece morto.
 // Esse eu tenho que pensar mais sobre o que fazer. pq pra eu tomar PEER_DISCONNECTED o outro otário tem q ficar fora 1min sem responder o ping basicamente né (claro que tem risco dele cair logo em seguida e não responder o ping, então temos mts incógnitas. Mas fica a reflexão, se o servidor de ws cair, os dois continuam conseguindo conversar né, já que não vai ter ping pong pra limpar as salas que já existem e jogar peer_disconnected pro front fechar tudo né)
-
-### 9. L20 — `MediaErrorMessage` não usado
-
-[`src/types/signaling.ts:20`](../../src/types/signaling.ts#L20)
-
-> Esse aqui não é usado pra nada né. tnc
-
-Confirmado — grep em `MediaErrorMessage` não acha uso. Apagar.
->>TODO: Pode apagar mesmo
 
 ### 10. L23 — mensagens junto das constantes
 
@@ -249,6 +186,7 @@ Você mesmo apontou: pros codes conhecidos `handleCloseCode` devolve `true` e `!
 > precisamos logar que estamos reconectando. de preferencia sabendo o motivo
 
 `scheduleReconnect(reason: string)` recebendo o code/razão do `onclose`, e `console.warn('[WS] reconnecting', { attempt, delay, reason })`. Trivial.
+>>TODO: Faça
 
 ### 23. L174 — nunca chega a 30s
 
@@ -257,6 +195,7 @@ Você mesmo apontou: pros codes conhecidos `handleCloseCode` devolve `true` e `!
 > Nunca chega a 30s se o limite é 3x né. E porra, 30s é tempo pra caralho
 
 Correto: 1s → 2s → 4s, bate no limit antes do cap. O `Math.min(..., 30_000)` é morto hoje. Ou aumenta `MAX_WS_ATTEMPTS` (5-6?) ou baixa o cap pra ~8s. 30s é UX ruim mesmo — usuário já achou que travou.
+>>TODO: Diminui pra 8s
 
 ### 24. L189 — close code desconhecido sem default
 
@@ -265,20 +204,7 @@ Correto: 1s → 2s → 4s, bate no limit antes do cap. O `Math.min(..., 30_000)`
 > precisamos de uma lógica para botar uma mensagem padrão quando é um close code desconhecido
 
 Combina com o item 21. No fallback: `console.error('[WS] unknown close code', code)` e setar `error: 'Connection lost unexpectedly.'`. Se decidir usar Sentry, esse é exatamente o tipo de log que importa.
-
-### 25. L198 — switch fede
-
-[`src/lib/call/CallSession.ts:198`](../../src/lib/call/CallSession.ts#L198)
-
-> Essa porra de switch FEDE. Aqui tá basicamente o CORAÇÃO DA APLICAÇÃO... Lógica e IO juntos
-
-De acordo. Três movimentos independentes que ajudam:
-
-1. **Tabela** em vez de switch: `const handlers: Record<Type, (msg) => Promise<void>>`. Mais testável.
-2. **Separar puro de efeito**: o "decide o que fazer" pode virar função pura `reduce(state, msg) → Action[]` e um runner aplica os actions (`sendWS`, `setPC`, `mutateStore`).
-3. **Submachine por role**: caller e callee tratam mensagens diferentes. Hoje tem vários `if (role === 'caller')` espalhados. Podem virar duas funções separadas.
-
-Custo: mais código. Benefício: ouro pra testar.
+>>TODO: Faça isso. E combine com o item 21 pra já matar os dois de uma vez
 
 ### 26. L206 — rollback+restartIce no `enter`
 
@@ -289,20 +215,6 @@ Custo: mais código. Benefício: ouro pra testar.
 Cenário: você é caller e já tinha começado uma oferta quando o peer original cai. Aí chega um peer novo (evento `enter`). A PC pode estar em `have-local-offer` (não-stable). Para emitir oferta nova com ICE restart limpo, a spec exige sair pra `stable` — `setLocalDescription({ type: 'rollback' })` reverte a oferta pendente pra estado estável sem sumir com o transport. Depois `restartIce()` marca pra próxima oferta nova regenerar ufrag/pwd → `onnegotiationneeded` dispara → nova offer com credenciais frescas.
 
 Não é gambiarra, é a cerimônia certa do "perfect negotiation pattern" do W3C. O que fede é ela estar inline no switch — extrai pra `renegotiateForNewPeer()`.
-
-### 27. L216 — mensagens só pro caller
-
-[`src/lib/call/CallSession.ts:216`](../../src/lib/call/CallSession.ts#L216)
-
-> outra mensagem que só serve pro caller né. Seria bom pensarmos num jeito de diferenciar
-
-Análise rápida:
-
-- **Só caller:** `enter`, `peer-reconnected`, `answer`.
-- **Só callee:** `offer`.
-- **Ambos:** `onopen`, `ping`, `ice-candidate` (trickle ICE vai nos dois sentidos).
-
-Valida o instinto. Refactor: duas sub-state-machines (ver item 25) ou um dispatcher que filtra por role e ignora silenciosamente as off-role (com warn no dev).
 
 ### 28. L237 — dois event loops na mesma classe
 
@@ -317,6 +229,7 @@ Valida o instinto. Refactor: duas sub-state-machines (ver item 25) ou um dispatc
 - `CallSession` — costura os dois, expõe a API pro hook.
 
 Teste fica viável: dá pra testar a `PeerConnection` com um `SignalingChannel` fake.
+>>THINK: Meu amigo, isso aqui é uma task só
 
 ### 29. L257 — STUN "cachea" na mesma máquina
 
@@ -394,6 +307,7 @@ Comentário correto sobre "basicamente pra callers" — offer/answer é sempre c
 > eu preciso de uma forma de tryGetPC sei lá... logar e dar erro caso seja null
 
 Concordo. `private getPC(): RTCPeerConnection { if (!this.pc) throw new Error('PC not ready'); return this.pc }` e quem chama envolve em try/catch com log. Ou tipo-dirigido: um método `requirePC()` que nunca retorna null.
+>>THINK: Acho que a gente pode estourar um tipo de exceção nova, e ter um handler q envolve tudo pra dar um catch nessa exceção e logar, não? Não tenho muita certeza ainda. Ou se sequer faz sentido a gente considerar que pc é vazio. ou se a gente criar ele, e na hora que ver q é vazio já manda ERRO PRO USUÁRIO
 
 ### 36. L300 — signalingState stable + rollback
 
@@ -412,6 +326,7 @@ Concordo. `private getPC(): RTCPeerConnection { if (!this.pc) throw new Error('P
 Cenário do `handleOffer`: sou callee ou tive colisão. Se minha PC estava em `have-local-offer` (tinha acabado de mandar oferta minha), **não posso** aceitar uma offer remota direto — `setRemoteDescription(offer)` quebra. O rollback reseta pra `stable` (desfaz minha offer localmente) sem fechar a PC. Aí posso seguir o caminho callee: setRemoteDescription(offer) → setLocalDescription() (answer) → send.
 
 Isso é exatamente o "Perfect Negotiation Pattern" (W3C): o polite peer (callee aqui) sempre cede em colisões fazendo rollback. Por isso o `collision` check no L298 só dispara early return se **não** somos callee.
+>>TODO: Podemos pelo menos refatorar esse lixo?
 
 ### 37. L306 — drainCandidates
 
@@ -420,14 +335,6 @@ Isso é exatamente o "Perfect Negotiation Pattern" (W3C): o polite peer (callee 
 > O que essa merda faz?
 
 Aplica candidates ICE que chegaram **antes** da gente setar `remoteDescription`. Ver `handleIceCandidate` (L321): se `remoteDescriptionSet` é false, o candidate vai pra `pendingCandidates`. `addIceCandidate` requer remoteDescription antes, senão throwa. Depois que setamos o remote (via offer ou answer), a gente "drena" a fila. O try/catch silencioso é pra candidate velho (ufrag mismatch após restart ICE) que é seguro ignorar.
-
-### 38. L313 — trava pro callee não aceitar answer
-
-[`src/lib/call/CallSession.ts:313`](../../src/lib/call/CallSession.ts#L313)
-
-> Será que não é bom ter uma trava pra não dar merda se por um acaso cair uma msg dessa pro callee?
-
-Sim. O servidor relaya cego, então em teoria pode chegar. Barato: `if (this.role !== 'caller') return`. Combina com o item 27 sobre mensagens por role.
 
 ### 39. L325 — pendingCandidates supostamente bugado
 
@@ -448,6 +355,7 @@ Salva sim — `this.pendingCandidates.push(candidate)` (L326) empurra no array. 
 - **replaceTrack vs addTrack**: em teoria, depois de `setupPC` a gente já adicionou video (L253) porque `localStream` tem uma video track. Então `sender` sempre existe e o `addTrack` é defensivo (se rodar antes da camera). `replaceTrack` é mágico: troca a track **sem renegociar SDP** — é instantâneo pro peer. Se usasse `removeTrack`+`addTrack` dispararia negociação nova a cada toggle de screenshare.
 
 "WebRTC é tão media centered" — sim, foi desenhado pra audio/video. Dados você manda por `RTCDataChannel` (outro mundo).
+>>TODO: Saquei, pode apagar esse sessão
 
 ### 41. L375 — outros erros no screenshare
 
@@ -464,6 +372,8 @@ catch (err) {
 }
 ```
 
+>>TODO: Já tá fix nessa porra de uma vez
+
 ### 42. L379 — stopScreenShare no lugar errado
 
 [`src/lib/call/CallSession.ts:379`](../../src/lib/call/CallSession.ts#L379)
@@ -479,6 +389,7 @@ Discordo parcialmente (ver item 4). Ele precisa do `pc.getSenders()` → acopla 
 > Eu imagino que algum desses métodos possa quebrar, certo?... só return com pc vazio me parece ruim
 
 Sim. `replaceTrack` pode rejeitar se a track for incompatível. `stop()` não throwa mas é síncrono. Wrap em try/catch, loga, e setar `isScreenSharing: false` no finally pra não deixar UI mentirosa.
+>>TODO: COrrijá essa porra tbm
 
 ---
 
@@ -499,6 +410,7 @@ Os outros 5 estão cobrindo a forma do `INITIAL_STATE` constante. Se alguém mex
 - **reset em cenários realistas**: após um hangup, garantir que tudo zerou incluindo `pc` e `ws`.
 
 Esses dão ROI real. Os memes atuais podem ficar (ninharia de manutenção) ou sair — indiferente.
+>>TODO: então faça os testes valiosos e apague os inuteis
 
 ---
 
@@ -512,10 +424,10 @@ Agrupadas por prioridade:
 - Item 41/43 — erros silenciosos em screenshare.
 
 **Limpeza fácil (baixo risco):**
-- Itens 7, 9, 22, 23, 38 — renames, asyncs, logs, guards.
+- Itens 7, 22, 23, 38 — renames, asyncs, logs, guards.
 
 **Refactors estruturais (pensar antes):**
-- Itens 1, 25, 28 — quebrar `useWebRTC` / `CallSession` em módulos por responsabilidade.
+- Itens 1, 28 — quebrar `useWebRTC` / `CallSession` em módulos por responsabilidade.
 - Item 34 — FSM explícita.
 - Item 44 — testes que valem a pena.
 
