@@ -28,7 +28,6 @@ const STATUS_LABEL: Record<CallStatus, string> = {
 
 export default function Room() {
   const { id: roomId } = useParams<{ id: string }>()
-  // TODO: [Room] não é uma má pratica um hook ter TANTAS coisas? mas eu ainda não li ele pra ver se faz sentido ter tudo aquilo junto ou se tem como quebrar
   const { localStream, isMicMuted, isCameraOff, toggleMic, toggleCamera } = useLocalMedia(roomId!)
   const { isScreenSharing, startScreenShare, stopScreenShare } = useScreenShare(roomId!)
   const { status, error, remoteStream, hangup, dismissError } = useCallConnection(roomId!)
