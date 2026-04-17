@@ -293,16 +293,4 @@ export class CallSession {
     this.navigate(`/room/${this.roomId}/ended`)
   }
 
-  dismissError() {
-    const err = useCallStore.getState().error
-    useCallStore.setState({ error: null })
-    if (
-      err?.includes('room is full') ||
-      err?.includes("doesn't exist") ||
-      err?.includes('another tab') ||
-      err?.includes('Unable to connect')
-    ) {
-      this.navigate('/')
-    }
-  }
 }
