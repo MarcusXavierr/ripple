@@ -104,7 +104,7 @@ export class CallSession {
       if (e.code === 1000) return
       const handled = this.handleCloseCode(e.code)
       // TODO: [Refactor] tem um bug aqui. Se por exemplo eu tomo um erro de que a sala tá cheia, pq eu vou chamar o scheduleReconnect? Não rola pq eu troco de pág lá em cima né. mas msm assim tá errado essa lógica do !handled
-      if (!handled) this.scheduleReconnect()
+      if (!handled) this.scheduleReconnect(`close code ${e.code}`)
     }
   }
 
@@ -114,7 +114,7 @@ export class CallSession {
     }
   }
 
-  private scheduleReconnect() {
+  private scheduleReconnect(reason: string) {
     // TODO: [Refactor] Nós precisamos logar que estamos reconectando. de preferencia sabendo o motivo de tal
     this.wsAttempts++
     if (this.wsAttempts >= MAX_WS_ATTEMPTS) {
@@ -122,13 +122,14 @@ export class CallSession {
       useCallStore.setState({ error: 'Unable to connect to the server.' })
       return
     }
+    console.warn('[WS] reconnecting', { attempt: this.wsAttempts, delay: this.reconnectDelay, reason })
     useCallStore.setState({ status: 'reconnecting' })
     this.reconnectTimer = setTimeout(() => {
       // INFO: Interessante, sem o limit lá em cima essa porra poderia virar uma recursão infinita
       if (this.alive) this.connectWS()
     }, this.reconnectDelay)
     // TODO: Nunca chega a 30s se o limite é 3x né. E porra, 30s é tempo pra caralho
-    this.reconnectDelay = Math.min(this.reconnectDelay * 2, 30_000)
+    this.reconnectDelay = Math.min(this.reconnectDelay * 2, 8_000)
   }
 
   private handleCloseCode(code: number): boolean {
@@ -145,6 +146,13 @@ export class CallSession {
     // TODO: [Refactor] nós precisamos de uma lógica para botar uma mensagem padrão quando é um close code desconhecido. e precisamos logar isso no console tbm (ou no sentry, ainda não decidi como vou jogar os logs do client pra um agregador)
     const handler = handlers[code]
     if (handler) { handler(); return true }
+    
+    if (code >= 4000) {
+      console.error('[WS] unknown close code', code)
+      useCallStore.setState({ error: 'Connection lost unexpectedly.' })
+      return true
+    }
+
     return false
   }
 
