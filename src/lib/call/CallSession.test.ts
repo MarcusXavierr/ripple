@@ -194,6 +194,16 @@ describe('WS close codes', () => {
     expect(useCallStore.getState().error).toMatch(/another tab/i)
   })
 
+  it('sets a generic error and does not reconnect on unknown 4xxx close code', async () => {
+    vi.useFakeTimers()
+    createSession()
+    await flush()
+    MockWebSocket.lastInstance!.simulateClose(4999)
+    expect(useCallStore.getState().error).toMatch(/connection lost unexpectedly/i)
+    vi.runAllTimers()
+    expect(MockWebSocket.instances).toHaveLength(1)
+  })
+
   it('does not reconnect or error on clean close (1000)', async () => {
     createSession()
     await flush()
@@ -252,6 +262,33 @@ describe('reconnection', () => {
     await flush()
     send({ type: 'onopen', role: 'caller', reconnect: true })
     expect(MockRTCPeerConnection.instances).toHaveLength(1)
+  })
+
+  it('logs [WS] reconnecting with reason, attempt, and delay', async () => {
+    vi.useFakeTimers()
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    createSession()
+    await flush()
+    MockWebSocket.lastInstance!.simulateClose(1006)
+    expect(warnSpy).toHaveBeenCalledWith(
+      '[WS] reconnecting',
+      expect.objectContaining({ reason: expect.stringContaining('1006'), attempt: 1 }),
+    )
+    warnSpy.mockRestore()
+  })
+
+  it('caps reconnect delay at 8 seconds', async () => {
+    vi.useFakeTimers()
+    const spy = vi.spyOn(globalThis, 'setTimeout')
+    createSession()
+    await flush()
+    MockWebSocket.lastInstance!.simulateClose(1006)
+    vi.runAllTimers()
+    await flush()
+    MockWebSocket.lastInstance!.simulateClose(1006)
+    const delays = spy.mock.calls.map((c) => c[1] as number).filter((d) => d > 0)
+    expect(Math.max(...delays)).toBeLessThanOrEqual(8_000)
+    spy.mockRestore()
   })
 })
 
