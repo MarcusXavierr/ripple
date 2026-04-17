@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 
+// TODO: [Types] Esses são todos os estados da call que de fato precisamos
 export type CallStatus =
   | 'idle'
   | 'connecting'

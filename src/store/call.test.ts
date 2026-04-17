@@ -1,4 +1,5 @@
 import { useCallStore } from "./call";
+// TODO: [Test] esses testes testam o que exatamente? porra, que testes memes hein?
 
 describe("useCallStore", () => {
   it("initializes with idle status", () => {

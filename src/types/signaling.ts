@@ -3,7 +3,9 @@
 // Server → Client
 export type ServerMessage =
   | { type: "onopen"; role: "caller" | "callee"; reconnect: boolean }
+// TODO: [Types] Porra, esse enter é o de quando o oponente entra na sala né. não deveria ter um nome melhor?
   | { type: "enter" }
+// TODO: [Types] Esse onclose é mandado quando o oponente sai da sala ou quando nós saímos da sala? o oponente né
   | { type: "onclose"; message: string }
   | { type: "peer-reconnected" }
   | { type: "ping" };
@@ -15,8 +17,10 @@ export type ClientMessage =
   | { type: "ice-candidate"; candidate: RTCIceCandidateInit }
   | { type: "pong" };
 
+// TODO: [Types] Esse aqui não é usado pra nada né. tnc
 export type MediaErrorMessage = { type: "error"; code: "ICE_FAILED" | "MEDIA_DENIED" };
 
+// TODO: [Constants] cara eu acho que as mensagens tbm poderiam ficar juntos dessas contantes
 export const CLOSE_CODES = {
   ROOM_FULL: 4001,
   PEER_DISCONNECTED: 4002,
@@ -26,6 +30,7 @@ export const CLOSE_CODES = {
 } as const;
 
 // Messages received from the server (server-emitted + relayed from other peer)
+// TODO: [Types] usai, essa porra tá duplicada?
 export type ReceivedMessage =
   | ServerMessage
   | { type: 'offer'; offer: RTCSessionDescriptionInit }
