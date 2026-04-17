@@ -30,15 +30,46 @@ O Room compõe os três. Vantagem: cada hook testa e evolui isolado. Desvantagem
 
 > essa bosta de hook é alimentado por duas coisas basicamente: 1. o CallSession... 2. O callStore
 
-Leitura correta. `CallSession` é a camada de serviço (IO: WebSocket + RTCPeerConnection + MediaDevices). `callStore` (zustand) é estado reativo consumido pelo React. O hook é só cola: monta/desmonta a session e reexpõe o store. Essa divisão é saudável — o incômodo é que a `CallSession` também escreve direto no store (`useCallStore.setState`), então acopla os dois. Um meio-termo decente: `CallSession` emite eventos, e um adapter fino traduz evento→store.
+Leitura correta. `CallSession` é a camada de serviço (IO: WebSocket + RTCPeerConnection + MediaDevices). `callStore` (zustand) é estado reativo consumido pelo React. O hook é só cola: monta/desmonta a session e reexpõe o store. Essa divisão é saudável — o incômodo é que a `CallSession` também escreve direto no store (`useCallStore.setState`), então acopla os dois.
 
-### 3. L18 — Store começa tudo vazio
+**Opção A — EventEmitter caseiro:**
 
-[`src/hooks/useWebRTC.ts:18`](../../src/hooks/useWebRTC.ts#L18)
+```ts
+type CallEvent =
+  | { type: 'status'; value: CallStatus }
+  | { type: 'localStream'; stream: MediaStream }
+  | { type: 'remoteStream'; stream: MediaStream | null }
+  | { type: 'error'; message: string }
+  | { type: 'role'; role: 'caller' | 'callee' }
 
-> Aqui eu só to retornando o estado da aplicação, tudo nessa porra tá vazio, eu imagino que o CallSession que vai setar a porra toda
+class CallSession {
+  private listeners = new Set<(e: CallEvent) => void>()
+  on(fn: (e: CallEvent) => void) { this.listeners.add(fn); return () => this.listeners.delete(fn) }
+  private emit(e: CallEvent) { this.listeners.forEach(l => l(e)) }
+}
+```
 
-Exato. Olha `CallSession.start()` (L87) e `setupPC()` (L238): todo `useCallStore.setState(...)` vem de lá. O hook é readonly no estado — só dispara ações via `sessionRef`.
+O hook `useWebRTC` registra um listener no mount que traduz evento → `useCallStore.setState`. A CallSession **para de importar o store** — fica pura de React/zustand. Ganha testabilidade, controle de escritas e portabilidade. Custa boilerplate.
+
+**Opção B — writer injetado (mais barata, ~80% do benefício):**
+
+```ts
+interface CallStateWriter {
+  setStatus(s: CallStatus): void
+  setLocalStream(s: MediaStream): void
+  setRemoteStream(s: MediaStream | null): void
+  setError(e: string): void
+  setRole(r: 'caller' | 'callee'): void
+  reset(): void
+}
+class CallSession {
+  constructor(roomId, navigate, private writer: CallStateWriter) { ... }
+}
+```
+
+O hook cria o writer amarrando em `useCallStore.setState` e injeta. CallSession só conhece a interface. Sem EventEmitter, sem tradução de evento, mesmo isolamento.
+
+**Decisão:** seguir com a **Opção B (writer)**. Event bus vira útil quando tem múltiplos consumidores; pro tamanho atual do app é exagero.
 
 ### 4. L37 — Métodos de media não pertencem à CallSession
 
@@ -46,7 +77,34 @@ Exato. Olha `CallSession.start()` (L87) e `setupPC()` (L238): todo `useCallStore
 
 > esses 4 métodos aqui lidam só com o localStream né. Tem nada a ver com webRTC ou com websocket
 
-**Quase.** `toggleMic`/`toggleCamera` de fato só mexem em `track.enabled` do `localStream`. Mas `startScreenShare`/`stopScreenShare` **tocam webRTC direto** (`pc.getSenders()`, `replaceTrack`) — não dá pra separar limpinho sem que o módulo de media peça o `pc` emprestado. Refactor razoável: um `MediaController` que só cuida de mic/camera (e futuramente device picker), e mantém screenshare na `CallSession` porque ela precisa da PC. Ou inverte: `MediaController` expõe `getCurrentVideoTrack()` e a `CallSession` pede.
+**Quase.** `toggleMic`/`toggleCamera` de fato só mexem em `track.enabled` do `localStream`. Mas `startScreenShare`/`stopScreenShare` **tocam webRTC direto** (`pc.getSenders()`, `replaceTrack`) — não dá pra separar limpinho sem que o módulo de media peça o `pc` emprestado.
+
+**Solução: `MediaController` com PC injetada.**
+
+```ts
+class MediaController {
+  private pc: RTCPeerConnection | null = null
+  private stream: MediaStream | null = null
+
+  attachPC(pc: RTCPeerConnection) {
+    this.pc = pc
+    // re-registra tracks na PC nova (reconexão recria a PC)
+    this.stream?.getTracks().forEach(t => pc.addTrack(t, this.stream!))
+  }
+  async init() { this.stream = await getUserMedia(...); return this.stream }
+  toggleMic() { ... }
+  toggleCamera() { ... }
+  async startScreenShare() { /* usa this.pc */ }
+  async stopScreenShare() { /* usa this.pc */ }
+  teardown() { this.stream?.getTracks().forEach(t => t.stop()) }
+}
+```
+
+O loop `pc.addTrack` do `setupPC` (L251) sai de lá e vem pra cá — centraliza "tudo que é media" num lugar. A CallSession vira: signaling + PC lifecycle. MediaController: stream + tracks + screenshare.
+
+**Caveat:** `setupPC` pode ser chamado de novo (reconexão cria PC nova). `attachPC` precisa ser idempotente — re-chama, re-registra tracks.
+
+**Aberto:** `ontrack` (recebe remote) continua na CallSession porque é reação a evento da PC, não ação de media. Aceitável.
 
 ### 5. L43 — hangup vs release
 
@@ -137,58 +195,6 @@ Fluxo natural: `idle → connecting (WS) → waiting (peer entra) → negotiatin
 
 ## `src/lib/call/CallSession.ts`
 
-### 13. L48 — `teardownTimer`
-
-[`src/lib/call/CallSession.ts:48`](../../src/lib/call/CallSession.ts#L48)
-
-> Me explique o que caralhos é esse teardownTimer e por que se ele não for undefined nós rodamos ele e dps botamos como undefined?
-
-É o escudo contra o StrictMode. React 18 em dev monta → desmonta → remonta o componente de cara pra caçar efeitos impuros. Sem debounce, seria: `acquire` (count=1) → `release` (count=0, destrói tudo) → `acquire` (cria session nova). WebSocket derrubada à toa, stream pedida duas vezes.
-
-A solução é: quando count chega a 0, **não destrói imediatamente** — agenda um `setTimeout(..., 0)` pra teardown. Se um novo `acquire` entrar no mesmo tick (que é o caso do StrictMode), a gente **cancela** (`clearTimeout`) e seta o timer como `undefined` pra indicar "ninguém mais tá esperando desmontar". A session sobrevive.
-
-Ou seja: `!== undefined` significa "tem um teardown agendado, cancela ele porque voltou alguém". O `= undefined` logo depois é housekeeping.
-
-### 14. L53 — count num singleton local
-
-[`src/lib/call/CallSession.ts:53`](../../src/lib/call/CallSession.ts#L53)
-
-> pra que serve esse count? pro front não temos apenas nós na sala?
-
-O count **não conta peers**, conta **mounts do hook no próprio cliente**. Dois motivos legítimos pra existir:
-
-1. StrictMode (mount/unmount/mount em dev).
-2. Se um dia o Room for renderizado duas vezes na mesma árvore (ex: uma miniview + fullscreen lendo o mesmo roomId), a session é compartilhada.
-
-"Red herring que pode bugar": tem razão parcial — o `hangup()` (L399) dá `sessions.delete(roomId)` sem zerar o count. Se existir segundo mount ativo nesse momento, o `release()` dele vai encontrar `!entry` e sair silencioso — ok, mas o bug real é que o segundo mount fica com referência a uma `CallSession` já morta. Melhor: `hangup` chama o mesmo caminho de teardown (talvez forçando count=0) em vez de deletar direto.
-
-### 15. L57 — pra que ter sessions?
-
-[`src/lib/call/CallSession.ts:57`](../../src/lib/call/CallSession.ts#L57)
-
-> Qual é a pira de todas essa lógica de sessions? se essa porra é um singleton?
-
-Mesma resposta do item 14 + isto: o `Map<roomId, ...>` é por-sala, não global. Hoje navegar só permite uma sala, mas a estrutura deixa o código idempotente se você fizer, por exemplo, roteamento que pré-carrega `/room/:id` em background. Não persiste a F5 porque `RTCPeerConnection` e `MediaStream` não são serializáveis — não tem como guardar mesmo. Se a UX de "sobreviver a refresh" importa, precisa repensar (reconectar e renegociar do zero).
-
-Pros: debounce StrictMode, hangup idempotente. Contras: código mais complicado do que precisaria pra um caso de uso de uma sala por aba. Se você aceita simplificar e abrir mão de compartilhar entre mounts, dá pra jogar tudo pro hook com `useRef` + `useEffect` cleanup.
-
-### 16. L88 — async/await em vez de .then
-
-[`src/lib/call/CallSession.ts:88`](../../src/lib/call/CallSession.ts#L88)
-
-> nós poderiamos usar async await aqui pre deixar esse código beeeeem mais limpo e bonito né
-
-Sim, trivial. `start()` fica `async`, chama `await getUserMedia(...)`, try/catch ao redor.
->>TODO: Aplicar esse refactor
-
-### 17. L94 — guarda `!sessions.has`
-
-[`src/lib/call/CallSession.ts:94`](../../src/lib/call/CallSession.ts#L94)
-
-> pq essa porra de session é tão importante que quebra o fluxo ao não ser encontrada?
-
-Não é sobre "chamada direta". É race: `start()` é async por causa do `getUserMedia`, que demora (usuário clica "permitir" na prompt). Nesse meio-tempo pode ter havido um `release()` que removeu a session do registry. Se a gente seguir e setar `localStream` no store, a câmera fica ligada de um componente desmontado — **luzinha acesa sem chamada acontecendo**. O guarda diz: "se já sumi do registro, fecha a stream e vaza daqui". Mesma coisa no catch.
-
 ### 18. L124 — conexão WS é coração
 
 [`src/lib/call/CallSession.ts:124`](../../src/lib/call/CallSession.ts#L124)
@@ -204,7 +210,16 @@ Sim. `connectWS` abre o socket e `handleMessage` é o event loop. Dá pra extrai
 
 > Esses são todos os hooks de websocket que setamos?
 
-Sim: `onopen`, `onmessage`, `onclose`. Falta `onerror`, o que é uma lacuna — hoje erro vira `onclose` com code próprio e caímos no fallback. Adicionar um `onerror` que pelo menos loga seria útil.
+Sim: `onopen`, `onmessage`, `onclose`. Falta `onerror` — evento do **browser WebSocket API** (não do backend) que dispara em falhas de transporte: DNS, TLS, handshake falho, desconexão abrupta sem close frame limpo.
+
+**Decisão: adiar.** Deixar um TODO explicativo no código:
+
+```ts
+// TODO: ws.onerror dispara em falhas de transporte (DNS, TLS, desconexão abrupta
+// sem close frame). Hoje caímos no onclose genérico logo depois. Quando tiver
+// agregador de logs (Sentry?), adicionar ws.onerror pra capturar o erro com
+// stack antes do close apagar a evidência.
+```
 
 ### 20. L141 — parse falho sem log
 
@@ -493,12 +508,11 @@ Agrupadas por prioridade:
 
 **Bugs/riscos reais:**
 - Item 21/24 — reconnect em close code desconhecido é arriscado.
-- Item 14 — `hangup` não zera count, deixa refs penduradas.
 - Item 20 — `JSON.parse` sem try/catch.
 - Item 41/43 — erros silenciosos em screenshare.
 
 **Limpeza fácil (baixo risco):**
-- Itens 7, 9, 16, 22, 23, 38 — renames, asyncs, logs, guards.
+- Itens 7, 9, 22, 23, 38 — renames, asyncs, logs, guards.
 
 **Refactors estruturais (pensar antes):**
 - Itens 1, 25, 28 — quebrar `useWebRTC` / `CallSession` em módulos por responsabilidade.
@@ -507,4 +521,3 @@ Agrupadas por prioridade:
 
 **Decisões pendentes:**
 - Item 10 — constantes de tipos de mensagem.
-- Item 15 — simplificar o registry de sessions (ou manter pra StrictMode).
