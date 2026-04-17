@@ -8,9 +8,10 @@ export function useCallConnection(roomId: string) {
   const sessionRef = useRef<CallSession | null>(null)
 
   useEffect(() => {
-    const session = CallSession.acquire(roomId, navigate)
+    const session = new CallSession(roomId, navigate)
     sessionRef.current = session
-    return () => { session.release() }
+    session.start()
+    return () => { session.teardown() }
   }, [roomId, navigate])
 
   const status = useCallStore((s) => s.status)
