@@ -105,7 +105,6 @@ describe('ws.onopen', () => {
     // New WS created — fire onopen
     MockWebSocket.lastInstance!.onopen!(new Event('open'))
     // Trigger another close and check delay reset back to 1000
-    MockWebSocket.lastInstance!.simulateClose(1006)
     const spy = vi.spyOn(globalThis, 'setTimeout')
     MockWebSocket.lastInstance!.simulateClose(1006)
     const delays = spy.mock.calls.map((c) => c[1] as number).filter((d) => d > 0)
