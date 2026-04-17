@@ -4,6 +4,8 @@ import { useCallStore } from '@/store/call'
 import { getPeerId } from '@/lib/peerId'
 import { CLOSE_CODES } from '@/types/signaling'
 import type { ClientMessage, ReceivedMessage } from '@/types/signaling'
+import { reduce } from './signalingReducer'
+import type { SignalingAction } from './signalingReducer'
 
 type NavigateFn = (path: string) => void
 
@@ -148,41 +150,64 @@ export class CallSession {
 
   // ── Signaling message dispatch ──────────────────────────────────────────────
 
+  private getSignalingState() {
+    return {
+      role: this.role,
+      makingOffer: this.makingOffer,
+      signalingState: this.pc?.signalingState ?? null,
+    }
+  }
+
+  private runAction(action: SignalingAction): Promise<void> | void {
+    if (action.type === 'SET_STATUS') {
+      useCallStore.setState({ status: action.status })
+      return
+    }
+    if (action.type === 'SETUP_PC') {
+      this.setupPC(action.role)
+      return
+    }
+    if (action.type === 'RESTART_ICE') {
+      this.pc?.restartIce()
+      return
+    }
+    if (action.type === 'ROLLBACK_AND_RESTART_ICE') {
+      if (this.pc) {
+        return this.pc.setLocalDescription({ type: 'rollback' }).then(() => {
+          this.pc?.restartIce()
+        })
+      }
+      return
+    }
+    if (action.type === 'SEND_WS') {
+      this.send(action.msg)
+      return
+    }
+    if (action.type === 'HANDLE_OFFER') {
+      return this.handleOffer(action.offer)
+    }
+    if (action.type === 'HANDLE_ANSWER') {
+      return this.handleAnswer(action.answer)
+    }
+    if (action.type === 'HANDLE_ICE_CANDIDATE') {
+      return this.handleIceCandidate(action.candidate)
+    }
+    if (action.type === 'WARN') {
+      console.warn('[Signaling]', action.message)
+      return
+    }
+
+    // Exhaustive check: ensures TypeScript warns us if we forget to handle a new SignalingAction type
+    const _exhaustiveCheck: never = action
+  }
+
   private async handleMessage(msg: ReceivedMessage) {
-    // TODO: [Refactor] Essa porra de switch FEDE. Aqui tá basicamente o CORAÇÃO DA APLICAÇÃO. Poderia ter um módulo de handling de mensagens mais bem testado e mais bem documentado. porra, aqui tá uma mistura de webRTC com websocket (imagino que os métodos internos chamados aqui mexam com websocket). Sei lá, não tô gostando dessa mistura de funções puras e impuras. Lógica e IO juntos
-    switch (msg.type) {
-      case 'onopen':
-        // INFO: cara, parece q um dos corações da sala vive aqui dentro hahaha, tanta coisa aninhada. eu acho que modulos mais flat são mais simples e faceis de entender e manter
-        this.setupPC(msg.role)
-        useCallStore.setState({ status: 'waiting' })
-        break
-      case 'enter':
-        // TODO: [Refactor] Porra, gambiarra legal hein. pq eu preciso restartar o ice aqui? pra que botar em rollback se não é stable? essa parece ser a parte mais confusa do método até então
-        useCallStore.setState({ status: 'negotiating' })
-        if (this.role === 'caller' && this.pc) {
-          if (this.pc.signalingState !== 'stable') {
-            await this.pc.setLocalDescription({ type: 'rollback' })
-          }
-          this.pc.restartIce()
-        }
-        break
-      case 'peer-reconnected':
-        // TODO: [Refactor] outra mensagem que só serve pro caller né. Seria bom pensarmos num jeito de diferenciar as mensagens que só são úteis pro caller e quais são uteis pra ambos (eu ACHO que o callee não tem nenhuma mensagem exclusivamente util pra ele né. Além da 'offer'?)
-        useCallStore.setState({ status: 'negotiating' })
-        if (this.role === 'caller') this.pc?.restartIce()
-        break
-      case 'ping':
-        this.send({ type: 'pong' })
-        break
-      case 'offer':
-        await this.handleOffer(msg.offer)
-        break
-      case 'answer':
-        await this.handleAnswer(msg.answer)
-        break
-      case 'ice-candidate':
-        await this.handleIceCandidate(msg.candidate)
-        break
+    const actions = reduce(this.getSignalingState(), msg)
+    for (const action of actions) {
+      const result = this.runAction(action)
+      if (result instanceof Promise) {
+        await result
+      }
     }
   }
 
