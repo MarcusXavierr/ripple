@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CallSession } from '@/lib/call/CallSession'
 import { useCallStore } from '@/store/call'
@@ -22,6 +22,19 @@ export function useCallSession(roomId: string) {
   const isCameraOff = useCallStore((s) => s.isCameraOff)
   const isScreenSharing = useCallStore((s) => s.isScreenSharing)
 
+  const dismissError = useCallback(() => {
+    const err = useCallStore.getState().error
+    useCallStore.setState({ error: null })
+    if (
+      err?.includes('room is full') ||
+      err?.includes("doesn't exist") ||
+      err?.includes('another tab') ||
+      err?.includes('Unable to connect')
+    ) {
+      navigate('/')
+    }
+  }, [navigate])
+
   return {
     localStream,
     remoteStream,
@@ -35,6 +48,6 @@ export function useCallSession(roomId: string) {
     startScreenShare: () => sessionRef.current?.media.startScreenShare(),
     stopScreenShare: () => sessionRef.current?.media.stopScreenShare(),
     hangup: () => sessionRef.current?.hangup(),
-    dismissError: () => sessionRef.current?.dismissError(),
+    dismissError,
   }
 }

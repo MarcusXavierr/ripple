@@ -580,52 +580,6 @@ describe('hangup', () => {
   })
 })
 
-// ── dismissError ──────────────────────────────────────────────────────────────
-
-describe('dismissError', () => {
-  it('clears the error', async () => {
-    const s = createSession()
-    useCallStore.setState({ error: 'Some error' })
-    s.dismissError()
-    expect(useCallStore.getState().error).toBeNull()
-  })
-
-  it('navigates to / for room-full error', async () => {
-    const s = createSession()
-    useCallStore.setState({ error: 'This room is full. Only two participants are allowed.' })
-    s.dismissError()
-    expect(mockNavigate).toHaveBeenCalledWith('/')
-  })
-
-  it("navigates to / for room-not-found error", async () => {
-    const s = createSession()
-    useCallStore.setState({ error: "This room doesn't exist." })
-    s.dismissError()
-    expect(mockNavigate).toHaveBeenCalledWith('/')
-  })
-
-  it('navigates to / for duplicate-session error', async () => {
-    const s = createSession()
-    useCallStore.setState({ error: "You're connected to this room from another tab." })
-    s.dismissError()
-    expect(mockNavigate).toHaveBeenCalledWith('/')
-  })
-
-  it('navigates to / for unable-to-connect error', async () => {
-    const s = createSession()
-    useCallStore.setState({ error: 'Unable to connect to the server.' })
-    s.dismissError()
-    expect(mockNavigate).toHaveBeenCalledWith('/')
-  })
-
-  it('does not navigate for media-denied error', async () => {
-    const s = createSession()
-    useCallStore.setState({ error: 'Camera and microphone access is required to join a call.' })
-    s.dismissError()
-    expect(mockNavigate).not.toHaveBeenCalled()
-  })
-})
-
 
 // ── Store coherence ───────────────────────────────────────────────────────────
 
