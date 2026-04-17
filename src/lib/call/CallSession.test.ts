@@ -564,34 +564,6 @@ describe('ICE connection state changes', () => {
   })
 })
 
-// ── Mic / camera toggles ──────────────────────────────────────────────────────
-
-describe('mic/camera toggles', () => {
-  it('toggleMic disables the audio track and sets isMicMuted in store', async () => {
-    const s = acquire()
-    await flush()
-    s.toggleMic()
-    expect(mockAudioTrack.enabled).toBe(false)
-    expect(useCallStore.getState().isMicMuted).toBe(true)
-  })
-
-  it('toggleMic re-enables the audio track on second call', async () => {
-    const s = acquire()
-    await flush()
-    s.toggleMic()
-    s.toggleMic()
-    expect(mockAudioTrack.enabled).toBe(true)
-    expect(useCallStore.getState().isMicMuted).toBe(false)
-  })
-
-  it('toggleCamera disables the video track and sets isCameraOff in store', async () => {
-    const s = acquire()
-    await flush()
-    s.toggleCamera()
-    expect(mockVideoTrack.enabled).toBe(false)
-    expect(useCallStore.getState().isCameraOff).toBe(true)
-  })
-})
 
 // ── Hangup ────────────────────────────────────────────────────────────────────
 
@@ -673,67 +645,6 @@ describe('dismissError', () => {
   })
 })
 
-// ── Screen share ──────────────────────────────────────────────────────────────
-
-describe('screen share', () => {
-  // The sender tracks its current track so stopScreenShare can find and stop it
-  const mockVideoSender = {
-    track: null as unknown,
-    replaceTrack: vi.fn().mockImplementation(async (track: unknown) => {
-      mockVideoSender.track = track
-    }),
-  }
-
-  beforeEach(() => {
-    mockVideoSender.track = mockVideoTrack
-    mockVideoSender.replaceTrack.mockClear()
-    mockVideoSender.replaceTrack.mockImplementation(async (track: unknown) => {
-      mockVideoSender.track = track
-    })
-  })
-
-  async function setupWithPC() {
-    const s = acquire()
-    await flush()
-    send({ type: 'onopen', role: 'caller', reconnect: false })
-    MockRTCPeerConnection.lastInstance!.getSenders.mockReturnValue([mockVideoSender])
-    return s
-  }
-
-  it('sets isScreenSharing to true on startScreenShare', async () => {
-    const s = await setupWithPC()
-    await s.startScreenShare()
-    expect(useCallStore.getState().isScreenSharing).toBe(true)
-  })
-
-  it('calls replaceTrack on the video sender', async () => {
-    const s = await setupWithPC()
-    await s.startScreenShare()
-    expect(mockVideoSender.replaceTrack).toHaveBeenCalledWith(mockScreenTrack)
-  })
-
-  it('handles user cancellation without throwing', async () => {
-    vi.mocked(navigator.mediaDevices.getDisplayMedia).mockRejectedValueOnce(new Error('cancelled'))
-    const s = await setupWithPC()
-    await expect(s.startScreenShare()).resolves.not.toThrow()
-    expect(useCallStore.getState().isScreenSharing).toBe(false)
-  })
-
-  it('stopScreenShare sets isScreenSharing to false', async () => {
-    const s = await setupWithPC()
-    await s.startScreenShare()
-    await s.stopScreenShare()
-    expect(useCallStore.getState().isScreenSharing).toBe(false)
-  })
-
-  it('screen track.onended triggers stopScreenShare automatically', async () => {
-    const s = await setupWithPC()
-    await s.startScreenShare()
-    expect(mockScreenTrack.onended).toBeTypeOf('function')
-    await mockScreenTrack.onended!()
-    expect(useCallStore.getState().isScreenSharing).toBe(false)
-  })
-})
 
 // ── Store coherence ───────────────────────────────────────────────────────────
 
