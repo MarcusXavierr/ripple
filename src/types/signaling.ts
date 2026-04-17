@@ -17,13 +17,24 @@ export type ClientMessage =
   | { type: "ice-candidate"; candidate: RTCIceCandidateInit }
   | { type: "pong" };
 
-// TODO: [Constants] cara eu acho que as mensagens tbm poderiam ficar juntos dessas contantes
 export const CLOSE_CODES = {
   ROOM_FULL: 4001,
   PEER_DISCONNECTED: 4002,
   ROOM_NOT_FOUND: 4003,
   DUPLICATE_SESSION: 4004,
   PING_TIMEOUT: 4005,
+} as const;
+
+export const MESSAGE_TYPES = {
+  ONOPEN: 'onopen',
+  ENTER: 'enter',
+  ONCLOSE: 'onclose',
+  PEER_RECONNECTED: 'peer-reconnected',
+  PING: 'ping',
+  OFFER: 'offer',
+  ANSWER: 'answer',
+  ICE_CANDIDATE: 'ice-candidate',
+  PONG: 'pong',
 } as const;
 
 // Messages received from the server (server-emitted + relayed from other peer)
