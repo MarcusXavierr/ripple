@@ -11,16 +11,6 @@ const WS_URL = import.meta.env.VITE_WS_URL as string
 const ICE_SERVERS = [{ urls: 'stun:stun.l.google.com:19302' }]
 const MAX_WS_ATTEMPTS = 3
 
-// ── Module-level registry (one session per roomId) ────────────────────────────
-
-interface RegistryEntry {
-  session: CallSession
-  count: number
-  teardownTimer?: ReturnType<typeof setTimeout>
-}
-
-const sessions = new Map<string, RegistryEntry>()
-
 // ── CallSession ───────────────────────────────────────────────────────────────
 
 export class CallSession {
@@ -39,86 +29,47 @@ export class CallSession {
   private wsAttempts = 0
   private reconnectDelay = 1000
   private reconnectTimer?: ReturnType<typeof setTimeout>
+  private alive = true
 
   // ── Lifecycle ───────────────────────────────────────────────────────────────
 
-  // INFO: Aqui então que tudo começa né. esse é o entrypoint
-  static acquire(roomId: string, navigate: NavigateFn): CallSession {
-    // INFO: eu vejo se já tenho uma sessão aberta pra essa sala no frontend. parece que essa session é um singleton
-    const entry = sessions.get(roomId)
-    if (entry) {
-      // TODO: Me explique o que caralhos é esse teardownTimer e por que se ele não for undefined nós rodamos ele e dps botamos como undefined?
-      if (entry.teardownTimer !== undefined) {
-        clearTimeout(entry.teardownTimer)
-        entry.teardownTimer = undefined
-      }
-      // TODO: pra que serve esse count? pro front não temos apenas nós na sala? Já que essa porra veio de um singleton local. eu olhei as chamadas e parece ser um red herring que pode bugar hein. sla
-      entry.count++
-      return entry.session
-    }
-    // TODO: Qual é a pira de todas essa lógica de sessions? se essa porra é um singleton? Eu não consigo entrar em mais de uma sala simultaneamente anyway lol. Tente entender a utilidade disso além de causar bugs. Ela tbm não salva no localStorage tbm né, então não é persistente a F5.
-    const session = new CallSession(roomId, navigate)
-    sessions.set(roomId, { session, count: 1 })
-    session.start()
-    return session
-  }
-
-  release() {
-    const entry = sessions.get(this.roomId)
-    if (!entry) return
-    entry.count--
-    if (entry.count === 0) {
-      entry.teardownTimer = setTimeout(() => {
-        this.teardown()
-        sessions.delete(this.roomId)
-      }, 0)
-    }
-  }
-
-  /** Test helper: clear all sessions without teardown. */
-  static __resetForTests() {
-    sessions.clear()
-  }
-
-  private constructor(roomId: string, navigate: NavigateFn) {
+  constructor(roomId: string, navigate: NavigateFn) {
     this.roomId = roomId
     this.navigate = navigate
     this.media = new MediaController()
   }
 
-  // INFO: Parece que antes de retornar pro hook, essa porra é chamada sync. nós vamos setar alguns estados importantes aqui, como o peerId, pegar as mídias do usuário (voz e video)
-  private async start() {
+  async start() {
     const peerId = getPeerId(this.roomId)
     useCallStore.setState({ peerId })
     try {
       const stream = await this.media.init()
-      if (!sessions.has(this.roomId)) {
+      if (!this.alive) {
         this.media.teardown()
         return
       }
       useCallStore.setState({ localStream: stream as MediaStream })
       this.connectWS()
     } catch (e) {
+      if (!this.alive) return
       console.error("[Media Devices] We can't get the stream", e)
-      if (!sessions.has(this.roomId)) return
       useCallStore.setState({ error: 'Camera and microphone access is required to join a call.' })
     }
   }
 
-  private teardown() {
+  teardown(reason: 'unmount' | 'hangup' = 'unmount') {
+    this.alive = false
     if (this.reconnectTimer !== undefined) clearTimeout(this.reconnectTimer)
     const { remoteStream } = useCallStore.getState()
     remoteStream?.getTracks().forEach((t) => t.stop())
     this.media.teardown()
-    this.ws?.close(1000, 'unmount')
+    this.ws?.close(1000, reason)
     this.pc?.close()
     useCallStore.getState().reset()
   }
 
   // ── WebSocket ───────────────────────────────────────────────────────────────
 
-
-  // INFO: Terceiro método chamado no fluxo. ele vai basicamente abrir a conexão e setar os três hooks de websocket da aplicação
   // TODO: Cara, junto do handleMessage, esse método é um dos coraçÕes da sala né. É aqui que roda o "event loop" do websocket que faz tudo kkkkk
   private connectWS() {
     console.debug("[Websocket] We are connecting to the websocket")
@@ -167,7 +118,7 @@ export class CallSession {
     useCallStore.setState({ status: 'reconnecting' })
     this.reconnectTimer = setTimeout(() => {
       // INFO: Interessante, sem o limit lá em cima essa porra poderia virar uma recursão infinita
-      if (sessions.has(this.roomId)) this.connectWS()
+      if (this.alive) this.connectWS()
     }, this.reconnectDelay)
     // TODO: Nunca chega a 30s se o limite é 3x né. E porra, 30s é tempo pra caralho
     this.reconnectDelay = Math.min(this.reconnectDelay * 2, 30_000)
@@ -333,13 +284,7 @@ export class CallSession {
   // ── Public actions ──────────────────────────────────────────────────────────
 
   hangup() {
-    const { remoteStream } = useCallStore.getState()
-    remoteStream?.getTracks().forEach((t) => t.stop())
-    this.media.teardown()
-    this.ws?.close(1000, 'hangup')
-    this.pc?.close()
-    // Remove from registry so teardown doesn't double-close
-    sessions.delete(this.roomId)
+    this.teardown('hangup')
     this.navigate(`/room/${this.roomId}/ended`)
   }
 
