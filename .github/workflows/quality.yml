@@ -23,7 +23,7 @@ jobs:
         run: bun run lint
 
       - name: Biome format check
-        run: npx biome format --check .
+        run: npx biome format .
 
       - name: TypeScript type check
         run: npx tsc -p tsconfig.app.json --noEmit
