@@ -1,8 +1,8 @@
 // src/pages/Room.tsx
-import { useEffect, useRef } from "react";
-import { useParams } from "react-router-dom";
-import { Mic, MicOff, Monitor, PhoneOff, Video, VideoOff } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useEffect, useRef } from "react"
+import { useParams } from "react-router-dom"
+import { Mic, MicOff, Monitor, PhoneOff, Video, VideoOff } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
@@ -10,9 +10,9 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { useCallSession } from "@/hooks/useCallSession";
-import type { CallStatus } from "@/store/call";
+} from "@/components/ui/dialog"
+import { useCallSession } from "@/hooks/useCallSession"
+import type { CallStatus } from "@/store/call"
 
 const STATUS_LABEL: Record<CallStatus, string> = {
   idle: "Connecting...",
@@ -23,10 +23,10 @@ const STATUS_LABEL: Record<CallStatus, string> = {
   reconnecting: "Reconnecting...",
   disconnected: "Disconnected",
   ended: "Call ended",
-};
+}
 
 export default function Room() {
-  const { id: roomId } = useParams<{ id: string }>();
+  const { id: roomId } = useParams<{ id: string }>()
   const {
     localStream,
     remoteStream,
@@ -41,21 +41,21 @@ export default function Room() {
     toggleMic,
     toggleCamera,
     dismissError,
-  } = useCallSession(roomId!);
+  } = useCallSession(roomId!)
 
-  const localVideoRef = useRef<HTMLVideoElement>(null);
-  const remoteVideoRef = useRef<HTMLVideoElement>(null);
-
-  useEffect(() => {
-    if (localVideoRef.current) localVideoRef.current.srcObject = localStream;
-  }, [localStream]);
+  const localVideoRef = useRef<HTMLVideoElement>(null)
+  const remoteVideoRef = useRef<HTMLVideoElement>(null)
 
   useEffect(() => {
-    if (remoteVideoRef.current) remoteVideoRef.current.srcObject = remoteStream;
-  }, [remoteStream]);
+    if (localVideoRef.current) localVideoRef.current.srcObject = localStream
+  }, [localStream])
+
+  useEffect(() => {
+    if (remoteVideoRef.current) remoteVideoRef.current.srcObject = remoteStream
+  }, [remoteStream])
 
   function handleCopyLink() {
-    void navigator.clipboard.writeText(`${window.location.origin}/room/${roomId}`);
+    void navigator.clipboard.writeText(`${window.location.origin}/room/${roomId}`)
   }
 
   return (
@@ -139,7 +139,7 @@ export default function Room() {
       <Dialog
         open={error !== null}
         onOpenChange={(open) => {
-          if (!open) dismissError();
+          if (!open) dismissError()
         }}
       >
         <DialogContent>
@@ -153,5 +153,5 @@ export default function Room() {
         </DialogContent>
       </Dialog>
     </div>
-  );
+  )
 }

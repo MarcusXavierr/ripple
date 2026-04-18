@@ -1,23 +1,23 @@
-import { describe, it, expect } from "vitest";
-import { reduce } from "./signalingReducer";
-import type { SignalingState, SignalingAction } from "./signalingReducer";
-import type { ReceivedMessage } from "@/types/signaling";
+import { describe, it, expect } from "vitest"
+import { reduce } from "./signalingReducer"
+import type { SignalingState, SignalingAction } from "./signalingReducer"
+import type { ReceivedMessage } from "@/types/signaling"
 
 const base: SignalingState = {
   role: null,
   makingOffer: false,
   signalingState: "stable",
-};
+}
 
 function state(overrides: Partial<SignalingState>): SignalingState {
-  return { ...base, ...overrides };
+  return { ...base, ...overrides }
 }
 
 const cases: Array<{
-  name: string;
-  state: SignalingState;
-  msg: ReceivedMessage;
-  expected: SignalingAction[];
+  name: string
+  state: SignalingState
+  msg: ReceivedMessage
+  expected: SignalingAction[]
 }> = [
   // onopen
   {
@@ -136,10 +136,10 @@ const cases: Array<{
       },
     ],
   },
-];
+]
 
 describe("reduce", () => {
   it.each(cases)("$name", ({ state: s, msg, expected }) => {
-    expect(reduce(s, msg)).toEqual(expected);
-  });
-});
+    expect(reduce(s, msg)).toEqual(expected)
+  })
+})

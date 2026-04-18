@@ -1,4 +1,4 @@
-import { create } from "zustand";
+import { create } from "zustand"
 
 export type CallStatus =
   | "idle"
@@ -8,21 +8,21 @@ export type CallStatus =
   | "connected"
   | "reconnecting"
   | "disconnected"
-  | "ended";
+  | "ended"
 
 type CallStore = {
-  peerId: string;
-  pc: RTCPeerConnection | null;
-  role: "caller" | "callee" | null;
-  localStream: MediaStream | null;
-  remoteStream: MediaStream | null;
-  isScreenSharing: boolean;
-  isMicMuted: boolean;
-  isCameraOff: boolean;
-  status: CallStatus;
-  error: string | null;
-  reset: () => void;
-};
+  peerId: string
+  pc: RTCPeerConnection | null
+  role: "caller" | "callee" | null
+  localStream: MediaStream | null
+  remoteStream: MediaStream | null
+  isScreenSharing: boolean
+  isMicMuted: boolean
+  isCameraOff: boolean
+  status: CallStatus
+  error: string | null
+  reset: () => void
+}
 
 const INITIAL_STATE = {
   peerId: "",
@@ -35,9 +35,9 @@ const INITIAL_STATE = {
   isCameraOff: false,
   status: "idle" as CallStatus,
   error: null,
-};
+}
 
 export const useCallStore = create<CallStore>()((set) => ({
   ...INITIAL_STATE,
   reset: () => set(INITIAL_STATE),
-}));
+}))

@@ -1,32 +1,32 @@
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { generateRoomSlug, parseRoomInput } from "@/lib/room";
-import { Video } from "lucide-react";
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { generateRoomSlug, parseRoomInput } from "@/lib/room"
+import { Video } from "lucide-react"
+import { useState } from "react"
+import { useNavigate } from "react-router-dom"
 
 export default function Home() {
-  const navigate = useNavigate();
-  const [joinInput, setJoinInput] = useState("");
-  const [joinError, setJoinError] = useState<string | null>(null);
+  const navigate = useNavigate()
+  const [joinInput, setJoinInput] = useState("")
+  const [joinError, setJoinError] = useState<string | null>(null)
 
   function handleCreateRoom() {
-    navigate(`/room/${generateRoomSlug()}`);
+    navigate(`/room/${generateRoomSlug()}`)
   }
 
   function handleJoinInputChange(e: React.ChangeEvent<HTMLInputElement>) {
-    setJoinInput(e.target.value);
-    if (joinError) setJoinError(null);
+    setJoinInput(e.target.value)
+    if (joinError) setJoinError(null)
   }
 
   function handleJoin(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const roomId = parseRoomInput(joinInput);
+    e.preventDefault()
+    const roomId = parseRoomInput(joinInput)
     if (!roomId) {
-      setJoinError("Enter a valid room ID or link");
-      return;
+      setJoinError("Enter a valid room ID or link")
+      return
     }
-    navigate(`/room/${roomId}`);
+    navigate(`/room/${roomId}`)
   }
 
   return (
@@ -82,5 +82,5 @@ export default function Home() {
         </form>
       </div>
     </main>
-  );
+  )
 }

@@ -1,9 +1,9 @@
-import { useNavigate, useParams } from "react-router-dom";
-import { Button } from "@/components/ui/button";
+import { useNavigate, useParams } from "react-router-dom"
+import { Button } from "@/components/ui/button"
 
 export default function CallEnded() {
-  const { id: roomId } = useParams<{ id: string }>();
-  const navigate = useNavigate();
+  const { id: roomId } = useParams<{ id: string }>()
+  const navigate = useNavigate()
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-6 bg-background">
@@ -15,5 +15,5 @@ export default function CallEnded() {
         </Button>
       </div>
     </main>
-  );
+  )
 }
