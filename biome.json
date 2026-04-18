@@ -7,6 +7,12 @@
       "correctness": {
         "noUnusedVariables": "error",
         "useExhaustiveDependencies": "warn"
+      },
+      "suspicious": {
+        "useIterableCallbackReturn": "off"
+      },
+      "a11y": {
+        "useMediaCaption": "off"
       }
     }
   },
@@ -20,7 +26,7 @@
     "formatter": {
       "quoteStyle": "double",
       "trailingCommas": "es5",
-      "semicolons": "always"
+      "semicolons": "asNeeded"
     }
   },
   "assist": {

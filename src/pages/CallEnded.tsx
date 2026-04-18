@@ -1,5 +1,5 @@
-import { useNavigate, useParams } from 'react-router-dom'
-import { Button } from '@/components/ui/button'
+import { useNavigate, useParams } from "react-router-dom"
+import { Button } from "@/components/ui/button"
 
 export default function CallEnded() {
   const { id: roomId } = useParams<{ id: string }>()
@@ -10,7 +10,7 @@ export default function CallEnded() {
       <h1 className="text-2xl font-semibold">Call ended</h1>
       <div className="flex gap-3">
         <Button onClick={() => navigate(`/room/${roomId}`)}>Rejoin</Button>
-        <Button variant="outline" onClick={() => navigate('/')}>
+        <Button variant="outline" onClick={() => navigate("/")}>
           Return home
         </Button>
       </div>

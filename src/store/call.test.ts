@@ -1,41 +1,37 @@
-import { useCallStore } from "./call";
+import { beforeEach, describe, expect, it } from "vitest"
+import { useCallStore } from "./call"
 
 describe("useCallStore", () => {
-  it("initializes with idle status", () => {
-    const state = useCallStore.getState();
-    expect(state.status).toBe("idle");
-  });
-
-  it("initializes with null connection values", () => {
-    const state = useCallStore.getState();
-    expect(state.ws).toBeNull();
-    expect(state.pc).toBeNull();
-    expect(state.role).toBeNull();
-  });
-
-  it("initializes with null media values", () => {
-    const state = useCallStore.getState();
-    expect(state.localStream).toBeNull();
-    expect(state.remoteStream).toBeNull();
-    expect(state.isScreenSharing).toBe(false);
-  });
-
-  it("initializes with no error", () => {
-    const state = useCallStore.getState();
-    expect(state.error).toBeNull();
-  });
-
-  it("initializes with empty peerId", () => {
-    const state = useCallStore.getState();
-    expect(typeof state.peerId).toBe("string");
-  });
-
-  it('reset restores initial state', () => {
-    useCallStore.setState({ status: 'connected', error: 'oops', role: 'caller' })
+  beforeEach(() => {
     useCallStore.getState().reset()
-    const state = useCallStore.getState()
-    expect(state.status).toBe('idle')
-    expect(state.error).toBeNull()
-    expect(state.role).toBeNull()
   })
-});
+
+  it("accepts ended as a valid status", () => {
+    useCallStore.setState({ status: "ended" })
+    expect(useCallStore.getState().status).toBe("ended")
+  })
+
+  it("reset() restores every field to its initial value", () => {
+    useCallStore.setState({
+      status: "connected",
+      error: "oops",
+      role: "caller",
+      isScreenSharing: true,
+      isMicMuted: true,
+      isCameraOff: true,
+      peerId: "abc",
+    })
+    useCallStore.getState().reset()
+    const s = useCallStore.getState()
+    expect(s.status).toBe("idle")
+    expect(s.error).toBeNull()
+    expect(s.role).toBeNull()
+    expect(s.localStream).toBeNull()
+    expect(s.remoteStream).toBeNull()
+    expect(s.pc).toBeNull()
+    expect(s.isScreenSharing).toBe(false)
+    expect(s.isMicMuted).toBe(false)
+    expect(s.isCameraOff).toBe(false)
+    expect(s.peerId).toBe("")
+  })
+})

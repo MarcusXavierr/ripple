@@ -1,7 +1,7 @@
-import { BrowserRouter, Route, Routes } from 'react-router-dom'
-import CallEnded from './pages/CallEnded'
-import Home from './pages/Home'
-import Room from './pages/Room'
+import { BrowserRouter, Route, Routes } from "react-router-dom"
+import CallEnded from "./pages/CallEnded"
+import Home from "./pages/Home"
+import Room from "./pages/Room"
 
 export default function Router() {
   return (

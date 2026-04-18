@@ -1,12 +1,17 @@
 const ADJECTIVES = [
-  'amber', 'azure', 'cobalt', 'coral', 'crimson',
-  'golden', 'jade', 'olive', 'silver', 'teal',
+  "amber",
+  "azure",
+  "cobalt",
+  "coral",
+  "crimson",
+  "golden",
+  "jade",
+  "olive",
+  "silver",
+  "teal",
 ]
 
-const NOUNS = [
-  'bear', 'eagle', 'falcon', 'fox', 'hawk',
-  'lion', 'lynx', 'otter', 'tiger', 'wolf',
-]
+const NOUNS = ["bear", "eagle", "falcon", "fox", "hawk", "lion", "lynx", "otter", "tiger", "wolf"]
 
 export function generateRoomSlug(): string {
   const adj = ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)]
@@ -20,7 +25,7 @@ export function parseRoomInput(input: string): string | null {
   if (!trimmed) return null
 
   // Full URL — extract the segment after /room/
-  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
     const match = trimmed.match(/\/room\/([^/?#]+)/)
     return match ? match[1] : null
   }

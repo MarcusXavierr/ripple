@@ -31,12 +31,14 @@ export class MockWebSocket {
 
   /** Simulate a server message arriving on this WS. */
   receive(data: unknown) {
-    this.onmessage!(new MessageEvent('message', { data: JSON.stringify(data) }))
+    if (!this.onmessage) throw new Error("onmessage not set on MockWebSocket")
+    this.onmessage(new MessageEvent("message", { data: JSON.stringify(data) }))
   }
 
   /** Simulate the WS closing. */
   simulateClose(code: number) {
-    this.onclose!(new CloseEvent('close', { code, wasClean: code === 1000 }))
+    if (!this.onclose) throw new Error("onclose not set on MockWebSocket")
+    this.onclose(new CloseEvent("close", { code, wasClean: code === 1000 }))
   }
 }
 
@@ -49,8 +51,8 @@ export class MockRTCPeerConnection {
   }
 
   localDescription: RTCSessionDescriptionInit | null = null
-  iceConnectionState = 'new'
-  signalingState = 'stable'
+  iceConnectionState = "new"
+  signalingState = "stable"
   onicecandidate: ((e: RTCPeerConnectionIceEvent) => void) | null = null
   ontrack: ((e: RTCTrackEvent) => void) | null = null
   oniceconnectionstatechange: (() => void) | null = null
@@ -59,11 +61,11 @@ export class MockRTCPeerConnection {
   addTrack = vi.fn()
   getSenders = vi.fn().mockReturnValue([])
   setLocalDescription = vi.fn().mockImplementation(async (desc?: RTCSessionDescriptionInit) => {
-    if (desc?.type === 'rollback') {
+    if (desc?.type === "rollback") {
       this.localDescription = null
-      this.signalingState = 'stable'
+      this.signalingState = "stable"
     } else {
-      this.localDescription = desc ?? { type: 'offer', sdp: 'mock-sdp' }
+      this.localDescription = desc ?? { type: "offer", sdp: "mock-sdp" }
     }
   })
   setRemoteDescription = vi.fn().mockResolvedValue(undefined)
@@ -79,13 +81,13 @@ export class MockRTCPeerConnection {
 // ── Media mocks ───────────────────────────────────────────────────────────────
 
 export const mockAudioTrack = {
-  kind: 'audio' as const,
+  kind: "audio" as const,
   enabled: true,
   stop: vi.fn(),
 }
 
 export const mockVideoTrack = {
-  kind: 'video' as const,
+  kind: "video" as const,
   enabled: true,
   stop: vi.fn(),
   onended: null as (() => void) | null,
@@ -98,7 +100,7 @@ export const mockStream = {
 }
 
 export const mockScreenTrack = {
-  kind: 'video' as const,
+  kind: "video" as const,
   stop: vi.fn(),
   onended: null as (() => void) | null,
 }
@@ -124,10 +126,10 @@ export function resetMocks() {
 
   // Re-apply mock implementations after vi.clearAllMocks may have wiped them
   ;(navigator.mediaDevices.getUserMedia as ReturnType<typeof vi.fn>).mockResolvedValue(
-    mockStream as unknown as MediaStream,
+    mockStream as unknown as MediaStream
   )
   ;(navigator.mediaDevices.getDisplayMedia as ReturnType<typeof vi.fn>).mockResolvedValue(
-    mockScreenStream as unknown as MediaStream,
+    mockScreenStream as unknown as MediaStream
   )
 }
 
@@ -136,7 +138,7 @@ export function installGlobalMocks() {
   globalThis.WebSocket = MockWebSocket as unknown as typeof WebSocket
   globalThis.RTCPeerConnection = MockRTCPeerConnection as unknown as typeof RTCPeerConnection
 
-  Object.defineProperty(navigator, 'mediaDevices', {
+  Object.defineProperty(navigator, "mediaDevices", {
     value: {
       getUserMedia: vi.fn().mockResolvedValue(mockStream as unknown as MediaStream),
       getDisplayMedia: vi.fn().mockResolvedValue(mockScreenStream as unknown as MediaStream),

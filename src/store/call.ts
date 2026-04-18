@@ -1,19 +1,19 @@
-import { create } from 'zustand'
+import { create } from "zustand"
 
 export type CallStatus =
-  | 'idle'
-  | 'connecting'
-  | 'waiting'
-  | 'negotiating'
-  | 'connected'
-  | 'reconnecting'
-  | 'disconnected'
+  | "idle"
+  | "connecting"
+  | "waiting"
+  | "negotiating"
+  | "connected"
+  | "reconnecting"
+  | "disconnected"
+  | "ended"
 
 type CallStore = {
   peerId: string
-  ws: WebSocket | null
   pc: RTCPeerConnection | null
-  role: 'caller' | 'callee' | null
+  role: "caller" | "callee" | null
   localStream: MediaStream | null
   remoteStream: MediaStream | null
   isScreenSharing: boolean
@@ -25,8 +25,7 @@ type CallStore = {
 }
 
 const INITIAL_STATE = {
-  peerId: '',
-  ws: null,
+  peerId: "",
   pc: null,
   role: null,
   localStream: null,
@@ -34,7 +33,7 @@ const INITIAL_STATE = {
   isScreenSharing: false,
   isMicMuted: false,
   isCameraOff: false,
-  status: 'idle' as CallStatus,
+  status: "idle" as CallStatus,
   error: null,
 }
 

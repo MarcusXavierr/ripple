@@ -1,13 +1,13 @@
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { generateRoomSlug, parseRoomInput } from '@/lib/room'
-import { Video } from 'lucide-react'
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Video } from "lucide-react"
+import { useState } from "react"
+import { useNavigate } from "react-router-dom"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { generateRoomSlug, parseRoomInput } from "@/lib/room"
 
 export default function Home() {
   const navigate = useNavigate()
-  const [joinInput, setJoinInput] = useState('')
+  const [joinInput, setJoinInput] = useState("")
   const [joinError, setJoinError] = useState<string | null>(null)
 
   function handleCreateRoom() {
@@ -23,7 +23,7 @@ export default function Home() {
     e.preventDefault()
     const roomId = parseRoomInput(joinInput)
     if (!roomId) {
-      setJoinError('Enter a valid room ID or link')
+      setJoinError("Enter a valid room ID or link")
       return
     }
     navigate(`/room/${roomId}`)
@@ -38,9 +38,7 @@ export default function Home() {
             <Video className="size-7 text-primary" aria-hidden="true" />
             <h1 className="text-3xl font-semibold tracking-tight">Ripple</h1>
           </div>
-          <p className="text-sm text-muted-foreground">
-            P2P video calls. No accounts. No history.
-          </p>
+          <p className="text-sm text-muted-foreground">P2P video calls. No accounts. No history.</p>
         </div>
 
         {/* Create room */}
@@ -58,10 +56,7 @@ export default function Home() {
         {/* Join form */}
         <form onSubmit={handleJoin} noValidate className="space-y-3">
           <div className="space-y-1.5">
-            <label
-              htmlFor="room-input"
-              className="text-sm font-medium text-foreground"
-            >
+            <label htmlFor="room-input" className="text-sm font-medium text-foreground">
               Room ID or link
             </label>
             <Input
@@ -72,15 +67,11 @@ export default function Home() {
               placeholder="coral-tiger-42"
               autoComplete="off"
               spellCheck={false}
-              aria-describedby={joinError ? 'room-input-error' : undefined}
+              aria-describedby={joinError ? "room-input-error" : undefined}
               aria-invalid={joinError ? true : undefined}
             />
             {joinError ? (
-              <p
-                id="room-input-error"
-                role="alert"
-                className="text-xs text-destructive"
-              >
+              <p id="room-input-error" role="alert" className="text-xs text-destructive">
                 {joinError}
               </p>
             ) : null}
