@@ -108,7 +108,7 @@ describe('MediaController', () => {
         }),
       }
       const pc = new MockRTCPeerConnection() as unknown as RTCPeerConnection
-      pc.getSenders.mockReturnValue([mockVideoSender])
+      vi.mocked(pc.getSenders).mockReturnValue([mockVideoSender as unknown as RTCRtpSender])
       media.attachPC(pc)
     })
 
@@ -150,7 +150,7 @@ describe('MediaController', () => {
         }),
       }
       const pc = new MockRTCPeerConnection() as unknown as RTCPeerConnection
-      pc.getSenders.mockReturnValue([mockVideoSender])
+      vi.mocked(pc.getSenders).mockReturnValue([mockVideoSender as unknown as RTCRtpSender])
       media.attachPC(pc)
       await media.startScreenShare()
     })

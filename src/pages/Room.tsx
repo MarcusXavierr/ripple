@@ -22,6 +22,7 @@ const STATUS_LABEL: Record<CallStatus, string> = {
   connected: 'Connected',
   reconnecting: 'Reconnecting...',
   disconnected: 'Disconnected',
+  ended: 'Call ended',
 }
 
 export default function Room() {

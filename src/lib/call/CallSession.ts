@@ -142,6 +142,7 @@ export class CallSession {
     }
 
     const _exhaustiveCheck: never = action
+    void _exhaustiveCheck
   }
 
   private async handleMessage(msg: ReceivedMessage) {
