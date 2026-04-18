@@ -24,20 +24,20 @@ export const CLOSE_CODES = {
 } as const;
 
 export const MESSAGE_TYPES = {
-  ONOPEN: 'onopen',
-  ENTER: 'enter',
-  ONCLOSE: 'onclose',
-  PEER_RECONNECTED: 'peer-reconnected',
-  PING: 'ping',
-  OFFER: 'offer',
-  ANSWER: 'answer',
-  ICE_CANDIDATE: 'ice-candidate',
-  PONG: 'pong',
+  ONOPEN: "onopen",
+  ENTER: "enter",
+  ONCLOSE: "onclose",
+  PEER_RECONNECTED: "peer-reconnected",
+  PING: "ping",
+  OFFER: "offer",
+  ANSWER: "answer",
+  ICE_CANDIDATE: "ice-candidate",
+  PONG: "pong",
 } as const;
 
 // Messages received from the server (server-emitted + relayed from other peer)
 export type ReceivedMessage =
   | ServerMessage
-  | { type: 'offer'; offer: RTCSessionDescriptionInit }
-  | { type: 'answer'; answer: RTCSessionDescriptionInit }
-  | { type: 'ice-candidate'; candidate: RTCIceCandidateInit }
+  | { type: "offer"; offer: RTCSessionDescriptionInit }
+  | { type: "answer"; answer: RTCSessionDescriptionInit }
+  | { type: "ice-candidate"; candidate: RTCIceCandidateInit };

@@ -1,8 +1,8 @@
 // src/pages/Room.tsx
-import { useEffect, useRef } from 'react'
-import { useParams } from 'react-router-dom'
-import { Mic, MicOff, Monitor, PhoneOff, Video, VideoOff } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { useEffect, useRef } from "react";
+import { useParams } from "react-router-dom";
+import { Mic, MicOff, Monitor, PhoneOff, Video, VideoOff } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -10,23 +10,23 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog'
-import { useCallSession } from '@/hooks/useCallSession'
-import type { CallStatus } from '@/store/call'
+} from "@/components/ui/dialog";
+import { useCallSession } from "@/hooks/useCallSession";
+import type { CallStatus } from "@/store/call";
 
 const STATUS_LABEL: Record<CallStatus, string> = {
-  idle: 'Connecting...',
-  connecting: 'Connecting...',
-  waiting: 'Waiting for peer...',
-  negotiating: 'Connecting...',
-  connected: 'Connected',
-  reconnecting: 'Reconnecting...',
-  disconnected: 'Disconnected',
-  ended: 'Call ended',
-}
+  idle: "Connecting...",
+  connecting: "Connecting...",
+  waiting: "Waiting for peer...",
+  negotiating: "Connecting...",
+  connected: "Connected",
+  reconnecting: "Reconnecting...",
+  disconnected: "Disconnected",
+  ended: "Call ended",
+};
 
 export default function Room() {
-  const { id: roomId } = useParams<{ id: string }>()
+  const { id: roomId } = useParams<{ id: string }>();
   const {
     localStream,
     remoteStream,
@@ -41,21 +41,21 @@ export default function Room() {
     toggleMic,
     toggleCamera,
     dismissError,
-  } = useCallSession(roomId!)
+  } = useCallSession(roomId!);
 
-  const localVideoRef = useRef<HTMLVideoElement>(null)
-  const remoteVideoRef = useRef<HTMLVideoElement>(null)
-
-  useEffect(() => {
-    if (localVideoRef.current) localVideoRef.current.srcObject = localStream
-  }, [localStream])
+  const localVideoRef = useRef<HTMLVideoElement>(null);
+  const remoteVideoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
-    if (remoteVideoRef.current) remoteVideoRef.current.srcObject = remoteStream
-  }, [remoteStream])
+    if (localVideoRef.current) localVideoRef.current.srcObject = localStream;
+  }, [localStream]);
+
+  useEffect(() => {
+    if (remoteVideoRef.current) remoteVideoRef.current.srcObject = remoteStream;
+  }, [remoteStream]);
 
   function handleCopyLink() {
-    void navigator.clipboard.writeText(`${window.location.origin}/room/${roomId}`)
+    void navigator.clipboard.writeText(`${window.location.origin}/room/${roomId}`);
   }
 
   return (
@@ -70,7 +70,7 @@ export default function Room() {
       />
 
       {/* Waiting overlay */}
-      {status === 'waiting' && (
+      {status === "waiting" && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 text-white">
           <p className="text-xl font-medium">Waiting for someone to join...</p>
           <div className="flex items-center gap-2">
@@ -95,7 +95,11 @@ export default function Room() {
       {/* Status bar */}
       <div className="absolute left-1/2 top-3 flex -translate-x-1/2 items-center gap-2 rounded-full bg-black/60 px-3 py-1 text-xs text-white">
         <span>{STATUS_LABEL[status]}</span>
-        <button type="button" onClick={handleCopyLink} className="font-mono text-white/60 hover:text-white">
+        <button
+          type="button"
+          onClick={handleCopyLink}
+          className="font-mono text-white/60 hover:text-white"
+        >
           {roomId}
         </button>
       </div>
@@ -106,7 +110,7 @@ export default function Room() {
           variant="outline"
           size="icon"
           onClick={toggleMic}
-          aria-label={isMicMuted ? 'Unmute' : 'Mute'}
+          aria-label={isMicMuted ? "Unmute" : "Mute"}
         >
           {isMicMuted ? <MicOff /> : <Mic />}
         </Button>
@@ -114,7 +118,7 @@ export default function Room() {
           variant="outline"
           size="icon"
           onClick={toggleCamera}
-          aria-label={isCameraOff ? 'Enable camera' : 'Disable camera'}
+          aria-label={isCameraOff ? "Enable camera" : "Disable camera"}
         >
           {isCameraOff ? <VideoOff /> : <Video />}
         </Button>
@@ -122,7 +126,7 @@ export default function Room() {
           variant="outline"
           size="icon"
           onClick={isScreenSharing ? stopScreenShare : startScreenShare}
-          aria-label={isScreenSharing ? 'Stop sharing' : 'Share screen'}
+          aria-label={isScreenSharing ? "Stop sharing" : "Share screen"}
         >
           <Monitor />
         </Button>
@@ -132,7 +136,12 @@ export default function Room() {
       </div>
 
       {/* Error modal */}
-      <Dialog open={error !== null} onOpenChange={(open) => { if (!open) dismissError() }}>
+      <Dialog
+        open={error !== null}
+        onOpenChange={(open) => {
+          if (!open) dismissError();
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Error</DialogTitle>
@@ -144,5 +153,5 @@ export default function Room() {
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }

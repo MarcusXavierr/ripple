@@ -1,6 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { useCallStore } from '@/store/call'
-import { MediaController } from './MediaController'
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { useCallStore } from "@/store/call";
+import { MediaController } from "./MediaController";
 import {
   MockRTCPeerConnection,
   installGlobalMocks,
@@ -9,166 +9,169 @@ import {
   mockStream,
   mockVideoTrack,
   resetMocks,
-} from './__tests__/mocks'
+} from "./__tests__/mocks";
 
-installGlobalMocks()
+installGlobalMocks();
 
-describe('MediaController', () => {
-  let media: MediaController
+describe("MediaController", () => {
+  let media: MediaController;
 
   beforeEach(() => {
-    media = new MediaController()
-    useCallStore.getState().reset()
-    resetMocks()
-  })
+    media = new MediaController();
+    useCallStore.getState().reset();
+    resetMocks();
+  });
 
-  describe('init()', () => {
-    it('calls getUserMedia with video and audio', async () => {
-      await media.init()
-      expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledWith({ video: true, audio: true })
-    })
+  describe("init()", () => {
+    it("calls getUserMedia with video and audio", async () => {
+      await media.init();
+      expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledWith({
+        video: true,
+        audio: true,
+      });
+    });
 
-    it('returns the acquired stream', async () => {
-      const result = await media.init()
-      expect(result).toBe(mockStream)
-    })
-  })
+    it("returns the acquired stream", async () => {
+      const result = await media.init();
+      expect(result).toBe(mockStream);
+    });
+  });
 
-  describe('attachPC()', () => {
-    it('adds all stream tracks to the peer connection', async () => {
-      await media.init()
-      const pc = new MockRTCPeerConnection() as unknown as RTCPeerConnection
-      media.attachPC(pc)
-      expect(pc.addTrack).toHaveBeenCalledTimes(2)
-    })
+  describe("attachPC()", () => {
+    it("adds all stream tracks to the peer connection", async () => {
+      await media.init();
+      const pc = new MockRTCPeerConnection() as unknown as RTCPeerConnection;
+      media.attachPC(pc);
+      expect(pc.addTrack).toHaveBeenCalledTimes(2);
+    });
 
-    it('is a no-op when stream has not been initialized', () => {
-      const pc = new MockRTCPeerConnection() as unknown as RTCPeerConnection
-      media.attachPC(pc)
-      expect(pc.addTrack).not.toHaveBeenCalled()
-    })
-  })
+    it("is a no-op when stream has not been initialized", () => {
+      const pc = new MockRTCPeerConnection() as unknown as RTCPeerConnection;
+      media.attachPC(pc);
+      expect(pc.addTrack).not.toHaveBeenCalled();
+    });
+  });
 
-  describe('toggleMic()', () => {
-    it('disables the audio track and sets isMicMuted=true in store', async () => {
-      await media.init()
-      media.toggleMic()
-      expect(mockAudioTrack.enabled).toBe(false)
-      expect(useCallStore.getState().isMicMuted).toBe(true)
-    })
+  describe("toggleMic()", () => {
+    it("disables the audio track and sets isMicMuted=true in store", async () => {
+      await media.init();
+      media.toggleMic();
+      expect(mockAudioTrack.enabled).toBe(false);
+      expect(useCallStore.getState().isMicMuted).toBe(true);
+    });
 
-    it('re-enables track on second call and sets isMicMuted=false', async () => {
-      await media.init()
-      media.toggleMic()
-      media.toggleMic()
-      expect(mockAudioTrack.enabled).toBe(true)
-      expect(useCallStore.getState().isMicMuted).toBe(false)
-    })
+    it("re-enables track on second call and sets isMicMuted=false", async () => {
+      await media.init();
+      media.toggleMic();
+      media.toggleMic();
+      expect(mockAudioTrack.enabled).toBe(true);
+      expect(useCallStore.getState().isMicMuted).toBe(false);
+    });
 
-    it('does not throw when stream is not initialized', () => {
-      expect(() => media.toggleMic()).not.toThrow()
-    })
-  })
+    it("does not throw when stream is not initialized", () => {
+      expect(() => media.toggleMic()).not.toThrow();
+    });
+  });
 
-  describe('toggleCamera()', () => {
-    it('disables the video track and sets isCameraOff=true in store', async () => {
-      await media.init()
-      media.toggleCamera()
-      expect(mockVideoTrack.enabled).toBe(false)
-      expect(useCallStore.getState().isCameraOff).toBe(true)
-    })
+  describe("toggleCamera()", () => {
+    it("disables the video track and sets isCameraOff=true in store", async () => {
+      await media.init();
+      media.toggleCamera();
+      expect(mockVideoTrack.enabled).toBe(false);
+      expect(useCallStore.getState().isCameraOff).toBe(true);
+    });
 
-    it('does not throw when stream is not initialized', () => {
-      expect(() => media.toggleCamera()).not.toThrow()
-    })
-  })
+    it("does not throw when stream is not initialized", () => {
+      expect(() => media.toggleCamera()).not.toThrow();
+    });
+  });
 
-  describe('teardown()', () => {
-    it('stops all tracks', async () => {
-      await media.init()
-      media.teardown()
-      expect(mockAudioTrack.stop).toHaveBeenCalled()
-      expect(mockVideoTrack.stop).toHaveBeenCalled()
-    })
+  describe("teardown()", () => {
+    it("stops all tracks", async () => {
+      await media.init();
+      media.teardown();
+      expect(mockAudioTrack.stop).toHaveBeenCalled();
+      expect(mockVideoTrack.stop).toHaveBeenCalled();
+    });
 
-    it('does not throw when called before init', () => {
-      expect(() => media.teardown()).not.toThrow()
-    })
-  })
+    it("does not throw when called before init", () => {
+      expect(() => media.teardown()).not.toThrow();
+    });
+  });
 
-  describe('startScreenShare()', () => {
-    let mockVideoSender: { track: unknown; replaceTrack: ReturnType<typeof vi.fn> }
+  describe("startScreenShare()", () => {
+    let mockVideoSender: { track: unknown; replaceTrack: ReturnType<typeof vi.fn> };
 
     beforeEach(async () => {
-      await media.init()
+      await media.init();
       mockVideoSender = {
         track: mockVideoTrack,
         replaceTrack: vi.fn().mockImplementation(async (track: unknown) => {
-          mockVideoSender.track = track
+          mockVideoSender.track = track;
         }),
-      }
-      const pc = new MockRTCPeerConnection() as unknown as RTCPeerConnection
-      vi.mocked(pc.getSenders).mockReturnValue([mockVideoSender as unknown as RTCRtpSender])
-      media.attachPC(pc)
-    })
+      };
+      const pc = new MockRTCPeerConnection() as unknown as RTCPeerConnection;
+      vi.mocked(pc.getSenders).mockReturnValue([mockVideoSender as unknown as RTCRtpSender]);
+      media.attachPC(pc);
+    });
 
-    it('replaces the video sender track with the screen track', async () => {
-      await media.startScreenShare()
-      expect(mockVideoSender.replaceTrack).toHaveBeenCalledWith(mockScreenTrack)
-    })
+    it("replaces the video sender track with the screen track", async () => {
+      await media.startScreenShare();
+      expect(mockVideoSender.replaceTrack).toHaveBeenCalledWith(mockScreenTrack);
+    });
 
-    it('sets isScreenSharing to true in store', async () => {
-      await media.startScreenShare()
-      expect(useCallStore.getState().isScreenSharing).toBe(true)
-    })
+    it("sets isScreenSharing to true in store", async () => {
+      await media.startScreenShare();
+      expect(useCallStore.getState().isScreenSharing).toBe(true);
+    });
 
-    it('is a no-op when no PC has been attached', async () => {
-      const mediaWithoutPC = new MediaController()
-      await mediaWithoutPC.init()
-      await mediaWithoutPC.startScreenShare()
-      expect(useCallStore.getState().isScreenSharing).toBe(false)
-    })
+    it("is a no-op when no PC has been attached", async () => {
+      const mediaWithoutPC = new MediaController();
+      await mediaWithoutPC.init();
+      await mediaWithoutPC.startScreenShare();
+      expect(useCallStore.getState().isScreenSharing).toBe(false);
+    });
 
-    it('does not throw when user cancels the screen picker', async () => {
+    it("does not throw when user cancels the screen picker", async () => {
       vi.mocked(navigator.mediaDevices.getDisplayMedia).mockRejectedValueOnce(
-        new DOMException('cancelled', 'NotAllowedError')
-      )
-      await expect(media.startScreenShare()).resolves.not.toThrow()
-      expect(useCallStore.getState().isScreenSharing).toBe(false)
-    })
-  })
+        new DOMException("cancelled", "NotAllowedError")
+      );
+      await expect(media.startScreenShare()).resolves.not.toThrow();
+      expect(useCallStore.getState().isScreenSharing).toBe(false);
+    });
+  });
 
-  describe('stopScreenShare()', () => {
-    let mockVideoSender: { track: unknown; replaceTrack: ReturnType<typeof vi.fn> }
+  describe("stopScreenShare()", () => {
+    let mockVideoSender: { track: unknown; replaceTrack: ReturnType<typeof vi.fn> };
 
     beforeEach(async () => {
-      await media.init()
+      await media.init();
       mockVideoSender = {
         track: mockVideoTrack,
         replaceTrack: vi.fn().mockImplementation(async (track: unknown) => {
-          mockVideoSender.track = track
+          mockVideoSender.track = track;
         }),
-      }
-      const pc = new MockRTCPeerConnection() as unknown as RTCPeerConnection
-      vi.mocked(pc.getSenders).mockReturnValue([mockVideoSender as unknown as RTCRtpSender])
-      media.attachPC(pc)
-      await media.startScreenShare()
-    })
+      };
+      const pc = new MockRTCPeerConnection() as unknown as RTCPeerConnection;
+      vi.mocked(pc.getSenders).mockReturnValue([mockVideoSender as unknown as RTCRtpSender]);
+      media.attachPC(pc);
+      await media.startScreenShare();
+    });
 
-    it('sets isScreenSharing to false', async () => {
-      await media.stopScreenShare()
-      expect(useCallStore.getState().isScreenSharing).toBe(false)
-    })
+    it("sets isScreenSharing to false", async () => {
+      await media.stopScreenShare();
+      expect(useCallStore.getState().isScreenSharing).toBe(false);
+    });
 
-    it('replaces the screen track with the camera track on the sender', async () => {
-      await media.stopScreenShare()
-      expect(mockVideoSender.replaceTrack).toHaveBeenLastCalledWith(mockVideoTrack)
-    })
+    it("replaces the screen track with the camera track on the sender", async () => {
+      await media.stopScreenShare();
+      expect(mockVideoSender.replaceTrack).toHaveBeenLastCalledWith(mockVideoTrack);
+    });
 
-    it('sets isScreenSharing=false even when replaceTrack throws', async () => {
-      mockVideoSender.replaceTrack.mockRejectedValueOnce(new Error('track error'))
-      await media.stopScreenShare()
-      expect(useCallStore.getState().isScreenSharing).toBe(false)
-    })
-  })
-})
+    it("sets isScreenSharing=false even when replaceTrack throws", async () => {
+      mockVideoSender.replaceTrack.mockRejectedValueOnce(new Error("track error"));
+      await media.stopScreenShare();
+      expect(useCallStore.getState().isScreenSharing).toBe(false);
+    });
+  });
+});

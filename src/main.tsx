@@ -4,6 +4,4 @@ import "./index.css";
 import Router from "./router";
 
 // biome-ignore lint/style/noNonNullAssertion: root element guaranteed by index.html
-createRoot(document.getElementById("root")!).render(
-    <Router />
-);
+createRoot(document.getElementById("root")!).render(<Router />);
