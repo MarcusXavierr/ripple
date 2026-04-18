@@ -1,6 +1,7 @@
 // src/lib/call/PeerConnection.ts
-import type { ClientMessage } from "@/types/signaling"
+
 import type { CallStatus } from "@/store/call"
+import type { ClientMessage } from "@/types/signaling"
 import type { SignalingState } from "./signalingReducer"
 
 const ICE_SERVERS: RTCConfiguration["iceServers"] = [{ urls: "stun:stun.l.google.com:19302" }]
@@ -75,7 +76,9 @@ export class PeerConnection {
       try {
         this._makingOffer = true
         await pc.setLocalDescription()
-        this.transport.send({ type: "offer", offer: pc.localDescription! })
+        const offerDesc = pc.localDescription
+        if (!offerDesc) return
+        this.transport.send({ type: "offer", offer: offerDesc })
       } finally {
         this._makingOffer = false
       }
@@ -98,7 +101,9 @@ export class PeerConnection {
     this.remoteDescriptionSet = true
     await this.drainCandidates()
     await pc.setLocalDescription()
-    this.transport.send({ type: "answer", answer: pc.localDescription! })
+    const answerDesc = pc.localDescription
+    if (!answerDesc) return
+    this.transport.send({ type: "answer", answer: answerDesc })
   }
 
   async handleAnswer(answer: RTCSessionDescriptionInit): Promise<void> {

@@ -10,6 +10,7 @@ vi.mock("react-router-dom", () => ({
 }))
 
 vi.mock("@/lib/call/CallSession", () => ({
+  // biome-ignore lint/complexity/useArrowFunction: constructor mock requires function expression
   CallSession: vi.fn().mockImplementation(function () {
     return {
       start: vi.fn(),

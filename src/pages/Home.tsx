@@ -1,9 +1,9 @@
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { generateRoomSlug, parseRoomInput } from "@/lib/room"
 import { Video } from "lucide-react"
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { generateRoomSlug, parseRoomInput } from "@/lib/room"
 
 export default function Home() {
   const navigate = useNavigate()

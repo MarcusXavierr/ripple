@@ -1,7 +1,8 @@
 // src/pages/Room.tsx
+
+import { Mic, MicOff, Monitor, PhoneOff, Video, VideoOff } from "lucide-react"
 import { useEffect, useRef } from "react"
 import { useParams } from "react-router-dom"
-import { Mic, MicOff, Monitor, PhoneOff, Video, VideoOff } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,

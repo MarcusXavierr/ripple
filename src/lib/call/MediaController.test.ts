@@ -1,15 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { useCallStore } from "@/store/call"
-import { MediaController } from "./MediaController"
 import {
-  MockRTCPeerConnection,
   installGlobalMocks,
+  MockRTCPeerConnection,
   mockAudioTrack,
   mockScreenTrack,
   mockStream,
   mockVideoTrack,
   resetMocks,
 } from "./__tests__/mocks"
+import { MediaController } from "./MediaController"
 
 installGlobalMocks()
 

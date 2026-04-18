@@ -1,7 +1,7 @@
-import { describe, it, expect } from "vitest"
-import { reduce } from "./signalingReducer"
-import type { SignalingState, SignalingAction } from "./signalingReducer"
+import { describe, expect, it } from "vitest"
 import type { ReceivedMessage } from "@/types/signaling"
+import type { SignalingAction, SignalingState } from "./signalingReducer"
+import { reduce } from "./signalingReducer"
 
 const base: SignalingState = {
   role: null,

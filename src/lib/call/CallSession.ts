@@ -1,13 +1,14 @@
 // src/lib/call/CallSession.ts
+
+import { getPeerId } from "@/lib/peerId"
+import { useCallStore } from "@/store/call"
+import type { ReceivedMessage } from "@/types/signaling"
+import { CLOSE_CODES } from "@/types/signaling"
 import { MediaController } from "./MediaController"
 import { PeerConnection } from "./PeerConnection"
 import { SignalingChannel } from "./SignalingChannel"
-import { useCallStore } from "@/store/call"
-import { getPeerId } from "@/lib/peerId"
-import { CLOSE_CODES } from "@/types/signaling"
-import type { ReceivedMessage } from "@/types/signaling"
-import { reduce } from "./signalingReducer"
 import type { SignalingAction } from "./signalingReducer"
+import { reduce } from "./signalingReducer"
 
 type NavigateFn = (path: string) => void
 
@@ -113,7 +114,8 @@ export class CallSession {
     }
     if (action.type === "SETUP_PC") {
       this.peerConnection.setup(action.role)
-      const pc = this.peerConnection.raw!
+      const pc = this.peerConnection.raw
+      if (!pc) return
       useCallStore.setState({ pc, role: action.role })
       this.media.attachPC(pc)
       return

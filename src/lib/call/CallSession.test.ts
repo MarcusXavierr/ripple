@@ -2,16 +2,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { useCallStore } from "@/store/call"
 import { CLOSE_CODES } from "@/types/signaling"
-import { CallSession } from "./CallSession"
 import {
+  installGlobalMocks,
   MockRTCPeerConnection,
   MockWebSocket,
-  installGlobalMocks,
   mockAudioTrack,
   mockStream,
   mockVideoTrack,
   resetMocks,
 } from "./__tests__/mocks"
+import { CallSession } from "./CallSession"
 
 installGlobalMocks()
 

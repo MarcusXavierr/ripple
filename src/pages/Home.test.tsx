@@ -16,8 +16,8 @@ vi.mock("@/lib/room", () => ({
   parseRoomInput: vi.fn(),
 }))
 
-import Home from "./Home"
 import { parseRoomInput } from "@/lib/room"
+import Home from "./Home"
 
 function renderHome() {
   render(

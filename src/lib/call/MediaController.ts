@@ -12,7 +12,8 @@ export class MediaController {
 
   attachPC(pc: RTCPeerConnection) {
     this.pc = pc
-    this.stream?.getTracks().forEach((t) => pc.addTrack(t, this.stream!))
+    const stream = this.stream
+    if (stream) stream.getTracks().forEach((t) => pc.addTrack(t, stream))
   }
 
   toggleMic() {

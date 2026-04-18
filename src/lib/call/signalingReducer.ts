@@ -1,5 +1,5 @@
-import type { ReceivedMessage, ClientMessage } from "@/types/signaling"
 import type { CallStatus } from "@/store/call"
+import type { ClientMessage, ReceivedMessage } from "@/types/signaling"
 
 export interface SignalingState {
   role: "caller" | "callee" | null

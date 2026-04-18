@@ -1,12 +1,12 @@
 // src/lib/call/PeerConnection.test.ts
 import { beforeEach, describe, expect, it, vi } from "vitest"
+import type { ClientMessage } from "@/types/signaling"
+import { installGlobalMocks, MockRTCPeerConnection, resetMocks } from "./__tests__/mocks"
 import {
   PeerConnection,
-  type PeerConnectionTransport,
   type PeerConnectionCallbacks,
+  type PeerConnectionTransport,
 } from "./PeerConnection"
-import { MockRTCPeerConnection, installGlobalMocks, resetMocks } from "./__tests__/mocks"
-import type { ClientMessage } from "@/types/signaling"
 
 installGlobalMocks()
 

@@ -1,7 +1,7 @@
 // src/lib/call/SignalingChannel.test.ts
 import { beforeEach, describe, expect, it, vi } from "vitest"
+import { installGlobalMocks, MockWebSocket, resetMocks } from "./__tests__/mocks"
 import { SignalingChannel, type SignalingChannelCallbacks } from "./SignalingChannel"
-import { MockWebSocket, installGlobalMocks, resetMocks } from "./__tests__/mocks"
 
 installGlobalMocks()
 

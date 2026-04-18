@@ -31,12 +31,14 @@ export class MockWebSocket {
 
   /** Simulate a server message arriving on this WS. */
   receive(data: unknown) {
-    this.onmessage!(new MessageEvent("message", { data: JSON.stringify(data) }))
+    if (!this.onmessage) throw new Error("onmessage not set on MockWebSocket")
+    this.onmessage(new MessageEvent("message", { data: JSON.stringify(data) }))
   }
 
   /** Simulate the WS closing. */
   simulateClose(code: number) {
-    this.onclose!(new CloseEvent("close", { code, wasClean: code === 1000 }))
+    if (!this.onclose) throw new Error("onclose not set on MockWebSocket")
+    this.onclose(new CloseEvent("close", { code, wasClean: code === 1000 }))
   }
 }
 
