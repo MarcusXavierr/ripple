@@ -1,0 +1,70 @@
+{
+  "nav": {
+    "brand": "Ripple",
+    "howItWorks": "How it works",
+    "privacy": "Privacy",
+    "openSource": "Open source"
+  },
+  "home": {
+    "hero": {
+      "badge": "No accounts. No history. Peer‑to‑peer.",
+      "headlineLine1": "Talk like",
+      "headlineLine2": "water flows.",
+      "description": "Ripple is a private, two‑person video room. Open a link, share your screen, talk. Nothing is stored — when you leave, the room disappears.",
+      "featureEncrypted": "End‑to‑end encrypted",
+      "featureScreenShare": "One‑click screen share"
+    },
+    "card": {
+      "title": "Start a room",
+      "subtitle": "Spin up a private room and send the link to one person.",
+      "createRoom": "Create room",
+      "suggestName": "Suggest another name",
+      "orJoin": "or join existing",
+      "inputAriaLabel": "Room ID or link",
+      "inputPlaceholder": "ripple.app/azure-otter-42",
+      "paste": "Paste",
+      "joinRoom": "Join room",
+      "joinError": "Enter a valid room ID or link"
+    },
+    "footer": {
+      "version": "v0.1 — built for small conversations",
+      "status": "Status",
+      "changelog": "Changelog",
+      "github": "github"
+    }
+  },
+  "room": {
+    "status": {
+      "idle": "Connecting...",
+      "connecting": "Connecting...",
+      "waiting": "Waiting for peer...",
+      "negotiating": "Connecting...",
+      "connected": "Connected",
+      "reconnecting": "Reconnecting...",
+      "disconnected": "Disconnected",
+      "ended": "Call ended"
+    },
+    "waiting": {
+      "message": "Waiting for someone to join..."
+    },
+    "controls": {
+      "copyLink": "Copy link",
+      "unmute": "Unmute",
+      "mute": "Mute",
+      "enableCamera": "Enable camera",
+      "disableCamera": "Disable camera",
+      "stopSharing": "Stop sharing",
+      "shareScreen": "Share screen",
+      "hangUp": "Hang up"
+    },
+    "error": {
+      "title": "Error",
+      "ok": "OK"
+    }
+  },
+  "callEnded": {
+    "title": "Call ended",
+    "rejoin": "Rejoin",
+    "returnHome": "Return home"
+  }
+}

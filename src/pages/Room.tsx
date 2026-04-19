@@ -2,6 +2,7 @@
 
 import { Mic, MicOff, Monitor, PhoneOff, Video, VideoOff } from "lucide-react"
 import { useEffect, useRef } from "react"
+import { useTranslation } from "react-i18next"
 import { useParams } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import {
@@ -14,20 +15,24 @@ import {
 } from "@/components/ui/dialog"
 import { useCallSession } from "@/hooks/useCallSession"
 import type { CallStatus } from "@/store/call"
+import type { TFunction } from "i18next"
 
-const STATUS_LABEL: Record<CallStatus, string> = {
-  idle: "Connecting...",
-  connecting: "Connecting...",
-  waiting: "Waiting for peer...",
-  negotiating: "Connecting...",
-  connected: "Connected",
-  reconnecting: "Reconnecting...",
-  disconnected: "Disconnected",
-  ended: "Call ended",
+function getStatusLabel(status: CallStatus, t: TFunction): string {
+  return {
+    idle: t("room.status.idle"),
+    connecting: t("room.status.connecting"),
+    waiting: t("room.status.waiting"),
+    negotiating: t("room.status.negotiating"),
+    connected: t("room.status.connected"),
+    reconnecting: t("room.status.reconnecting"),
+    disconnected: t("room.status.disconnected"),
+    ended: t("room.status.ended"),
+  }[status]
 }
 
 export default function Room() {
   const { id: roomId } = useParams<{ id: string }>()
+  const { t } = useTranslation()
   const {
     localStream,
     remoteStream,
@@ -73,11 +78,11 @@ export default function Room() {
       {/* Waiting overlay */}
       {status === "waiting" && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 text-white">
-          <p className="text-xl font-medium">Waiting for someone to join...</p>
+          <p className="text-xl font-medium">{t("room.waiting.message")}</p>
           <div className="flex items-center gap-2">
             <span className="font-mono text-sm text-white/70">{roomId}</span>
             <Button variant="outline" size="sm" onClick={handleCopyLink}>
-              Copy link
+              {t("room.controls.copyLink")}
             </Button>
           </div>
         </div>
@@ -95,7 +100,7 @@ export default function Room() {
 
       {/* Status bar */}
       <div className="absolute left-1/2 top-3 flex -translate-x-1/2 items-center gap-2 rounded-full bg-black/60 px-3 py-1 text-xs text-white">
-        <span>{STATUS_LABEL[status]}</span>
+        <span>{getStatusLabel(status, t)}</span>
         <button
           type="button"
           onClick={handleCopyLink}
@@ -111,7 +116,7 @@ export default function Room() {
           variant="outline"
           size="icon"
           onClick={toggleMic}
-          aria-label={isMicMuted ? "Unmute" : "Mute"}
+          aria-label={isMicMuted ? t("room.controls.unmute") : t("room.controls.mute")}
         >
           {isMicMuted ? <MicOff /> : <Mic />}
         </Button>
@@ -119,7 +124,7 @@ export default function Room() {
           variant="outline"
           size="icon"
           onClick={toggleCamera}
-          aria-label={isCameraOff ? "Enable camera" : "Disable camera"}
+          aria-label={isCameraOff ? t("room.controls.enableCamera") : t("room.controls.disableCamera")}
         >
           {isCameraOff ? <VideoOff /> : <Video />}
         </Button>
@@ -127,11 +132,11 @@ export default function Room() {
           variant="outline"
           size="icon"
           onClick={isScreenSharing ? stopScreenShare : startScreenShare}
-          aria-label={isScreenSharing ? "Stop sharing" : "Share screen"}
+          aria-label={isScreenSharing ? t("room.controls.stopSharing") : t("room.controls.shareScreen")}
         >
           <Monitor />
         </Button>
-        <Button variant="destructive" size="icon" onClick={hangup} aria-label="Hang up">
+        <Button variant="destructive" size="icon" onClick={hangup} aria-label={t("room.controls.hangUp")}>
           <PhoneOff />
         </Button>
       </div>
@@ -145,11 +150,11 @@ export default function Room() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Error</DialogTitle>
+            <DialogTitle>{t("room.error.title")}</DialogTitle>
             <DialogDescription>{error}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button onClick={dismissError}>OK</Button>
+            <Button onClick={dismissError}>{t("room.error.ok")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

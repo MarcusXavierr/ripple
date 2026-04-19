@@ -16,7 +16,7 @@ vi.mock("@/lib/room", () => ({
   parseRoomInput: vi.fn(),
 }))
 
-import { parseRoomInput } from "@/lib/room"
+import { generateRoomSlug, parseRoomInput } from "@/lib/room"
 import Home from "./Home"
 
 function renderHome() {
@@ -87,5 +87,15 @@ describe("Home page", () => {
     expect(screen.getByRole("alert")).toBeInTheDocument()
     await user.type(screen.getByLabelText(/room id or link/i), "a")
     expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+  })
+
+  it("generates a new slug when 'Suggest another name' is clicked", async () => {
+    vi.mocked(generateRoomSlug)
+      .mockReturnValueOnce("coral-tiger-42") // consumed by useState init
+      .mockReturnValueOnce("jade-wolf-99")   // consumed by handleSuggestName
+    const user = userEvent.setup()
+    renderHome()
+    await user.click(screen.getByRole("button", { name: /suggest another name/i }))
+    expect(screen.getByText(/jade-wolf-99/i)).toBeInTheDocument()
   })
 })
