@@ -459,7 +459,12 @@ export default function Home() {
         >
           <div>{t("home.footer.version")}</div>
           <div style={{ display: "flex", gap: 22 }}>
-            <a href="https://github.com/MarcusXavierr/ripple" target="_blank" rel="noopener noreferrer" style={{ color: "inherit", textDecoration: "none" }}>
+            <a
+              href="https://github.com/MarcusXavierr/ripple"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: "inherit", textDecoration: "none" }}
+            >
               {t("home.footer.github")}
             </a>
           </div>
