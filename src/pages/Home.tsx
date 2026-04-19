@@ -6,7 +6,7 @@ import { generateRoomSlug, parseRoomInput } from "@/lib/room"
 
 export default function Home() {
   const navigate = useNavigate()
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const [suggestion, setSuggestion] = useState(() => generateRoomSlug())
   const [joinInput, setJoinInput] = useState("")
   const [joinError, setJoinError] = useState<string | null>(null)
@@ -118,7 +118,10 @@ export default function Home() {
             {/* Join card — right column */}
             <div className="glass-strong" style={{ padding: 32, borderRadius: 28, display: "flex", flexDirection: "column", gap: 20, boxShadow: "0 30px 80px rgba(60, 40, 120, 0.12), 0 4px 14px rgba(60, 40, 120, 0.06), inset 0 1px 0 rgba(255,255,255,0.9)" }}>
               <div>
-                <h2 style={{ margin: "0 0 4px", fontSize: 17, fontWeight: 600, color: "var(--ripple-ink)" }}>{t("home.card.title")}</h2>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+                  <h2 style={{ margin: 0, fontSize: 17, fontWeight: 600, color: "var(--ripple-ink)" }}>{t("home.card.title")}</h2>
+                  <LanguageToggle currentLang={i18n.language} onChange={(code) => i18n.changeLanguage(code)} />
+                </div>
                 <p style={{ margin: 0, fontSize: 12.5, color: "var(--ripple-ink-mute)" }}>{t("home.card.subtitle")}</p>
               </div>
 
@@ -185,20 +188,6 @@ export default function Home() {
                     className="join-input"
                     style={{ flex: 1, border: "none", background: "transparent", outline: "none", fontFamily: "inherit", fontSize: 13.5, color: "var(--ripple-ink)" }}
                   />
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      try {
-                        const text = await navigator.clipboard.readText()
-                        setJoinInput(text)
-                      } catch {
-                        // clipboard unavailable — no-op
-                      }
-                    }}
-                    style={{ padding: "5px 10px", borderRadius: 7, border: "none", background: "rgba(20,40,80,0.06)", fontFamily: "inherit", fontSize: 11, color: "var(--ripple-ink-soft)", cursor: "pointer", fontWeight: 500 }}
-                  >
-                    {t("home.card.paste")}
-                  </button>
                 </div>
 
                 {joinError && (
@@ -235,6 +224,48 @@ export default function Home() {
         </footer>
       </div>
     </div>
+  )
+}
+
+const LANGS = [
+  { code: "en", label: "EN" },
+  { code: "pt-BR", label: "PT" },
+] as const
+
+function LanguageToggle({ currentLang, onChange }: { currentLang: string; onChange: (code: string) => void }) {
+  const currentIndex = LANGS.findIndex(({ code }) => code === currentLang)
+  const next = LANGS[(currentIndex + 1) % LANGS.length]
+
+  return (
+    <button
+      type="button"
+      onClick={() => onChange(next.code)}
+      style={{
+        display: "flex", alignItems: "center", gap: 2,
+        padding: "3px 4px", borderRadius: 999,
+        background: "oklch(95% 0.03 var(--ripple-hue))",
+        border: "1px solid oklch(85% 0.06 var(--ripple-hue) / 0.5)",
+        cursor: "pointer", fontFamily: "inherit",
+      }}
+    >
+      {LANGS.map(({ code, label }) => {
+        const active = currentLang === code
+        return (
+          <span
+            key={code}
+            style={{
+              padding: "2px 8px", borderRadius: 999,
+              background: active ? "var(--ripple-accent)" : "transparent",
+              color: active ? "white" : "var(--ripple-ink-mute)",
+              fontSize: 10.5, fontWeight: active ? 600 : 400,
+              transition: "background 0.15s, color 0.15s",
+            }}
+          >
+            {label}
+          </span>
+        )
+      })}
+    </button>
   )
 }
 
