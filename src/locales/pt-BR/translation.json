@@ -1,0 +1,70 @@
+{
+  "nav": {
+    "brand": "Ripple",
+    "howItWorks": "Como funciona",
+    "privacy": "Privacidade",
+    "openSource": "Código aberto"
+  },
+  "home": {
+    "hero": {
+      "badge": "Sem contas. Sem histórico. Peer‑to‑peer.",
+      "headlineLine1": "Converse como",
+      "headlineLine2": "água que flui.",
+      "description": "Ripple é uma sala de vídeo privada para duas pessoas. Abra um link, compartilhe sua tela, converse. Nada é armazenado — quando você sai, a sala desaparece.",
+      "featureEncrypted": "Criptografia de ponta a ponta",
+      "featureScreenShare": "Compartilhe a tela com um clique"
+    },
+    "card": {
+      "title": "Criar uma sala",
+      "subtitle": "Crie uma sala privada e envie o link para uma pessoa.",
+      "createRoom": "Criar sala",
+      "suggestName": "Sugerir outro nome",
+      "orJoin": "ou entrar em existente",
+      "inputAriaLabel": "ID da sala ou link",
+      "inputPlaceholder": "ripple.app/azure-otter-42",
+      "paste": "Colar",
+      "joinRoom": "Entrar na sala",
+      "joinError": "Digite um ID de sala ou link válido"
+    },
+    "footer": {
+      "version": "v0.1 — feito para conversas pequenas",
+      "status": "Status",
+      "changelog": "Changelog",
+      "github": "github"
+    }
+  },
+  "room": {
+    "status": {
+      "idle": "Conectando...",
+      "connecting": "Conectando...",
+      "waiting": "Aguardando o par...",
+      "negotiating": "Conectando...",
+      "connected": "Conectado",
+      "reconnecting": "Reconectando...",
+      "disconnected": "Desconectado",
+      "ended": "Chamada encerrada"
+    },
+    "waiting": {
+      "message": "Aguardando alguém entrar..."
+    },
+    "controls": {
+      "copyLink": "Copiar link",
+      "unmute": "Ativar microfone",
+      "mute": "Silenciar",
+      "enableCamera": "Ativar câmera",
+      "disableCamera": "Desativar câmera",
+      "stopSharing": "Parar compartilhamento",
+      "shareScreen": "Compartilhar tela",
+      "hangUp": "Encerrar chamada"
+    },
+    "error": {
+      "title": "Erro",
+      "ok": "OK"
+    }
+  },
+  "callEnded": {
+    "title": "Chamada encerrada",
+    "rejoin": "Entrar novamente",
+    "returnHome": "Voltar ao início"
+  }
+}

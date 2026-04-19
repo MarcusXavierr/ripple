@@ -51,7 +51,7 @@ describe("lifecycle", () => {
     const s = createSession()
     await flush()
     s.teardown()
-    expect(MockWebSocket.lastInstance!.close).toHaveBeenCalledWith(1000, "unmount")
+    expect(MockWebSocket.lastInstance?.close).toHaveBeenCalledWith(1000, "unmount")
   })
 
   it("stops media tracks on teardown", async () => {
@@ -120,8 +120,8 @@ describe("WebSocket", () => {
   it("creates WS with room and peerId query params", async () => {
     createSession("coral-tiger-42")
     await flush()
-    expect(MockWebSocket.lastInstance!.url).toMatch(/room=coral-tiger-42/)
-    expect(MockWebSocket.lastInstance!.url).toMatch(/peerId=/)
+    expect(MockWebSocket.lastInstance?.url).toMatch(/room=coral-tiger-42/)
+    expect(MockWebSocket.lastInstance?.url).toMatch(/peerId=/)
   })
 
   it("sets status to connecting immediately after WS is created", async () => {
@@ -134,7 +134,7 @@ describe("WebSocket", () => {
     createSession()
     await flush()
     send({ type: "ping" })
-    expect(MockWebSocket.lastInstance!.send).toHaveBeenCalledWith(JSON.stringify({ type: "pong" }))
+    expect(MockWebSocket.lastInstance?.send).toHaveBeenCalledWith(JSON.stringify({ type: "pong" }))
   })
 
   it("does not send when WS readyState is not OPEN", async () => {
@@ -142,7 +142,7 @@ describe("WebSocket", () => {
     await flush()
     MockWebSocket.lastInstance!.readyState = WebSocket.CONNECTING
     send({ type: "ping" })
-    expect(MockWebSocket.lastInstance!.send).not.toHaveBeenCalled()
+    expect(MockWebSocket.lastInstance?.send).not.toHaveBeenCalled()
   })
 
   it("ignores unknown message types without throwing", async () => {
@@ -157,7 +157,7 @@ describe("WebSocket", () => {
     await flush()
     const ws = MockWebSocket.lastInstance!
     // Bypass the receive() helper to inject raw invalid JSON
-    ws.onmessage!(new MessageEvent("message", { data: "not valid json {{{" }))
+    ws.onmessage?.(new MessageEvent("message", { data: "not valid json {{{" }))
     await flush()
     expect(consoleSpy).toHaveBeenCalledWith(
       "[WS] bad payload",
@@ -174,28 +174,28 @@ describe("WS close codes", () => {
   it("sets error on ROOM_FULL (4001)", async () => {
     createSession()
     await flush()
-    MockWebSocket.lastInstance!.simulateClose(CLOSE_CODES.ROOM_FULL)
+    MockWebSocket.lastInstance?.simulateClose(CLOSE_CODES.ROOM_FULL)
     expect(useCallStore.getState().error).toMatch(/room is full/i)
   })
 
   it("navigates to /ended on PEER_DISCONNECTED (4002)", async () => {
     createSession(ROOM)
     await flush()
-    MockWebSocket.lastInstance!.simulateClose(CLOSE_CODES.PEER_DISCONNECTED)
+    MockWebSocket.lastInstance?.simulateClose(CLOSE_CODES.PEER_DISCONNECTED)
     expect(mockNavigate).toHaveBeenCalledWith(`/room/${ROOM}/ended`)
   })
 
   it("sets error on ROOM_NOT_FOUND (4003)", async () => {
     createSession()
     await flush()
-    MockWebSocket.lastInstance!.simulateClose(CLOSE_CODES.ROOM_NOT_FOUND)
+    MockWebSocket.lastInstance?.simulateClose(CLOSE_CODES.ROOM_NOT_FOUND)
     expect(useCallStore.getState().error).toMatch(/doesn't exist/i)
   })
 
   it("sets error on DUPLICATE_SESSION (4004)", async () => {
     createSession()
     await flush()
-    MockWebSocket.lastInstance!.simulateClose(CLOSE_CODES.DUPLICATE_SESSION)
+    MockWebSocket.lastInstance?.simulateClose(CLOSE_CODES.DUPLICATE_SESSION)
     expect(useCallStore.getState().error).toMatch(/another tab/i)
   })
 
@@ -203,7 +203,7 @@ describe("WS close codes", () => {
     vi.useFakeTimers()
     createSession()
     await flush()
-    MockWebSocket.lastInstance!.simulateClose(4999)
+    MockWebSocket.lastInstance?.simulateClose(4999)
     expect(useCallStore.getState().error).toMatch(/connection lost unexpectedly/i)
     vi.runAllTimers()
     expect(MockWebSocket.instances).toHaveLength(1)
@@ -226,7 +226,7 @@ describe("reconnection", () => {
     vi.useFakeTimers()
     createSession()
     await flush() // settle getUserMedia
-    MockWebSocket.lastInstance!.simulateClose(1006)
+    MockWebSocket.lastInstance?.simulateClose(1006)
     expect(useCallStore.getState().status).toBe("reconnecting")
     vi.runAllTimers() // fire reconnect timer → connectWS
     expect(MockWebSocket.instances).toHaveLength(2)
@@ -238,7 +238,7 @@ describe("reconnection", () => {
     await flush()
     // MAX_WS_ATTEMPTS = 3: need 3 failures (wsAttempts++ inside each, error on 3rd)
     for (let i = 0; i < 3; i++) {
-      MockWebSocket.lastInstance!.simulateClose(1006)
+      MockWebSocket.lastInstance?.simulateClose(1006)
       vi.runAllTimers()
     }
     expect(useCallStore.getState().error).toMatch(/unable to connect/i)
@@ -250,12 +250,12 @@ describe("reconnection", () => {
     createSession()
     await flush()
 
-    MockWebSocket.lastInstance!.simulateClose(1006)
+    MockWebSocket.lastInstance?.simulateClose(1006)
     const delay1 = spy.mock.calls[spy.mock.calls.length - 1]?.[1] as number
 
     vi.runAllTimers()
 
-    MockWebSocket.lastInstance!.simulateClose(1006)
+    MockWebSocket.lastInstance?.simulateClose(1006)
     const delay2 = spy.mock.calls[spy.mock.calls.length - 1]?.[1] as number
 
     expect(delay2).toBe(delay1 * 2)
@@ -274,7 +274,7 @@ describe("reconnection", () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
     createSession()
     await flush()
-    MockWebSocket.lastInstance!.simulateClose(1006)
+    MockWebSocket.lastInstance?.simulateClose(1006)
     expect(warnSpy).toHaveBeenCalledWith(
       "[WS] reconnecting",
       expect.objectContaining({ reason: expect.stringContaining("1006"), attempt: 1 })
@@ -287,10 +287,10 @@ describe("reconnection", () => {
     const spy = vi.spyOn(globalThis, "setTimeout")
     createSession()
     await flush()
-    MockWebSocket.lastInstance!.simulateClose(1006)
+    MockWebSocket.lastInstance?.simulateClose(1006)
     vi.runAllTimers()
     await flush()
-    MockWebSocket.lastInstance!.simulateClose(1006)
+    MockWebSocket.lastInstance?.simulateClose(1006)
     const delays = spy.mock.calls.map((c) => c[1] as number).filter((d) => d > 0)
     expect(Math.max(...delays)).toBeLessThanOrEqual(8_000)
     spy.mockRestore()
@@ -325,7 +325,7 @@ describe("onopen message", () => {
     createSession()
     await flush()
     send({ type: "onopen", role: "caller", reconnect: false })
-    expect(MockRTCPeerConnection.lastInstance!.addTrack).toHaveBeenCalledTimes(2)
+    expect(MockRTCPeerConnection.lastInstance?.addTrack).toHaveBeenCalledTimes(2)
   })
 })
 
@@ -346,7 +346,7 @@ describe("enter message", () => {
     send({ type: "onopen", role: "caller", reconnect: false })
     send({ type: "enter" })
     await flush()
-    expect(MockRTCPeerConnection.lastInstance!.restartIce).toHaveBeenCalled()
+    expect(MockRTCPeerConnection.lastInstance?.restartIce).toHaveBeenCalled()
   })
 
   it("rolls back local description before restartIce when in have-local-offer state", async () => {
@@ -356,10 +356,10 @@ describe("enter message", () => {
     MockRTCPeerConnection.lastInstance!.signalingState = "have-local-offer"
     send({ type: "enter" })
     await flush()
-    expect(MockRTCPeerConnection.lastInstance!.setLocalDescription).toHaveBeenCalledWith({
+    expect(MockRTCPeerConnection.lastInstance?.setLocalDescription).toHaveBeenCalledWith({
       type: "rollback",
     })
-    expect(MockRTCPeerConnection.lastInstance!.restartIce).toHaveBeenCalled()
+    expect(MockRTCPeerConnection.lastInstance?.restartIce).toHaveBeenCalled()
   })
 
   it("does not call restartIce when role is callee", async () => {
@@ -368,7 +368,7 @@ describe("enter message", () => {
     send({ type: "onopen", role: "callee", reconnect: false })
     send({ type: "enter" })
     await flush()
-    expect(MockRTCPeerConnection.lastInstance!.restartIce).not.toHaveBeenCalled()
+    expect(MockRTCPeerConnection.lastInstance?.restartIce).not.toHaveBeenCalled()
   })
 })
 
@@ -382,7 +382,7 @@ describe("peer-reconnected message", () => {
     send({ type: "peer-reconnected" })
     await flush()
     expect(useCallStore.getState().status).toBe("negotiating")
-    expect(MockRTCPeerConnection.lastInstance!.restartIce).toHaveBeenCalled()
+    expect(MockRTCPeerConnection.lastInstance?.restartIce).toHaveBeenCalled()
   })
 
   it("callee does not call restartIce", async () => {
@@ -391,7 +391,7 @@ describe("peer-reconnected message", () => {
     send({ type: "onopen", role: "callee", reconnect: false })
     send({ type: "peer-reconnected" })
     await flush()
-    expect(MockRTCPeerConnection.lastInstance!.restartIce).not.toHaveBeenCalled()
+    expect(MockRTCPeerConnection.lastInstance?.restartIce).not.toHaveBeenCalled()
   })
 })
 
@@ -408,7 +408,7 @@ describe("callee offer/answer flow", () => {
     await setupCallee()
     send({ type: "offer", offer: { type: "offer", sdp: "remote-sdp" } })
     await flush()
-    expect(MockRTCPeerConnection.lastInstance!.setRemoteDescription).toHaveBeenCalledWith({
+    expect(MockRTCPeerConnection.lastInstance?.setRemoteDescription).toHaveBeenCalledWith({
       type: "offer",
       sdp: "remote-sdp",
     })
@@ -418,7 +418,7 @@ describe("callee offer/answer flow", () => {
     await setupCallee()
     send({ type: "offer", offer: { type: "offer", sdp: "remote-sdp" } })
     await flush()
-    const calls = MockWebSocket.lastInstance!.send.mock.calls as string[][]
+    const calls = MockWebSocket.lastInstance?.send.mock.calls as string[][]
     expect(calls.some((c) => c[0].includes('"type":"answer"'))).toBe(true)
   })
 })
@@ -430,7 +430,7 @@ describe("caller answer flow", () => {
     send({ type: "onopen", role: "caller", reconnect: false })
     send({ type: "answer", answer: { type: "answer", sdp: "answer-sdp" } })
     await flush()
-    expect(MockRTCPeerConnection.lastInstance!.setRemoteDescription).toHaveBeenCalledWith({
+    expect(MockRTCPeerConnection.lastInstance?.setRemoteDescription).toHaveBeenCalledWith({
       type: "answer",
       sdp: "answer-sdp",
     })
@@ -443,7 +443,7 @@ describe("caller answer flow", () => {
     send({ type: "ice-candidate", candidate: { candidate: "c1", sdpMid: "0", sdpMLineIndex: 0 } })
     send({ type: "answer", answer: { type: "answer", sdp: "answer-sdp" } })
     await flush()
-    expect(MockRTCPeerConnection.lastInstance!.addIceCandidate).toHaveBeenCalledWith({
+    expect(MockRTCPeerConnection.lastInstance?.addIceCandidate).toHaveBeenCalledWith({
       candidate: "c1",
       sdpMid: "0",
       sdpMLineIndex: 0,
@@ -488,7 +488,7 @@ describe("ICE candidate queuing", () => {
     await flush()
     send({ type: "onopen", role: "callee", reconnect: false })
     send({ type: "ice-candidate", candidate: { candidate: "c1", sdpMid: "0", sdpMLineIndex: 0 } })
-    expect(MockRTCPeerConnection.lastInstance!.addIceCandidate).not.toHaveBeenCalled()
+    expect(MockRTCPeerConnection.lastInstance?.addIceCandidate).not.toHaveBeenCalled()
   })
 
   it("drains queued candidates after setRemoteDescription via offer", async () => {
@@ -498,7 +498,7 @@ describe("ICE candidate queuing", () => {
     send({ type: "ice-candidate", candidate: { candidate: "c1", sdpMid: "0", sdpMLineIndex: 0 } })
     send({ type: "offer", offer: { type: "offer", sdp: "remote" } })
     await flush()
-    expect(MockRTCPeerConnection.lastInstance!.addIceCandidate).toHaveBeenCalledWith({
+    expect(MockRTCPeerConnection.lastInstance?.addIceCandidate).toHaveBeenCalledWith({
       candidate: "c1",
       sdpMid: "0",
       sdpMLineIndex: 0,
@@ -515,8 +515,8 @@ describe("PC event wiring", () => {
     send({ type: "onopen", role: "caller", reconnect: false })
     const pc = MockRTCPeerConnection.lastInstance!
     const candidate = { toJSON: () => ({ candidate: "c", sdpMid: "0", sdpMLineIndex: 0 }) }
-    pc.onicecandidate!({ candidate } as unknown as RTCPeerConnectionIceEvent)
-    expect(MockWebSocket.lastInstance!.send).toHaveBeenCalledWith(
+    pc.onicecandidate?.({ candidate } as unknown as RTCPeerConnectionIceEvent)
+    expect(MockWebSocket.lastInstance?.send).toHaveBeenCalledWith(
       JSON.stringify({ type: "ice-candidate", candidate: candidate.toJSON() })
     )
   })
@@ -527,7 +527,7 @@ describe("PC event wiring", () => {
     send({ type: "onopen", role: "caller", reconnect: false })
     const ws = MockWebSocket.lastInstance!
     ws.send.mockClear()
-    MockRTCPeerConnection.lastInstance!.onicecandidate!({
+    MockRTCPeerConnection.lastInstance?.onicecandidate?.({
       candidate: null,
     } as RTCPeerConnectionIceEvent)
     expect(ws.send).not.toHaveBeenCalled()
@@ -538,7 +538,7 @@ describe("PC event wiring", () => {
     await flush()
     send({ type: "onopen", role: "caller", reconnect: false })
     const fakeStream = { id: "remote" }
-    MockRTCPeerConnection.lastInstance!.ontrack!({
+    MockRTCPeerConnection.lastInstance?.ontrack?.({
       streams: [fakeStream],
     } as unknown as RTCTrackEvent)
     expect(useCallStore.getState().remoteStream).toBe(fakeStream)
@@ -550,7 +550,7 @@ describe("PC event wiring", () => {
     send({ type: "onopen", role: "caller", reconnect: false })
     const ws = MockWebSocket.lastInstance!
     ws.send.mockClear()
-    await MockRTCPeerConnection.lastInstance!.onnegotiationneeded!()
+    await MockRTCPeerConnection.lastInstance?.onnegotiationneeded?.()
     expect(ws.send).toHaveBeenCalledWith(expect.stringContaining('"type":"offer"'))
   })
 })
@@ -568,7 +568,7 @@ describe("ICE connection state changes", () => {
     await setupCaller()
     const pc = MockRTCPeerConnection.lastInstance!
     pc.iceConnectionState = "connected"
-    pc.oniceconnectionstatechange!()
+    pc.oniceconnectionstatechange?.()
     expect(useCallStore.getState().status).toBe("connected")
   })
 
@@ -576,7 +576,7 @@ describe("ICE connection state changes", () => {
     await setupCaller()
     const pc = MockRTCPeerConnection.lastInstance!
     pc.iceConnectionState = "completed"
-    pc.oniceconnectionstatechange!()
+    pc.oniceconnectionstatechange?.()
     expect(useCallStore.getState().status).toBe("connected")
   })
 
@@ -584,7 +584,7 @@ describe("ICE connection state changes", () => {
     await setupCaller()
     const pc = MockRTCPeerConnection.lastInstance!
     pc.iceConnectionState = "failed"
-    pc.oniceconnectionstatechange!()
+    pc.oniceconnectionstatechange?.()
     expect(pc.restartIce).toHaveBeenCalled()
   })
 
@@ -594,7 +594,7 @@ describe("ICE connection state changes", () => {
     send({ type: "onopen", role: "callee", reconnect: false })
     const pc = MockRTCPeerConnection.lastInstance!
     pc.iceConnectionState = "failed"
-    pc.oniceconnectionstatechange!()
+    pc.oniceconnectionstatechange?.()
     expect(pc.restartIce).not.toHaveBeenCalled()
   })
 })
@@ -606,7 +606,7 @@ describe("hangup", () => {
     const s = createSession()
     await flush()
     s.hangup()
-    expect(MockWebSocket.lastInstance!.close).toHaveBeenCalledWith(1000, "hangup")
+    expect(MockWebSocket.lastInstance?.close).toHaveBeenCalledWith(1000, "hangup")
   })
 
   it("navigates to /ended", async () => {
@@ -629,7 +629,7 @@ describe("hangup", () => {
     await flush()
     send({ type: "onopen", role: "caller", reconnect: false })
     s.hangup()
-    expect(MockRTCPeerConnection.lastInstance!.close).toHaveBeenCalled()
+    expect(MockRTCPeerConnection.lastInstance?.close).toHaveBeenCalled()
   })
 })
 

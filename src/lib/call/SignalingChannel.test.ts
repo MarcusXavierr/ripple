@@ -33,7 +33,7 @@ describe("connect()", () => {
   it("creates a WebSocket with the provided URL", () => {
     const ch = new SignalingChannel(URL, createCallbacks())
     ch.connect()
-    expect(MockWebSocket.lastInstance!.url).toBe(URL)
+    expect(MockWebSocket.lastInstance?.url).toBe(URL)
   })
 
   it("calls onConnecting when WS is created", () => {
@@ -51,7 +51,7 @@ describe("send()", () => {
     const ch = new SignalingChannel(URL, createCallbacks())
     ch.connect()
     ch.send({ type: "pong" })
-    expect(MockWebSocket.lastInstance!.send).toHaveBeenCalledWith(JSON.stringify({ type: "pong" }))
+    expect(MockWebSocket.lastInstance?.send).toHaveBeenCalledWith(JSON.stringify({ type: "pong" }))
   })
 
   it("does not send when WS readyState is not OPEN", () => {
@@ -59,7 +59,7 @@ describe("send()", () => {
     ch.connect()
     MockWebSocket.lastInstance!.readyState = WebSocket.CONNECTING
     ch.send({ type: "pong" })
-    expect(MockWebSocket.lastInstance!.send).not.toHaveBeenCalled()
+    expect(MockWebSocket.lastInstance?.send).not.toHaveBeenCalled()
   })
 
   it("does not throw when WS is null (before connect)", () => {
@@ -75,7 +75,7 @@ describe("message handling", () => {
     const cb = createCallbacks()
     const ch = new SignalingChannel(URL, cb)
     ch.connect()
-    MockWebSocket.lastInstance!.receive({ type: "ping" })
+    MockWebSocket.lastInstance?.receive({ type: "ping" })
     await Promise.resolve()
     expect(cb.onMessage).toHaveBeenCalledWith({ type: "ping" })
   })
@@ -85,7 +85,7 @@ describe("message handling", () => {
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {})
     const ch = new SignalingChannel(URL, cb)
     ch.connect()
-    MockWebSocket.lastInstance!.onmessage!(new MessageEvent("message", { data: "not json {{" }))
+    MockWebSocket.lastInstance?.onmessage?.(new MessageEvent("message", { data: "not json {{" }))
     await Promise.resolve()
     expect(cb.onMessage).not.toHaveBeenCalled()
     expect(consoleSpy).toHaveBeenCalled()
@@ -102,13 +102,13 @@ describe("ws.onopen", () => {
     const ch = new SignalingChannel(URL, cb, 5)
     ch.connect()
     // Trigger a reconnect cycle
-    MockWebSocket.lastInstance!.simulateClose(1006)
+    MockWebSocket.lastInstance?.simulateClose(1006)
     vi.runAllTimers()
     // New WS created — fire onopen
-    MockWebSocket.lastInstance!.onopen!(new Event("open"))
+    MockWebSocket.lastInstance?.onopen?.(new Event("open"))
     // Trigger another close and check delay reset back to 1000
     const spy = vi.spyOn(globalThis, "setTimeout")
-    MockWebSocket.lastInstance!.simulateClose(1006)
+    MockWebSocket.lastInstance?.simulateClose(1006)
     const delays = spy.mock.calls.map((c) => c[1] as number).filter((d) => d > 0)
     expect(Math.min(...delays)).toBe(1000)
     spy.mockRestore()
@@ -123,7 +123,7 @@ describe("ws.onclose — terminal codes (4xxx)", () => {
     const cb = createCallbacks()
     const ch = new SignalingChannel(URL, cb)
     ch.connect()
-    MockWebSocket.lastInstance!.simulateClose(4001)
+    MockWebSocket.lastInstance?.simulateClose(4001)
     expect(cb.onTerminalClose).toHaveBeenCalledWith(4001)
   })
 
@@ -132,7 +132,7 @@ describe("ws.onclose — terminal codes (4xxx)", () => {
     const cb = createCallbacks()
     const ch = new SignalingChannel(URL, cb)
     ch.connect()
-    MockWebSocket.lastInstance!.simulateClose(4001)
+    MockWebSocket.lastInstance?.simulateClose(4001)
     vi.runAllTimers()
     expect(MockWebSocket.instances).toHaveLength(1)
     vi.useRealTimers()
@@ -142,7 +142,7 @@ describe("ws.onclose — terminal codes (4xxx)", () => {
     const cb = createCallbacks()
     const ch = new SignalingChannel(URL, cb)
     ch.connect()
-    MockWebSocket.lastInstance!.simulateClose(1000)
+    MockWebSocket.lastInstance?.simulateClose(1000)
     expect(cb.onTerminalClose).not.toHaveBeenCalled()
   })
 })
@@ -155,7 +155,7 @@ describe("ws.onclose — reconnect (non-4xxx)", () => {
     const cb = createCallbacks()
     const ch = new SignalingChannel(URL, cb)
     ch.connect()
-    MockWebSocket.lastInstance!.simulateClose(1006)
+    MockWebSocket.lastInstance?.simulateClose(1006)
     expect(cb.onReconnecting).toHaveBeenCalledOnce()
     vi.useRealTimers()
   })
@@ -165,7 +165,7 @@ describe("ws.onclose — reconnect (non-4xxx)", () => {
     const cb = createCallbacks()
     const ch = new SignalingChannel(URL, cb)
     ch.connect()
-    MockWebSocket.lastInstance!.simulateClose(1006)
+    MockWebSocket.lastInstance?.simulateClose(1006)
     vi.runAllTimers()
     expect(MockWebSocket.instances).toHaveLength(2)
     vi.useRealTimers()
@@ -178,11 +178,11 @@ describe("ws.onclose — reconnect (non-4xxx)", () => {
     const ch = new SignalingChannel(URL, cb, 5)
     ch.connect()
 
-    MockWebSocket.lastInstance!.simulateClose(1006)
+    MockWebSocket.lastInstance?.simulateClose(1006)
     const delay1 = spy.mock.calls[spy.mock.calls.length - 1]?.[1] as number
     vi.runAllTimers()
 
-    MockWebSocket.lastInstance!.simulateClose(1006)
+    MockWebSocket.lastInstance?.simulateClose(1006)
     const delay2 = spy.mock.calls[spy.mock.calls.length - 1]?.[1] as number
 
     expect(delay2).toBe(delay1 * 2)
@@ -198,7 +198,7 @@ describe("ws.onclose — reconnect (non-4xxx)", () => {
     ch.connect()
 
     for (let i = 0; i < 8; i++) {
-      MockWebSocket.lastInstance!.simulateClose(1006)
+      MockWebSocket.lastInstance?.simulateClose(1006)
       vi.runAllTimers()
     }
 
@@ -215,7 +215,7 @@ describe("ws.onclose — reconnect (non-4xxx)", () => {
     ch.connect()
 
     for (let i = 0; i < 3; i++) {
-      MockWebSocket.lastInstance!.simulateClose(1006)
+      MockWebSocket.lastInstance?.simulateClose(1006)
       vi.runAllTimers()
     }
 
@@ -230,7 +230,7 @@ describe("ws.onclose — reconnect (non-4xxx)", () => {
     ch.connect()
 
     for (let i = 0; i < 3; i++) {
-      MockWebSocket.lastInstance!.simulateClose(1006)
+      MockWebSocket.lastInstance?.simulateClose(1006)
       vi.runAllTimers()
     }
 
@@ -247,14 +247,14 @@ describe("close()", () => {
     const ch = new SignalingChannel(URL, createCallbacks())
     ch.connect()
     ch.close(1000, "hangup")
-    expect(MockWebSocket.lastInstance!.close).toHaveBeenCalledWith(1000, "hangup")
+    expect(MockWebSocket.lastInstance?.close).toHaveBeenCalledWith(1000, "hangup")
   })
 
   it("defaults to code 1000", () => {
     const ch = new SignalingChannel(URL, createCallbacks())
     ch.connect()
     ch.close()
-    expect(MockWebSocket.lastInstance!.close).toHaveBeenCalledWith(1000, undefined)
+    expect(MockWebSocket.lastInstance?.close).toHaveBeenCalledWith(1000, undefined)
   })
 
   it("does not reconnect after close() even if the socket fires onclose", () => {
@@ -262,7 +262,7 @@ describe("close()", () => {
     const ch = new SignalingChannel(URL, createCallbacks())
     ch.connect()
     ch.close(1000, "unmount")
-    MockWebSocket.lastInstance!.simulateClose(1006)
+    MockWebSocket.lastInstance?.simulateClose(1006)
     vi.runAllTimers()
     expect(MockWebSocket.instances).toHaveLength(1)
     vi.useRealTimers()
@@ -272,7 +272,7 @@ describe("close()", () => {
     vi.useFakeTimers()
     const ch = new SignalingChannel(URL, createCallbacks())
     ch.connect()
-    MockWebSocket.lastInstance!.simulateClose(1006)
+    MockWebSocket.lastInstance?.simulateClose(1006)
     // timer is now scheduled
     ch.close()
     vi.runAllTimers()

@@ -11,6 +11,9 @@
       "suspicious": {
         "useIterableCallbackReturn": "off"
       },
+      "style": {
+        "noNonNullAssertion": "off"
+      },
       "a11y": {
         "useMediaCaption": "off"
       }
@@ -43,7 +46,8 @@
       "!dist",
       "!src/components/ui",
       "!reference",
-      "!src/index.css"
+      "!src/index.css",
+      "!.code-review-graph"
     ]
   }
 }
