@@ -68,7 +68,7 @@ describe("setup() → onicecandidate", () => {
     const pc = new PeerConnection(transport, createCallbacks())
     pc.setup("caller")
     const candidate = { toJSON: () => ({ candidate: "c", sdpMid: "0", sdpMLineIndex: 0 }) }
-    MockRTCPeerConnection.lastInstance!.onicecandidate!({
+    MockRTCPeerConnection.lastInstance?.onicecandidate?.({
       candidate,
     } as unknown as RTCPeerConnectionIceEvent)
     expect(transport.sent).toEqual([{ type: "ice-candidate", candidate: candidate.toJSON() }])
@@ -78,7 +78,7 @@ describe("setup() → onicecandidate", () => {
     const transport = createTransport()
     const pc = new PeerConnection(transport, createCallbacks())
     pc.setup("caller")
-    MockRTCPeerConnection.lastInstance!.onicecandidate!({
+    MockRTCPeerConnection.lastInstance?.onicecandidate?.({
       candidate: null,
     } as RTCPeerConnectionIceEvent)
     expect(transport.sent).toHaveLength(0)
@@ -91,7 +91,7 @@ describe("setup() → ontrack", () => {
     const pc = new PeerConnection(createTransport(), callbacks)
     pc.setup("caller")
     const fakeStream = { id: "remote" }
-    MockRTCPeerConnection.lastInstance!.ontrack!({
+    MockRTCPeerConnection.lastInstance?.ontrack?.({
       streams: [fakeStream],
     } as unknown as RTCTrackEvent)
     expect(callbacks.onRemoteStream).toHaveBeenCalledWith(fakeStream)
@@ -103,7 +103,7 @@ describe("setup() → onnegotiationneeded", () => {
     const transport = createTransport()
     const pc = new PeerConnection(transport, createCallbacks())
     pc.setup("caller")
-    await MockRTCPeerConnection.lastInstance!.onnegotiationneeded!()
+    await MockRTCPeerConnection.lastInstance?.onnegotiationneeded?.()
     expect(transport.sent.some((m) => m.type === "offer")).toBe(true)
   })
 
@@ -111,14 +111,14 @@ describe("setup() → onnegotiationneeded", () => {
     const transport = createTransport()
     const pc = new PeerConnection(transport, createCallbacks())
     pc.setup("callee")
-    await MockRTCPeerConnection.lastInstance!.onnegotiationneeded!()
+    await MockRTCPeerConnection.lastInstance?.onnegotiationneeded?.()
     expect(transport.sent).toHaveLength(0)
   })
 
   it("resets makingOffer to false after onnegotiationneeded completes", async () => {
     const pc = new PeerConnection(createTransport(), createCallbacks())
     pc.setup("caller")
-    await MockRTCPeerConnection.lastInstance!.onnegotiationneeded!()
+    await MockRTCPeerConnection.lastInstance?.onnegotiationneeded?.()
     expect(pc.state.makingOffer).toBe(false)
   })
 })
@@ -130,7 +130,7 @@ describe("setup() → oniceconnectionstatechange", () => {
     pc.setup("caller")
     const mockPC = MockRTCPeerConnection.lastInstance!
     mockPC.iceConnectionState = "connected"
-    mockPC.oniceconnectionstatechange!()
+    mockPC.oniceconnectionstatechange?.()
     expect(callbacks.onStatusChange).toHaveBeenCalledWith("connected")
   })
 
@@ -140,7 +140,7 @@ describe("setup() → oniceconnectionstatechange", () => {
     pc.setup("caller")
     const mockPC = MockRTCPeerConnection.lastInstance!
     mockPC.iceConnectionState = "completed"
-    mockPC.oniceconnectionstatechange!()
+    mockPC.oniceconnectionstatechange?.()
     expect(callbacks.onStatusChange).toHaveBeenCalledWith("connected")
   })
 
@@ -150,7 +150,7 @@ describe("setup() → oniceconnectionstatechange", () => {
     pc.setup("caller")
     const mockPC = MockRTCPeerConnection.lastInstance!
     mockPC.iceConnectionState = "failed"
-    mockPC.oniceconnectionstatechange!()
+    mockPC.oniceconnectionstatechange?.()
     expect(callbacks.onStatusChange).toHaveBeenCalledWith("reconnecting")
     expect(mockPC.restartIce).toHaveBeenCalled()
   })
@@ -161,7 +161,7 @@ describe("setup() → oniceconnectionstatechange", () => {
     pc.setup("callee")
     const mockPC = MockRTCPeerConnection.lastInstance!
     mockPC.iceConnectionState = "failed"
-    mockPC.oniceconnectionstatechange!()
+    mockPC.oniceconnectionstatechange?.()
     expect(callbacks.onStatusChange).toHaveBeenCalledWith("reconnecting")
     expect(mockPC.restartIce).not.toHaveBeenCalled()
   })
@@ -174,7 +174,7 @@ describe("close()", () => {
     const pc = new PeerConnection(createTransport(), createCallbacks())
     pc.setup("caller")
     pc.close()
-    expect(MockRTCPeerConnection.lastInstance!.close).toHaveBeenCalled()
+    expect(MockRTCPeerConnection.lastInstance?.close).toHaveBeenCalled()
   })
 })
 
@@ -237,7 +237,7 @@ describe("handleAnswer()", () => {
     const pc = new PeerConnection(createTransport(), createCallbacks())
     pc.setup("caller")
     await pc.handleAnswer({ type: "answer", sdp: "answer-sdp" })
-    expect(MockRTCPeerConnection.lastInstance!.setRemoteDescription).toHaveBeenCalledWith({
+    expect(MockRTCPeerConnection.lastInstance?.setRemoteDescription).toHaveBeenCalledWith({
       type: "answer",
       sdp: "answer-sdp",
     })
@@ -250,7 +250,7 @@ describe("handleAnswer()", () => {
     await pc.handleIceCandidate({ candidate: "c1", sdpMid: "0", sdpMLineIndex: 0 })
     // Now handle answer — should drain
     await pc.handleAnswer({ type: "answer", sdp: "answer-sdp" })
-    expect(MockRTCPeerConnection.lastInstance!.addIceCandidate).toHaveBeenCalledWith({
+    expect(MockRTCPeerConnection.lastInstance?.addIceCandidate).toHaveBeenCalledWith({
       candidate: "c1",
       sdpMid: "0",
       sdpMLineIndex: 0,
@@ -271,7 +271,7 @@ describe("handleIceCandidate()", () => {
     const pc = new PeerConnection(createTransport(), createCallbacks())
     pc.setup("callee")
     await pc.handleIceCandidate({ candidate: "c1", sdpMid: "0", sdpMLineIndex: 0 })
-    expect(MockRTCPeerConnection.lastInstance!.addIceCandidate).not.toHaveBeenCalled()
+    expect(MockRTCPeerConnection.lastInstance?.addIceCandidate).not.toHaveBeenCalled()
   })
 
   it("adds candidates directly after remote description", async () => {
@@ -281,7 +281,7 @@ describe("handleIceCandidate()", () => {
     await pc.handleOffer({ type: "offer", sdp: "remote" })
     // Now candidate should be added directly
     await pc.handleIceCandidate({ candidate: "c1", sdpMid: "0", sdpMLineIndex: 0 })
-    expect(MockRTCPeerConnection.lastInstance!.addIceCandidate).toHaveBeenCalledWith({
+    expect(MockRTCPeerConnection.lastInstance?.addIceCandidate).toHaveBeenCalledWith({
       candidate: "c1",
       sdpMid: "0",
       sdpMLineIndex: 0,
@@ -296,7 +296,7 @@ describe("restartIce()", () => {
     const pc = new PeerConnection(createTransport(), createCallbacks())
     pc.setup("caller")
     pc.restartIce()
-    expect(MockRTCPeerConnection.lastInstance!.restartIce).toHaveBeenCalled()
+    expect(MockRTCPeerConnection.lastInstance?.restartIce).toHaveBeenCalled()
   })
 })
 

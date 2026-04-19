@@ -1,5 +1,6 @@
 // src/pages/Room.tsx
 
+import type { TFunction } from "i18next"
 import { Mic, MicOff, Monitor, PhoneOff, Video, VideoOff } from "lucide-react"
 import { useEffect, useRef } from "react"
 import { useTranslation } from "react-i18next"
@@ -15,7 +16,6 @@ import {
 } from "@/components/ui/dialog"
 import { useCallSession } from "@/hooks/useCallSession"
 import type { CallStatus } from "@/store/call"
-import type { TFunction } from "i18next"
 
 function getStatusLabel(status: CallStatus, t: TFunction): string {
   return {
@@ -124,7 +124,9 @@ export default function Room() {
           variant="outline"
           size="icon"
           onClick={toggleCamera}
-          aria-label={isCameraOff ? t("room.controls.enableCamera") : t("room.controls.disableCamera")}
+          aria-label={
+            isCameraOff ? t("room.controls.enableCamera") : t("room.controls.disableCamera")
+          }
         >
           {isCameraOff ? <VideoOff /> : <Video />}
         </Button>
@@ -132,11 +134,18 @@ export default function Room() {
           variant="outline"
           size="icon"
           onClick={isScreenSharing ? stopScreenShare : startScreenShare}
-          aria-label={isScreenSharing ? t("room.controls.stopSharing") : t("room.controls.shareScreen")}
+          aria-label={
+            isScreenSharing ? t("room.controls.stopSharing") : t("room.controls.shareScreen")
+          }
         >
           <Monitor />
         </Button>
-        <Button variant="destructive" size="icon" onClick={hangup} aria-label={t("room.controls.hangUp")}>
+        <Button
+          variant="destructive"
+          size="icon"
+          onClick={hangup}
+          aria-label={t("room.controls.hangUp")}
+        >
           <PhoneOff />
         </Button>
       </div>
