@@ -81,6 +81,12 @@ export class SignalingMachine {
       case "WARN":
         console.warn("[FSM]", effect.message)
         return
+      case "SHOW_RECONNECT_MODAL":
+        this.deps.store.setState({ showReconnectModal: true })
+        return
+      case "HIDE_RECONNECT_MODAL":
+        this.deps.store.setState({ showReconnectModal: false })
+        return
       default: {
         const _: never = effect
       }

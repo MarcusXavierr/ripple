@@ -44,6 +44,8 @@ export type Effect =
   | { type: "HANDLE_ICE_CANDIDATE";  candidate: RTCIceCandidateInit }
   | { type: "SEND_WS";               msg: ClientMessage }
   | { type: "WARN";                  message: string }
+  | { type: "SHOW_RECONNECT_MODAL" }
+  | { type: "HIDE_RECONNECT_MODAL" }
 
 function handleOnopen(full: FullMachineState, event: { type: "onopen", role: "caller" | "callee", reconnect: boolean }): { next: FullMachineState, effects: Effect[] } {
   const role = full.role !== null ? full.role : event.role
@@ -61,18 +63,25 @@ function handleEnter(full: FullMachineState): { next: FullMachineState, effects:
 }
 
 function handlePeerReconnected(full: FullMachineState): { next: FullMachineState, effects: Effect[] } {
-  if (full.state === "NEGOTIATING" || full.state === "CONNECTED") {
+  if (full.state === "NEGOTIATING" || full.state === "CONNECTED" || full.state === "CALLER_WAITING" || full.state === "CALLEE_WAITING") {
     if (full.role === "caller") {
-      return { next: { ...full, state: "NEGOTIATING" }, effects: [{ type: "ROLLBACK_AND_RESTART_ICE" }] }
+      return { next: { ...full, state: "NEGOTIATING" }, effects: [{ type: "ROLLBACK_AND_RESTART_ICE" }, { type: "HIDE_RECONNECT_MODAL" }] }
     } else {
-      return { next: { ...full, state: "CALLEE_WAITING" }, effects: [{ type: "RESET_PC" }, { type: "SETUP_PC", role: "callee" }] }
+      return { next: { ...full, state: "CALLEE_WAITING" }, effects: [{ type: "RESET_PC" }, { type: "SETUP_PC", role: "callee" }, { type: "HIDE_RECONNECT_MODAL" }] }
     }
   }
   return { next: full, effects: [{ type: "WARN", message: `unhandled event: peer-reconnected in ${full.state}` }] }
 }
 
 function handleOnclose(full: FullMachineState): { next: FullMachineState, effects: Effect[] } {
-  if (full.state === "NEGOTIATING" || full.state === "CONNECTED") {
+  if (full.state === "CONNECTED") {
+    if (full.role === "caller") {
+      return { next: { ...full, state: "CALLER_WAITING" }, effects: [{ type: "RESET_PC" }, { type: "SHOW_RECONNECT_MODAL" }] }
+    } else if (full.role === "callee") {
+      return { next: { ...full, state: "CALLEE_WAITING" }, effects: [{ type: "RESET_PC" }, { type: "SHOW_RECONNECT_MODAL" }] }
+    }
+  }
+  if (full.state === "NEGOTIATING") {
     if (full.role === "caller") {
       return { next: { ...full, state: "CALLER_WAITING" }, effects: [{ type: "RESET_PC" }] }
     } else if (full.role === "callee") {

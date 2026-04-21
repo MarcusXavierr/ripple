@@ -60,6 +60,12 @@
     "error": {
       "title": "Error",
       "ok": "OK"
+    },
+    "reconnect": {
+      "title": "Peer disconnected",
+      "description": "The other person has left. You can wait for them to reconnect or go back home.",
+      "stay": "Stay in room",
+      "goHome": "Go home"
     }
   },
   "callEnded": {
