@@ -33,8 +33,6 @@ export class PeerConnection {
     return this.pc
   }
 
-
-
   setup(role: "caller" | "callee"): void {
     this.pc?.close()
     this.role = role

@@ -37,7 +37,7 @@ export class CallSession {
       {
         onRemoteStream: (stream) => useCallStore.setState({ remoteStream: stream }),
         onIceConnected: () => this.machine.send({ type: "ice-connected" }),
-        onIceFailed:    () => this.machine.send({ type: "ice-failed" }),
+        onIceFailed: () => this.machine.send({ type: "ice-failed" }),
       }
     )
 
@@ -115,5 +115,3 @@ export class CallSession {
     useCallStore.setState({ error: "Connection lost unexpectedly." })
   }
 }
-
-

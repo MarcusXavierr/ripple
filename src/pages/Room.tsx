@@ -172,14 +172,21 @@ export default function Room() {
       </Dialog>
 
       {/* Peer disconnected modal */}
-      <Dialog open={showReconnectModal} onOpenChange={(open) => { if (!open) dismissReconnectModal() }}>
+      <Dialog
+        open={showReconnectModal}
+        onOpenChange={(open) => {
+          if (!open) dismissReconnectModal()
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t("room.reconnect.title")}</DialogTitle>
             <DialogDescription>{t("room.reconnect.description")}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={dismissReconnectModal}>{t("room.reconnect.stay")}</Button>
+            <Button variant="outline" onClick={dismissReconnectModal}>
+              {t("room.reconnect.stay")}
+            </Button>
             <Button onClick={() => navigate("/")}>{t("room.reconnect.goHome")}</Button>
           </DialogFooter>
         </DialogContent>
