@@ -89,6 +89,7 @@ export class SignalingMachine {
         return
       default: {
         const _: never = effect
+        void _
       }
     }
   }

@@ -2,7 +2,6 @@
 
 import { getPeerId } from "@/lib/peerId"
 import { useCallStore } from "@/store/call"
-import type { ReceivedMessage } from "@/types/signaling"
 import { CLOSE_CODES } from "@/types/signaling"
 import { MediaController } from "./MediaController"
 import { PeerConnection } from "./PeerConnection"

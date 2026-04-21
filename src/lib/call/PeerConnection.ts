@@ -1,8 +1,6 @@
 // src/lib/call/PeerConnection.ts
 
-import type { CallStatus } from "@/store/call"
 import type { ClientMessage } from "@/types/signaling"
-import type { SignalingState } from "./signalingReducer"
 
 const ICE_SERVERS: RTCConfiguration["iceServers"] = [{ urls: "stun:stun.l.google.com:19302" }]
 

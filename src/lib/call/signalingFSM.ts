@@ -63,12 +63,11 @@ function handleEnter(full: FullMachineState): { next: FullMachineState, effects:
 }
 
 function handlePeerReconnected(full: FullMachineState): { next: FullMachineState, effects: Effect[] } {
-  if (full.state === "NEGOTIATING" || full.state === "CONNECTED" || full.state === "CALLER_WAITING" || full.state === "CALLEE_WAITING") {
-    if (full.role === "caller") {
-      return { next: { ...full, state: "NEGOTIATING" }, effects: [{ type: "ROLLBACK_AND_RESTART_ICE" }, { type: "HIDE_RECONNECT_MODAL" }] }
-    } else {
-      return { next: { ...full, state: "CALLEE_WAITING" }, effects: [{ type: "RESET_PC" }, { type: "SETUP_PC", role: "callee" }, { type: "HIDE_RECONNECT_MODAL" }] }
-    }
+  if (full.role === "caller" && (full.state === "NEGOTIATING" || full.state === "CONNECTED" || full.state === "CALLER_WAITING")) {
+    return { next: { ...full, state: "NEGOTIATING" }, effects: [{ type: "ROLLBACK_AND_RESTART_ICE" }, { type: "HIDE_RECONNECT_MODAL" }] }
+  }
+  if (full.role === "callee" && (full.state === "NEGOTIATING" || full.state === "CONNECTED")) {
+    return { next: { ...full, state: "CALLEE_WAITING" }, effects: [{ type: "RESET_PC" }, { type: "SETUP_PC", role: "callee" }, { type: "HIDE_RECONNECT_MODAL" }] }
   }
   return { next: full, effects: [{ type: "WARN", message: `unhandled event: peer-reconnected in ${full.state}` }] }
 }
@@ -152,6 +151,7 @@ export function transition(
     case "ice-failed":       return handleIceFailed(full)
     default: {
       const _: never = event
+      void _
       return {
         next: full,
         effects: [{ type: "WARN", message: `unhandled event: ${(event as MachineEvent).type} in ${full.state}` }],
@@ -172,6 +172,7 @@ export function toMachineEvent(msg: ReceivedMessage): MachineEvent {
     case "ice-candidate":    return { type: "ice-candidate", candidate: msg.candidate }
     default: {
       const _: never = msg
+      void _
       throw new Error(`[FSM] unknown protocol message: ${(msg as { type: string }).type}`)
     }
   }
