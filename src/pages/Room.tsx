@@ -4,7 +4,7 @@ import type { TFunction } from "i18next"
 import { Mic, MicOff, Monitor, PhoneOff, Video, VideoOff } from "lucide-react"
 import { useEffect, useRef } from "react"
 import { useTranslation } from "react-i18next"
-import { useParams } from "react-router-dom"
+import { useNavigate, useParams } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -32,12 +32,14 @@ function getStatusLabel(status: CallStatus, t: TFunction): string {
 
 export default function Room() {
   const { id: roomId } = useParams<{ id: string }>()
+  const navigate = useNavigate()
   const { t } = useTranslation()
   const {
     localStream,
     remoteStream,
     status,
     error,
+    showReconnectModal,
     isScreenSharing,
     isMicMuted,
     isCameraOff,
@@ -47,6 +49,7 @@ export default function Room() {
     toggleMic,
     toggleCamera,
     dismissError,
+    dismissReconnectModal,
   } = useCallSession(roomId!)
 
   const localVideoRef = useRef<HTMLVideoElement>(null)
@@ -164,6 +167,27 @@ export default function Room() {
           </DialogHeader>
           <DialogFooter>
             <Button onClick={dismissError}>{t("room.error.ok")}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Peer disconnected modal */}
+      <Dialog
+        open={showReconnectModal}
+        onOpenChange={(open) => {
+          if (!open) dismissReconnectModal()
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("room.reconnect.title")}</DialogTitle>
+            <DialogDescription>{t("room.reconnect.description")}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={dismissReconnectModal}>
+              {t("room.reconnect.stay")}
+            </Button>
+            <Button onClick={() => navigate("/")}>{t("room.reconnect.goHome")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

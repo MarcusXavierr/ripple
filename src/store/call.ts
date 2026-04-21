@@ -21,6 +21,7 @@ type CallStore = {
   isCameraOff: boolean
   status: CallStatus
   error: string | null
+  showReconnectModal: boolean
   reset: () => void
 }
 
@@ -35,6 +36,7 @@ const INITIAL_STATE = {
   isCameraOff: false,
   status: "idle" as CallStatus,
   error: null,
+  showReconnectModal: false,
 }
 
 export const useCallStore = create<CallStore>()((set) => ({

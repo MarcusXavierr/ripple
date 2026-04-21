@@ -60,6 +60,12 @@
     "error": {
       "title": "Erro",
       "ok": "OK"
+    },
+    "reconnect": {
+      "title": "Par desconectado",
+      "description": "A outra pessoa saiu. Você pode aguardar a reconexão ou voltar ao início.",
+      "stay": "Permanecer na sala",
+      "goHome": "Voltar ao início"
     }
   },
   "callEnded": {

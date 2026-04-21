@@ -20,6 +20,7 @@ export function useCallSession(roomId: string) {
   const remoteStream = useCallStore((s) => s.remoteStream)
   const status = useCallStore((s) => s.status)
   const error = useCallStore((s) => s.error)
+  const showReconnectModal = useCallStore((s) => s.showReconnectModal)
   const isMicMuted = useCallStore((s) => s.isMicMuted)
   const isCameraOff = useCallStore((s) => s.isCameraOff)
   const isScreenSharing = useCallStore((s) => s.isScreenSharing)
@@ -37,11 +38,16 @@ export function useCallSession(roomId: string) {
     }
   }, [navigate])
 
+  const dismissReconnectModal = useCallback(() => {
+    useCallStore.setState({ showReconnectModal: false })
+  }, [])
+
   return {
     localStream,
     remoteStream,
     status,
     error,
+    showReconnectModal,
     isMicMuted,
     isCameraOff,
     isScreenSharing,
@@ -51,5 +57,6 @@ export function useCallSession(roomId: string) {
     stopScreenShare: () => sessionRef.current?.media.stopScreenShare(),
     hangup: () => sessionRef.current?.hangup(),
     dismissError,
+    dismissReconnectModal,
   }
 }
