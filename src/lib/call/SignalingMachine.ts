@@ -1,4 +1,4 @@
-import { useCallStore } from "@/store/call"
+import type { useCallStore } from "@/store/call"
 import type { ReceivedMessage } from "@/types/signaling"
 import type { MediaController } from "./MediaController"
 import type { PeerConnection } from "./PeerConnection"
