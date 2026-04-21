@@ -18,7 +18,8 @@ function createTransport(): PeerConnectionTransport & { sent: ClientMessage[] } 
 function createCallbacks(): PeerConnectionCallbacks {
   return {
     onRemoteStream: vi.fn(),
-    onStatusChange: vi.fn(),
+    onIceConnected: vi.fn(),
+    onIceFailed: vi.fn(),
   }
 }
 
@@ -41,16 +42,6 @@ describe("setup()", () => {
     const first = MockRTCPeerConnection.lastInstance!
     pc.setup("callee")
     expect(first.close).toHaveBeenCalled()
-  })
-
-  it("exposes state with correct role and signalingState", () => {
-    const pc = new PeerConnection(createTransport(), createCallbacks())
-    pc.setup("caller")
-    expect(pc.state).toEqual({
-      role: "caller",
-      makingOffer: false,
-      signalingState: "stable",
-    })
   })
 
   it("exposes raw PC via getter", () => {
@@ -114,56 +105,27 @@ describe("setup() → onnegotiationneeded", () => {
     await MockRTCPeerConnection.lastInstance?.onnegotiationneeded?.()
     expect(transport.sent).toHaveLength(0)
   })
-
-  it("resets makingOffer to false after onnegotiationneeded completes", async () => {
-    const pc = new PeerConnection(createTransport(), createCallbacks())
-    pc.setup("caller")
-    await MockRTCPeerConnection.lastInstance?.onnegotiationneeded?.()
-    expect(pc.state.makingOffer).toBe(false)
-  })
 })
 
 describe("setup() → oniceconnectionstatechange", () => {
-  it("fires onStatusChange connected when ICE is connected", () => {
+  it("fires onIceConnected when ICE is connected", () => {
     const callbacks = createCallbacks()
     const pc = new PeerConnection(createTransport(), callbacks)
     pc.setup("caller")
     const mockPC = MockRTCPeerConnection.lastInstance!
     mockPC.iceConnectionState = "connected"
     mockPC.oniceconnectionstatechange?.()
-    expect(callbacks.onStatusChange).toHaveBeenCalledWith("connected")
+    expect(callbacks.onIceConnected).toHaveBeenCalled()
   })
 
-  it("fires onStatusChange connected when ICE is completed", () => {
-    const callbacks = createCallbacks()
-    const pc = new PeerConnection(createTransport(), callbacks)
-    pc.setup("caller")
-    const mockPC = MockRTCPeerConnection.lastInstance!
-    mockPC.iceConnectionState = "completed"
-    mockPC.oniceconnectionstatechange?.()
-    expect(callbacks.onStatusChange).toHaveBeenCalledWith("connected")
-  })
-
-  it("fires reconnecting + restartIce when ICE fails as caller", () => {
+  it("fires onIceFailed when ICE fails", () => {
     const callbacks = createCallbacks()
     const pc = new PeerConnection(createTransport(), callbacks)
     pc.setup("caller")
     const mockPC = MockRTCPeerConnection.lastInstance!
     mockPC.iceConnectionState = "failed"
     mockPC.oniceconnectionstatechange?.()
-    expect(callbacks.onStatusChange).toHaveBeenCalledWith("reconnecting")
-    expect(mockPC.restartIce).toHaveBeenCalled()
-  })
-
-  it("does not call restartIce when ICE fails as callee", () => {
-    const callbacks = createCallbacks()
-    const pc = new PeerConnection(createTransport(), callbacks)
-    pc.setup("callee")
-    const mockPC = MockRTCPeerConnection.lastInstance!
-    mockPC.iceConnectionState = "failed"
-    mockPC.oniceconnectionstatechange?.()
-    expect(callbacks.onStatusChange).toHaveBeenCalledWith("reconnecting")
-    expect(mockPC.restartIce).not.toHaveBeenCalled()
+    expect(callbacks.onIceFailed).toHaveBeenCalled()
   })
 })
 
@@ -290,15 +252,6 @@ describe("handleIceCandidate()", () => {
 })
 
 // ── restartIce() ────────────────────────────────────────────────────────────
-
-describe("restartIce()", () => {
-  it("calls pc.restartIce()", () => {
-    const pc = new PeerConnection(createTransport(), createCallbacks())
-    pc.setup("caller")
-    pc.restartIce()
-    expect(MockRTCPeerConnection.lastInstance?.restartIce).toHaveBeenCalled()
-  })
-})
 
 // ── rollbackAndRestartIce() ─────────────────────────────────────────────────
 

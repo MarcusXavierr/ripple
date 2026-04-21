@@ -12,7 +12,8 @@ export interface PeerConnectionTransport {
 
 export interface PeerConnectionCallbacks {
   onRemoteStream(stream: MediaStream | null): void
-  onStatusChange(status: CallStatus): void
+  onIceConnected(): void
+  onIceFailed(): void
 }
 
 export class PeerConnection {
@@ -34,13 +35,7 @@ export class PeerConnection {
     return this.pc
   }
 
-  get state(): SignalingState {
-    return {
-      role: this.role,
-      makingOffer: this._makingOffer,
-      signalingState: this.pc?.signalingState ?? null,
-    }
-  }
+
 
   setup(role: "caller" | "callee"): void {
     this.pc?.close()
@@ -64,10 +59,9 @@ export class PeerConnection {
 
     pc.oniceconnectionstatechange = () => {
       if (pc.iceConnectionState === "connected" || pc.iceConnectionState === "completed") {
-        this.callbacks.onStatusChange("connected")
+        this.callbacks.onIceConnected()
       } else if (pc.iceConnectionState === "failed") {
-        this.callbacks.onStatusChange("reconnecting")
-        if (this.role === "caller") pc.restartIce()
+        this.callbacks.onIceFailed()
       }
     }
 
@@ -134,15 +128,12 @@ export class PeerConnection {
     this.pendingCandidates = []
   }
 
-  restartIce(): void {
-    this.pc?.restartIce()
-  }
-
   async rollbackAndRestartIce(): Promise<void> {
-    if (this.pc) {
+    if (!this.pc) return
+    if (this.pc.signalingState !== "stable") {
       await this.pc.setLocalDescription({ type: "rollback" })
-      this.pc.restartIce()
     }
+    this.pc.restartIce()
   }
 
   close(): void {

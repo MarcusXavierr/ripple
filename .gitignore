@@ -27,3 +27,5 @@ dist-ssr
 skills-lock.json
 reference/
 reference
+.python-version
+
