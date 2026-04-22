@@ -11,6 +11,8 @@ const arbState: fc.Arbitrary<FullMachineState> = fc.record({
     "CONNECTING",
     "CALLER_WAITING",
     "CALLEE_WAITING",
+    "CALLER_ORPHANED",
+    "CALLEE_ORPHANED",
     "NEGOTIATING",
     "CONNECTED"
   ),
@@ -69,12 +71,12 @@ describe("Signaling Machine Invariants", () => {
     )
   })
 
-  it("onclose in CONNECTED or NEGOTIATING always returns to a WAITING state", () => {
+  it("onclose in CONNECTED or NEGOTIATING always returns to an ORPHANED state", () => {
     fc.assert(
       fc.property(arbRole, (role) => {
         for (const state of ["CONNECTED", "NEGOTIATING"] as MachineState[]) {
           const { next } = transition({ state, role }, { type: "onclose", message: "bye" })
-          expect(["CALLER_WAITING", "CALLEE_WAITING"]).toContain(next.state)
+          expect(["CALLER_ORPHANED", "CALLEE_ORPHANED"]).toContain(next.state)
         }
       })
     )
@@ -114,20 +116,28 @@ describe("Signaling Machine Invariants", () => {
     )
   })
 
-  it("after onclose, a subsequent enter/offer produces NEGOTIATING (F5 bug regression)", () => {
+  it("after onclose → peer-reconnected → enter/offer reaches NEGOTIATING (F5 bug regression)", () => {
     fc.assert(
       fc.property(arbRole, (role) => {
         const afterOnclose = transition(
           { state: "CONNECTED", role },
           { type: "onclose", message: "bye" }
         ).next
+        expect(afterOnclose.state).toBe(
+          role === "caller" ? "CALLER_ORPHANED" : "CALLEE_ORPHANED"
+        )
+
+        const afterReconnect = transition(afterOnclose, { type: "peer-reconnected" }).next
+        expect(afterReconnect.state).toBe(
+          role === "caller" ? "CALLER_WAITING" : "CALLEE_WAITING"
+        )
 
         const followUp: MachineEvent =
           role === "caller"
             ? { type: "enter" }
             : { type: "offer", offer: { type: "offer", sdp: "v=0" } }
 
-        const { next } = transition(afterOnclose, followUp)
+        const { next } = transition(afterReconnect, followUp)
         expect(next.state).toBe("NEGOTIATING")
       })
     )
@@ -137,6 +147,8 @@ describe("Signaling Machine Invariants", () => {
     if (state.state === "IDLE" || state.state === "CONNECTING") return true
     if (state.state === "CALLER_WAITING" && state.role === "caller") return true
     if (state.state === "CALLEE_WAITING" && state.role === "callee") return true
+    if (state.state === "CALLER_ORPHANED" && state.role === "caller") return true
+    if (state.state === "CALLEE_ORPHANED" && state.role === "callee") return true
     if ((state.state === "NEGOTIATING" || state.state === "CONNECTED") && state.role !== null)
       return true
     return false
@@ -150,8 +162,12 @@ describe("Signaling Machine Invariants", () => {
         if (final.state === "IDLE" || final.state === "CONNECTING") {
           return
         }
-        if (final.state === "CALLER_WAITING") expect(final.role).toBe("caller")
-        if (final.state === "CALLEE_WAITING") expect(final.role).toBe("callee")
+        if (final.state === "CALLER_WAITING" || final.state === "CALLER_ORPHANED") {
+          expect(final.role).toBe("caller")
+        }
+        if (final.state === "CALLEE_WAITING" || final.state === "CALLEE_ORPHANED") {
+          expect(final.role).toBe("callee")
+        }
         if (final.state === "NEGOTIATING" || final.state === "CONNECTED") {
           expect(final.role).not.toBeNull()
         }
@@ -184,7 +200,7 @@ describe("Signaling Machine Invariants", () => {
     )
   })
 
-  it("SETUP_PC coupling: emitted ⇔ onopen or peer-reconnected(callee), next.state matches role", () => {
+  it("SETUP_PC coupling: emitted ⇔ onopen or peer-reconnected(from ORPHANED), next.state matches role", () => {
     fc.assert(
       fc.property(arbState, arbEvent, (state, event) => {
         const { next, effects } = transition(state, event)
@@ -192,7 +208,11 @@ describe("Signaling Machine Invariants", () => {
         if (setup && setup.type === "SETUP_PC") {
           const validTrigger =
             event.type === "onopen" ||
-            (event.type === "peer-reconnected" && state.role === "callee")
+            (event.type === "peer-reconnected" &&
+              (state.state === "CALLER_ORPHANED" ||
+                state.state === "CALLEE_ORPHANED" ||
+                state.state === "NEGOTIATING" ||
+                state.state === "CONNECTED"))
           expect(validTrigger).toBe(true)
           const expected = setup.role === "caller" ? "CALLER_WAITING" : "CALLEE_WAITING"
           expect(next.state).toBe(expected)
@@ -204,14 +224,18 @@ describe("Signaling Machine Invariants", () => {
     )
   })
 
-  it("RESET_PC coupling: only from onclose or peer-reconnected out of NEGOTIATING or CONNECTED", () => {
+  it("RESET_PC coupling: only from onclose or peer-reconnected, always landing in ORPHANED or WAITING", () => {
     fc.assert(
       fc.property(arbState, arbEvent, (state, event) => {
         const { next, effects } = transition(state, event)
         if (effects.some((e) => e.type === "RESET_PC")) {
           expect(["onclose", "peer-reconnected"]).toContain(event.type)
-          expect(["NEGOTIATING", "CONNECTED"]).toContain(state.state)
-          expect(["CALLER_WAITING", "CALLEE_WAITING"]).toContain(next.state)
+          expect([
+            "CALLER_ORPHANED",
+            "CALLEE_ORPHANED",
+            "CALLER_WAITING",
+            "CALLEE_WAITING",
+          ]).toContain(next.state)
         }
       })
     )
@@ -265,6 +289,28 @@ describe("Signaling Machine Invariants", () => {
       expect(effects.some((e) => e.type === "RESET_PC")).toBe(true)
       expect(effects.some((e) => e.type === "SETUP_PC")).toBe(true)
     }
+  })
+
+  it("PC-lifecycle invariant: effects that dereference PC never fire from PC-less states", () => {
+    // PC-less states: IDLE, CONNECTING, CALLER_ORPHANED, CALLEE_ORPHANED
+    // Effects that require a live PC: ROLLBACK_AND_RESTART_ICE, HANDLE_OFFER, HANDLE_ANSWER, HANDLE_ICE_CANDIDATE
+    const pcLessStates: MachineState[] = ["IDLE", "CONNECTING", "CALLER_ORPHANED", "CALLEE_ORPHANED"]
+    const pcDerefEffects = [
+      "ROLLBACK_AND_RESTART_ICE",
+      "HANDLE_OFFER",
+      "HANDLE_ANSWER",
+      "HANDLE_ICE_CANDIDATE",
+    ]
+    fc.assert(
+      fc.property(arbState, arbEvent, (state, event) => {
+        fc.pre(isCoherent(state))
+        fc.pre(pcLessStates.includes(state.state))
+        const { effects } = transition(state, event)
+        for (const eff of effects) {
+          expect(pcDerefEffects).not.toContain(eff.type)
+        }
+      })
+    )
   })
 
   it("after peer-reconnected as callee, a subsequent offer produces NEGOTIATING", () => {
