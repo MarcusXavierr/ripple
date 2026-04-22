@@ -6,6 +6,8 @@ export type MachineState =
   | "CONNECTING"
   | "CALLER_WAITING"
   | "CALLEE_WAITING"
+  | "CALLER_ORPHANED"
+  | "CALLEE_ORPHANED"
   | "NEGOTIATING"
   | "CONNECTED"
 
@@ -14,6 +16,8 @@ export const STATUS_MAP: Record<MachineState, CallStatus> = {
   CONNECTING: "connecting",
   CALLER_WAITING: "waiting",
   CALLEE_WAITING: "waiting",
+  CALLER_ORPHANED: "waiting",
+  CALLEE_ORPHANED: "waiting",
   NEGOTIATING: "negotiating",
   CONNECTED: "connected",
 }
@@ -75,16 +79,31 @@ function handlePeerReconnected(full: FullMachineState): {
   next: FullMachineState
   effects: Effect[]
 } {
+  if (full.role === "caller" && full.state === "CALLER_ORPHANED") {
+    return {
+      next: { ...full, state: "CALLER_WAITING" },
+      effects: [{ type: "SETUP_PC", role: "caller" }, { type: "HIDE_RECONNECT_MODAL" }],
+    }
+  }
+  if (full.role === "callee" && full.state === "CALLEE_ORPHANED") {
+    return {
+      next: { ...full, state: "CALLEE_WAITING" },
+      effects: [{ type: "SETUP_PC", role: "callee" }, { type: "HIDE_RECONNECT_MODAL" }],
+    }
+  }
   if (
     full.role === "caller" &&
-    (full.state === "NEGOTIATING" || full.state === "CONNECTED" || full.state === "CALLER_WAITING")
+    (full.state === "NEGOTIATING" || full.state === "CONNECTED")
   ) {
     return {
       next: { ...full, state: "NEGOTIATING" },
       effects: [{ type: "ROLLBACK_AND_RESTART_ICE" }, { type: "HIDE_RECONNECT_MODAL" }],
     }
   }
-  if (full.role === "callee" && (full.state === "NEGOTIATING" || full.state === "CONNECTED")) {
+  if (
+    full.role === "callee" &&
+    (full.state === "NEGOTIATING" || full.state === "CONNECTED")
+  ) {
     return {
       next: { ...full, state: "CALLEE_WAITING" },
       effects: [
@@ -104,21 +123,21 @@ function handleOnclose(full: FullMachineState): { next: FullMachineState; effect
   if (full.state === "CONNECTED") {
     if (full.role === "caller") {
       return {
-        next: { ...full, state: "CALLER_WAITING" },
+        next: { ...full, state: "CALLER_ORPHANED" },
         effects: [{ type: "RESET_PC" }, { type: "SHOW_RECONNECT_MODAL" }],
       }
     } else if (full.role === "callee") {
       return {
-        next: { ...full, state: "CALLEE_WAITING" },
+        next: { ...full, state: "CALLEE_ORPHANED" },
         effects: [{ type: "RESET_PC" }, { type: "SHOW_RECONNECT_MODAL" }],
       }
     }
   }
   if (full.state === "NEGOTIATING") {
     if (full.role === "caller") {
-      return { next: { ...full, state: "CALLER_WAITING" }, effects: [{ type: "RESET_PC" }] }
+      return { next: { ...full, state: "CALLER_ORPHANED" }, effects: [{ type: "RESET_PC" }] }
     } else if (full.role === "callee") {
-      return { next: { ...full, state: "CALLEE_WAITING" }, effects: [{ type: "RESET_PC" }] }
+      return { next: { ...full, state: "CALLEE_ORPHANED" }, effects: [{ type: "RESET_PC" }] }
     }
   }
   return {
