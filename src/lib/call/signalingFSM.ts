@@ -1,6 +1,8 @@
 import type { CallStatus } from "@/store/call"
 import type { ClientMessage, ReceivedMessage } from "@/types/signaling"
 
+export type MachineReceivedMessage = Exclude<ReceivedMessage, { type: "peer-video-click" }>
+
 export type MachineState =
   | "IDLE"
   | "CONNECTING"
@@ -267,7 +269,7 @@ export function transition(
   }
 }
 
-export function toMachineEvent(msg: ReceivedMessage): MachineEvent {
+export function toMachineEvent(msg: MachineReceivedMessage): MachineEvent {
   switch (msg.type) {
     case "onopen":
       return { type: "onopen", role: msg.role, reconnect: msg.reconnect }

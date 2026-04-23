@@ -1,5 +1,7 @@
 // SYNC: keep identical to backend types.ts
 
+import type { PeerVideoClick } from "./peerVideoClick"
+
 // Server → Client
 export type ServerMessage =
   | { type: "onopen"; role: "caller" | "callee"; reconnect: boolean }
@@ -13,6 +15,7 @@ export type ClientMessage =
   | { type: "offer"; offer: RTCSessionDescriptionInit }
   | { type: "answer"; answer: RTCSessionDescriptionInit }
   | { type: "ice-candidate"; candidate: RTCIceCandidateInit }
+  | { type: "peer-video-click"; click: PeerVideoClick }
   | { type: "pong" }
 
 export const CLOSE_CODES = {
@@ -32,6 +35,7 @@ export const MESSAGE_TYPES = {
   OFFER: "offer",
   ANSWER: "answer",
   ICE_CANDIDATE: "ice-candidate",
+  PEER_VIDEO_CLICK: "peer-video-click",
   PONG: "pong",
 } as const
 
@@ -41,3 +45,4 @@ export type ReceivedMessage =
   | { type: "offer"; offer: RTCSessionDescriptionInit }
   | { type: "answer"; answer: RTCSessionDescriptionInit }
   | { type: "ice-candidate"; candidate: RTCIceCandidateInit }
+  | { type: "peer-video-click"; click: PeerVideoClick }
