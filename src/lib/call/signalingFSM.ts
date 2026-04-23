@@ -93,19 +93,13 @@ function handlePeerReconnected(full: FullMachineState): {
       effects: [{ type: "SETUP_PC", role: "callee" }, { type: "HIDE_RECONNECT_MODAL" }],
     }
   }
-  if (
-    full.role === "caller" &&
-    (full.state === "NEGOTIATING" || full.state === "CONNECTED")
-  ) {
+  if (full.role === "caller" && (full.state === "NEGOTIATING" || full.state === "CONNECTED")) {
     return {
       next: { ...full, state: "NEGOTIATING" },
       effects: [{ type: "ROLLBACK_AND_RESTART_ICE" }, { type: "HIDE_RECONNECT_MODAL" }],
     }
   }
-  if (
-    full.role === "callee" &&
-    (full.state === "NEGOTIATING" || full.state === "CONNECTED")
-  ) {
+  if (full.role === "callee" && (full.state === "NEGOTIATING" || full.state === "CONNECTED")) {
     return {
       next: { ...full, state: "CALLEE_WAITING" },
       effects: [

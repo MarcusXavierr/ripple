@@ -26,11 +26,7 @@ function createVideoStub(overrides?: Partial<HTMLVideoElement>) {
 
 describe("createPeerVideoClick", () => {
   it("builds a payload relative to the visible rendered media", () => {
-    const click = createPeerVideoClick(
-      createVideoStub(),
-      { clientX: 300, clientY: 150 },
-      env,
-    )
+    const click = createPeerVideoClick(createVideoStub(), { clientX: 300, clientY: 150 }, env)
 
     expect(click).toEqual({
       x: 200,
@@ -48,11 +44,7 @@ describe("createPeerVideoClick", () => {
   })
 
   it("returns null for clicks in the letterboxed padding area", () => {
-    const click = createPeerVideoClick(
-      createVideoStub(),
-      { clientX: 140, clientY: 80 },
-      env,
-    )
+    const click = createPeerVideoClick(createVideoStub(), { clientX: 140, clientY: 80 }, env)
 
     expect(click).toBeNull()
   })
@@ -63,27 +55,15 @@ describe("createPeerVideoClick", () => {
       videoHeight: 400,
     })
 
-    const leftPaddingClick = createPeerVideoClick(
-      video,
-      { clientX: 120, clientY: 200 },
-      env,
-    )
-    const rightPaddingClick = createPeerVideoClick(
-      video,
-      { clientX: 480, clientY: 200 },
-      env,
-    )
+    const leftPaddingClick = createPeerVideoClick(video, { clientX: 120, clientY: 200 }, env)
+    const rightPaddingClick = createPeerVideoClick(video, { clientX: 480, clientY: 200 }, env)
 
     expect(leftPaddingClick).toBeNull()
     expect(rightPaddingClick).toBeNull()
   })
 
   it("accepts clicks exactly on the visible media edge", () => {
-    const click = createPeerVideoClick(
-      createVideoStub(),
-      { clientX: 100, clientY: 100 },
-      env,
-    )
+    const click = createPeerVideoClick(createVideoStub(), { clientX: 100, clientY: 100 }, env)
 
     expect(click).toEqual({
       x: 0,
@@ -104,7 +84,7 @@ describe("createPeerVideoClick", () => {
     const click = createPeerVideoClick(
       createVideoStub({ videoWidth: 0, videoHeight: 0 }),
       { clientX: 300, clientY: 150 },
-      env,
+      env
     )
 
     expect(click).toBeNull()

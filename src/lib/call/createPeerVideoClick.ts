@@ -24,20 +24,14 @@ function getDefaultEnvironment(): ClickEnvironment {
 }
 
 export function createPeerVideoClick(
-  video: Pick<
-    HTMLVideoElement,
-    "videoWidth" | "videoHeight" | "getBoundingClientRect"
-  >,
+  video: Pick<HTMLVideoElement, "videoWidth" | "videoHeight" | "getBoundingClientRect">,
   point: ClickPoint,
-  env: ClickEnvironment = getDefaultEnvironment(),
+  env: ClickEnvironment = getDefaultEnvironment()
 ): PeerVideoClick | null {
   if (video.videoWidth <= 0 || video.videoHeight <= 0) return null
 
   const rect = video.getBoundingClientRect()
-  const scale = Math.min(
-    rect.width / video.videoWidth,
-    rect.height / video.videoHeight,
-  )
+  const scale = Math.min(rect.width / video.videoWidth, rect.height / video.videoHeight)
   const renderedWidth = video.videoWidth * scale
   const renderedHeight = video.videoHeight * scale
   const offsetX = (rect.width - renderedWidth) / 2

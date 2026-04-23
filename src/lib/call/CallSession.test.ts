@@ -5,11 +5,9 @@ import { CallSession } from "./CallSession"
 
 const signalingSend = vi.fn()
 const machineHandleProtocolMessage = vi.fn()
-let signalingCallbacks:
-  | {
-      onMessage: (msg: ReceivedMessage) => Promise<void>
-    }
-  | null = null
+let signalingCallbacks: {
+  onMessage: (msg: ReceivedMessage) => Promise<void>
+} | null = null
 
 vi.mock("@/lib/peerId", () => ({
   getPeerId: () => "peer-123",
@@ -18,9 +16,9 @@ vi.mock("@/lib/peerId", () => ({
 vi.mock("./MediaController", () => ({
   MediaController: vi.fn().mockImplementation(function MediaControllerMock() {
     return {
-    init: vi.fn(),
-    teardown: vi.fn(),
-    attachPC: vi.fn(),
+      init: vi.fn(),
+      teardown: vi.fn(),
+      attachPC: vi.fn(),
     }
   }),
 }))
@@ -28,13 +26,13 @@ vi.mock("./MediaController", () => ({
 vi.mock("./PeerConnection", () => ({
   PeerConnection: vi.fn().mockImplementation(function PeerConnectionMock() {
     return {
-    raw: null,
-    close: vi.fn(),
-    setup: vi.fn(),
-    handleOffer: vi.fn(),
-    handleAnswer: vi.fn(),
-    handleIceCandidate: vi.fn(),
-    rollbackAndRestartIce: vi.fn(),
+      raw: null,
+      close: vi.fn(),
+      setup: vi.fn(),
+      handleOffer: vi.fn(),
+      handleAnswer: vi.fn(),
+      handleIceCandidate: vi.fn(),
+      rollbackAndRestartIce: vi.fn(),
     }
   }),
 }))
@@ -42,8 +40,8 @@ vi.mock("./PeerConnection", () => ({
 vi.mock("./SignalingMachine", () => ({
   SignalingMachine: vi.fn().mockImplementation(function SignalingMachineMock() {
     return {
-    handleProtocolMessage: machineHandleProtocolMessage,
-    send: vi.fn(),
+      handleProtocolMessage: machineHandleProtocolMessage,
+      send: vi.fn(),
     }
   }),
 }))
