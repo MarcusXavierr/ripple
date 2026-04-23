@@ -1,9 +1,23 @@
 import { act, renderHook } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { CallSession } from "@/lib/call/CallSession"
 import { useCallStore } from "@/store/call"
 import { useCallSession } from "./useCallSession"
 
 const mockNavigate = vi.fn()
+const sampleClick = {
+  x: 120,
+  y: 45,
+  width: 640,
+  height: 360,
+  xRatio: 0.1875,
+  yRatio: 0.125,
+  clickerViewportWidth: 1440,
+  clickerViewportHeight: 900,
+  clickerScreenWidth: 2560,
+  clickerScreenHeight: 1440,
+  devicePixelRatio: 2,
+}
 
 vi.mock("react-router-dom", () => ({
   useNavigate: () => mockNavigate,
@@ -16,6 +30,7 @@ vi.mock("@/lib/call/CallSession", () => ({
       start: vi.fn(),
       teardown: vi.fn(),
       hangup: vi.fn(),
+      sendPeerVideoClick: vi.fn(),
       media: {
         toggleMic: vi.fn(),
         toggleCamera: vi.fn(),
@@ -33,6 +48,15 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.clearAllMocks()
+})
+
+it("delegates sendPeerVideoClick to the session", () => {
+  const { result } = renderHook(() => useCallSession("test-room"))
+  const session = vi.mocked(CallSession).mock.results[0]?.value
+
+  act(() => result.current.sendPeerVideoClick(sampleClick))
+
+  expect(session.sendPeerVideoClick).toHaveBeenCalledWith(sampleClick)
 })
 
 describe("dismissError", () => {
