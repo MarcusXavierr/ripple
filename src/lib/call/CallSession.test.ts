@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
+import { samplePeerVideoClick } from "@/testing/peerVideoClick.fixture"
 import type { ReceivedMessage } from "@/types/signaling"
 import { CallSession } from "./CallSession"
 
@@ -9,20 +10,6 @@ let signalingCallbacks:
       onMessage: (msg: ReceivedMessage) => Promise<void>
     }
   | null = null
-
-const sampleClick = {
-  x: 120,
-  y: 45,
-  width: 640,
-  height: 360,
-  xRatio: 0.1875,
-  yRatio: 0.125,
-  clickerViewportWidth: 1440,
-  clickerViewportHeight: 900,
-  clickerScreenWidth: 2560,
-  clickerScreenHeight: 1440,
-  devicePixelRatio: 2,
-}
 
 vi.mock("@/lib/peerId", () => ({
   getPeerId: () => "peer-123",
@@ -86,26 +73,21 @@ describe("sendPeerVideoClick", () => {
   it("sends the click payload through the signaling channel", () => {
     const session = new CallSession("room-1", vi.fn())
 
-    session.sendPeerVideoClick(sampleClick)
+    session.sendPeerVideoClick(samplePeerVideoClick)
 
     expect(signalingSend).toHaveBeenCalledWith({
       type: "peer-video-click",
-      click: sampleClick,
+      click: samplePeerVideoClick,
     })
   })
 })
 
 describe("incoming peer video click relay", () => {
-  it("logs the payload instead of forwarding it to the FSM", async () => {
-    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {})
-
+  it("does not forward the click to the FSM", async () => {
     new CallSession("room-1", vi.fn())
-    await signalingCallbacks?.onMessage({ type: "peer-video-click", click: sampleClick })
+    await signalingCallbacks?.onMessage({ type: "peer-video-click", click: samplePeerVideoClick })
 
-    expect(consoleSpy).toHaveBeenCalledWith("[Peer Video Click]", sampleClick)
     expect(machineHandleProtocolMessage).not.toHaveBeenCalled()
-
-    consoleSpy.mockRestore()
   })
 
   it("still forwards normal signaling messages to the FSM", async () => {

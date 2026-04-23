@@ -3,7 +3,7 @@
 import { getPeerId } from "@/lib/peerId"
 import { useCallStore } from "@/store/call"
 import type { PeerVideoClick } from "@/types/peerVideoClick"
-import { CLOSE_CODES } from "@/types/signaling"
+import { CLOSE_CODES, MESSAGE_TYPES } from "@/types/signaling"
 import type { ReceivedMessage } from "@/types/signaling"
 import { MediaController } from "./MediaController"
 import { PeerConnection } from "./PeerConnection"
@@ -97,13 +97,13 @@ export class CallSession {
   }
 
   sendPeerVideoClick(click: PeerVideoClick) {
-    this.signalingChannel.send({ type: "peer-video-click", click })
+    this.signalingChannel.send({ type: MESSAGE_TYPES.PEER_VIDEO_CLICK, click })
   }
 
   // ── Signaling message dispatch ──────────────────────────────────────────────
 
   private handleMessage(msg: ReceivedMessage): Promise<void> {
-    if (msg.type === "peer-video-click") {
+    if (msg.type === MESSAGE_TYPES.PEER_VIDEO_CLICK) {
       console.log("[Peer Video Click]", msg.click)
       return Promise.resolve()
     }

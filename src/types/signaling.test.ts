@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import type { PeerVideoClick } from "./peerVideoClick"
+import { samplePeerVideoClick } from "@/testing/peerVideoClick.fixture"
 import { MESSAGE_TYPES } from "./signaling"
 import type { ClientMessage, ReceivedMessage } from "./signaling"
 
@@ -12,20 +12,6 @@ type PeerVideoClickReceivedMessage = Extract<
   ReceivedMessage,
   { type: typeof MESSAGE_TYPES.PEER_VIDEO_CLICK }
 >
-
-const sampleClick: PeerVideoClick = {
-  x: 120,
-  y: 45,
-  width: 640,
-  height: 360,
-  xRatio: 0.1875,
-  yRatio: 0.125,
-  clickerViewportWidth: 1440,
-  clickerViewportHeight: 900,
-  clickerScreenWidth: 2560,
-  clickerScreenHeight: 1440,
-  devicePixelRatio: 2,
-}
 
 describe("MESSAGE_TYPES", () => {
   it("has all server message type constants", () => {
@@ -48,11 +34,11 @@ describe("MESSAGE_TYPES", () => {
     // Compile-time coverage: if either union drops this branch, these assignments fail under TypeScript.
     const outbound: PeerVideoClickClientMessage = {
       type: "peer-video-click",
-      click: sampleClick,
+      click: samplePeerVideoClick,
     }
     const inbound: PeerVideoClickReceivedMessage = {
       type: "peer-video-click",
-      click: sampleClick,
+      click: samplePeerVideoClick,
     }
 
     expect(outbound.type).toBe("peer-video-click")
