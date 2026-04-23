@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import { CallSession } from "@/lib/call/CallSession"
 import { useCallStore } from "@/store/call"
+import type { PeerVideoClick } from "@/types/peerVideoClick"
 
 export function useCallSession(roomId: string) {
   const navigate = useNavigate()
@@ -55,6 +56,7 @@ export function useCallSession(roomId: string) {
     toggleCamera: () => sessionRef.current?.media.toggleCamera(),
     startScreenShare: () => sessionRef.current?.media.startScreenShare(),
     stopScreenShare: () => sessionRef.current?.media.stopScreenShare(),
+    sendPeerVideoClick: (click: PeerVideoClick) => sessionRef.current?.sendPeerVideoClick(click),
     hangup: () => sessionRef.current?.hangup(),
     dismissError,
     dismissReconnectModal,

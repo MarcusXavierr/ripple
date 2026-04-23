@@ -2,7 +2,9 @@
 
 import { getPeerId } from "@/lib/peerId"
 import { useCallStore } from "@/store/call"
-import { CLOSE_CODES } from "@/types/signaling"
+import type { PeerVideoClick } from "@/types/peerVideoClick"
+import { CLOSE_CODES, MESSAGE_TYPES } from "@/types/signaling"
+import type { ReceivedMessage } from "@/types/signaling"
 import { MediaController } from "./MediaController"
 import { PeerConnection } from "./PeerConnection"
 import { SignalingChannel } from "./SignalingChannel"
@@ -42,7 +44,7 @@ export class CallSession {
     )
 
     this.signalingChannel = new SignalingChannel(wsUrl, {
-      onMessage: (msg) => this.machine.handleProtocolMessage(msg),
+      onMessage: (msg) => this.handleMessage(msg),
       onConnecting: () => useCallStore.setState({ status: "connecting" }),
       onReconnecting: () => useCallStore.setState({ status: "reconnecting" }),
       onTerminalClose: (code) => this.handleTerminalClose(code),
@@ -94,7 +96,20 @@ export class CallSession {
     this.navigate(`/room/${this.roomId}/ended`)
   }
 
+  sendPeerVideoClick(click: PeerVideoClick) {
+    this.signalingChannel.send({ type: MESSAGE_TYPES.PEER_VIDEO_CLICK, click })
+  }
+
   // ── Signaling message dispatch ──────────────────────────────────────────────
+
+  private handleMessage(msg: ReceivedMessage): Promise<void> {
+    if (msg.type === MESSAGE_TYPES.PEER_VIDEO_CLICK) {
+      console.log("[Peer Video Click]", msg.click)
+      return Promise.resolve()
+    }
+
+    return this.machine.handleProtocolMessage(msg)
+  }
 
   private handleTerminalClose(code: number): void {
     const handlers: Record<number, () => void> = {

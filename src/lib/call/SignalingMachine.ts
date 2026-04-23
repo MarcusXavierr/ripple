@@ -1,5 +1,4 @@
 import type { useCallStore } from "@/store/call"
-import type { ReceivedMessage } from "@/types/signaling"
 import type { MediaController } from "./MediaController"
 import type { PeerConnection } from "./PeerConnection"
 import type { SignalingChannel } from "./SignalingChannel"
@@ -7,6 +6,7 @@ import {
   type Effect,
   type FullMachineState,
   type MachineEvent,
+  type MachineReceivedMessage,
   STATUS_MAP,
   toMachineEvent,
   transition,
@@ -33,7 +33,7 @@ export class SignalingMachine {
     this.deps = deps
   }
 
-  handleProtocolMessage(msg: ReceivedMessage): Promise<void> {
+  handleProtocolMessage(msg: MachineReceivedMessage): Promise<void> {
     try {
       return this.send(toMachineEvent(msg))
     } catch (e) {

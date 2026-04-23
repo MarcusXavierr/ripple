@@ -123,14 +123,10 @@ describe("Signaling Machine Invariants", () => {
           { state: "CONNECTED", role },
           { type: "onclose", message: "bye" }
         ).next
-        expect(afterOnclose.state).toBe(
-          role === "caller" ? "CALLER_ORPHANED" : "CALLEE_ORPHANED"
-        )
+        expect(afterOnclose.state).toBe(role === "caller" ? "CALLER_ORPHANED" : "CALLEE_ORPHANED")
 
         const afterReconnect = transition(afterOnclose, { type: "peer-reconnected" }).next
-        expect(afterReconnect.state).toBe(
-          role === "caller" ? "CALLER_WAITING" : "CALLEE_WAITING"
-        )
+        expect(afterReconnect.state).toBe(role === "caller" ? "CALLER_WAITING" : "CALLEE_WAITING")
 
         const followUp: MachineEvent =
           role === "caller"
@@ -294,7 +290,12 @@ describe("Signaling Machine Invariants", () => {
   it("PC-lifecycle invariant: effects that dereference PC never fire from PC-less states", () => {
     // PC-less states: IDLE, CONNECTING, CALLER_ORPHANED, CALLEE_ORPHANED
     // Effects that require a live PC: ROLLBACK_AND_RESTART_ICE, HANDLE_OFFER, HANDLE_ANSWER, HANDLE_ICE_CANDIDATE
-    const pcLessStates: MachineState[] = ["IDLE", "CONNECTING", "CALLER_ORPHANED", "CALLEE_ORPHANED"]
+    const pcLessStates: MachineState[] = [
+      "IDLE",
+      "CONNECTING",
+      "CALLER_ORPHANED",
+      "CALLEE_ORPHANED",
+    ]
     const pcDerefEffects = [
       "ROLLBACK_AND_RESTART_ICE",
       "HANDLE_OFFER",

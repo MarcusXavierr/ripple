@@ -1,6 +1,8 @@
 import type { CallStatus } from "@/store/call"
 import type { ClientMessage, ReceivedMessage } from "@/types/signaling"
 
+export type MachineReceivedMessage = Exclude<ReceivedMessage, { type: "peer-video-click" }>
+
 export type MachineState =
   | "IDLE"
   | "CONNECTING"
@@ -91,19 +93,13 @@ function handlePeerReconnected(full: FullMachineState): {
       effects: [{ type: "SETUP_PC", role: "callee" }, { type: "HIDE_RECONNECT_MODAL" }],
     }
   }
-  if (
-    full.role === "caller" &&
-    (full.state === "NEGOTIATING" || full.state === "CONNECTED")
-  ) {
+  if (full.role === "caller" && (full.state === "NEGOTIATING" || full.state === "CONNECTED")) {
     return {
       next: { ...full, state: "NEGOTIATING" },
       effects: [{ type: "ROLLBACK_AND_RESTART_ICE" }, { type: "HIDE_RECONNECT_MODAL" }],
     }
   }
-  if (
-    full.role === "callee" &&
-    (full.state === "NEGOTIATING" || full.state === "CONNECTED")
-  ) {
+  if (full.role === "callee" && (full.state === "NEGOTIATING" || full.state === "CONNECTED")) {
     return {
       next: { ...full, state: "CALLEE_WAITING" },
       effects: [
@@ -267,7 +263,7 @@ export function transition(
   }
 }
 
-export function toMachineEvent(msg: ReceivedMessage): MachineEvent {
+export function toMachineEvent(msg: MachineReceivedMessage): MachineEvent {
   switch (msg.type) {
     case "onopen":
       return { type: "onopen", role: msg.role, reconnect: msg.reconnect }
