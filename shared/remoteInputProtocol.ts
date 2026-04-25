@@ -1,74 +1,58 @@
-export type PeerVideoClick = {
-  x: number
-  y: number
-  width: number
-  height: number
-  xRatio: number
-  yRatio: number
-  clickerViewportWidth: number
-  clickerViewportHeight: number
-  clickerScreenWidth: number
-  clickerScreenHeight: number
-  devicePixelRatio: number
-}
+import * as v from "valibot"
 
-export type RemoteClickRequest = {
-  type: "remote-click"
-  click: PeerVideoClick
-}
+const FiniteNumberSchema = v.pipe(v.number(), v.finite())
 
-export type RemoteInputMessage = RemoteClickRequest
+export const PeerVideoClickSchema = v.object({
+  x: FiniteNumberSchema,
+  y: FiniteNumberSchema,
+  width: FiniteNumberSchema,
+  height: FiniteNumberSchema,
+  xRatio: FiniteNumberSchema,
+  yRatio: FiniteNumberSchema,
+  clickerViewportWidth: FiniteNumberSchema,
+  clickerViewportHeight: FiniteNumberSchema,
+  clickerScreenWidth: FiniteNumberSchema,
+  clickerScreenHeight: FiniteNumberSchema,
+  devicePixelRatio: FiniteNumberSchema,
+})
 
-export type ExtensionAck =
-  | { ok: true; type: "remote-click-applied"; targetTabId: number }
-  | { ok: false; type: "remote-click-rejected"; reason: string; stage?: string }
+export type PeerVideoClick = v.InferOutput<typeof PeerVideoClickSchema>
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null
-}
+const RemoteClickRequestSchema = v.object({
+  type: v.literal("remote-click"),
+  click: PeerVideoClickSchema,
+})
 
-function isFiniteNumber(value: unknown): value is number {
-  return typeof value === "number" && Number.isFinite(value)
-}
+export type RemoteClickRequest = v.InferOutput<typeof RemoteClickRequestSchema>
 
-// TODO: [Refactor] Aqui tu poderia ter usado zod haha. não inventa moda. Até porque vamos botar mais tipos de eventos no futuro
+export const RemoteInputMessageSchema = v.variant("type", [RemoteClickRequestSchema])
+
+export type RemoteInputMessage = v.InferOutput<typeof RemoteInputMessageSchema>
+
+export const ExtensionAckSchema = v.variant("ok", [
+  v.object({
+    ok: v.literal(true),
+    type: v.literal("remote-click-applied"),
+    targetTabId: FiniteNumberSchema,
+  }),
+  v.object({
+    ok: v.literal(false),
+    type: v.literal("remote-click-rejected"),
+    reason: v.string(),
+    stage: v.optional(v.string()),
+  }),
+])
+
+export type ExtensionAck = v.InferOutput<typeof ExtensionAckSchema>
+
 export function isPeerVideoClick(value: unknown): value is PeerVideoClick {
-  if (!isRecord(value)) return false
-
-  return (
-    isFiniteNumber(value.x) &&
-    isFiniteNumber(value.y) &&
-    isFiniteNumber(value.width) &&
-    isFiniteNumber(value.height) &&
-    isFiniteNumber(value.xRatio) &&
-    isFiniteNumber(value.yRatio) &&
-    isFiniteNumber(value.clickerViewportWidth) &&
-    isFiniteNumber(value.clickerViewportHeight) &&
-    isFiniteNumber(value.clickerScreenWidth) &&
-    isFiniteNumber(value.clickerScreenHeight) &&
-    isFiniteNumber(value.devicePixelRatio)
-  )
+  return v.safeParse(PeerVideoClickSchema, value).success
 }
 
 export function isRemoteInputMessage(value: unknown): value is RemoteInputMessage {
-  if (!isRecord(value)) return false
-  return value.type === "remote-click" && isPeerVideoClick(value.click)
+  return v.safeParse(RemoteInputMessageSchema, value).success
 }
 
 export function isExtensionAck(value: unknown): value is ExtensionAck {
-  if (!isRecord(value)) return false
-
-  if (value.ok === true) {
-    return value.type === "remote-click-applied" && isFiniteNumber(value.targetTabId)
-  }
-
-  if (value.ok === false) {
-    return (
-      value.type === "remote-click-rejected" &&
-      typeof value.reason === "string" &&
-      (value.stage === undefined || typeof value.stage === "string")
-    )
-  }
-
-  return false
+  return v.safeParse(ExtensionAckSchema, value).success
 }

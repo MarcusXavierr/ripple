@@ -1,8 +1,12 @@
+import * as v from "valibot"
 import {
+  ExtensionAckSchema,
   isExtensionAck,
   isPeerVideoClick,
   isRemoteInputMessage,
   type PeerVideoClick,
+  PeerVideoClickSchema,
+  RemoteInputMessageSchema,
 } from "./remoteInputProtocol"
 
 const click: PeerVideoClick = {
@@ -54,5 +58,17 @@ describe("remote input protocol guards", () => {
   it("rejects malformed extension acks", () => {
     expect(isExtensionAck({ ok: true, type: "remote-click-applied" })).toBe(false)
     expect(isExtensionAck({ ok: false, type: "remote-click-rejected" })).toBe(false)
+  })
+
+  it("exports reusable schemas for shared validation", () => {
+    expect(v.safeParse(PeerVideoClickSchema, click).success).toBe(true)
+    expect(v.safeParse(RemoteInputMessageSchema, { type: "remote-click", click }).success).toBe(true)
+    expect(v.safeParse(ExtensionAckSchema, { ok: true, type: "remote-click-applied", targetTabId: 7 }).success).toBe(true)
+  })
+
+  it("rejects invalid schema inputs", () => {
+    expect(v.safeParse(PeerVideoClickSchema, { ...click, x: Number.NaN }).success).toBe(false)
+    expect(v.safeParse(RemoteInputMessageSchema, { type: "remote-click", click: { x: 1 } }).success).toBe(false)
+    expect(v.safeParse(ExtensionAckSchema, { ok: false, type: "remote-click-rejected" }).success).toBe(false)
   })
 })
