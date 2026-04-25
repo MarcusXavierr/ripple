@@ -1,0 +1,23 @@
+{
+  "extends": "./.wxt/tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": "..",
+    "types": ["vitest/globals", "@testing-library/jest-dom"],
+    "jsx": "react-jsx",
+    "noEmit": true,
+    "ignoreDeprecations": "6.0",
+    "paths": {
+      "@": [".."],
+      "@/*": ["../*"],
+      "~": [".."],
+      "~/*": ["../*"],
+      "@@": [".."],
+      "@@/*": ["../*"],
+      "~~": [".."],
+      "~~/*": ["../*"],
+      "@extension/*": ["./extension/src/*"],
+      "@shared/*": ["./shared/*"]
+    }
+  },
+  "include": ["./entrypoints", "./src", "../shared", "./wxt.config.ts", "./vitest.config.ts", "./.wxt/wxt.d.ts"]
+}
