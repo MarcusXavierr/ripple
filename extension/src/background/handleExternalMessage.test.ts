@@ -88,4 +88,22 @@ describe("handleExternalMessage", () => {
       stage: "target",
     })
   })
+
+  it("logs and rejects when the selected tab can no longer be read", async () => {
+    const deps = createDeps({
+      getTab: vi.fn().mockRejectedValue(new Error("No tab with id: 7")),
+    })
+
+    await expect(handleExternalMessage(message, deps)).resolves.toEqual({
+      ok: false,
+      type: "remote-click-rejected",
+      reason: "selected tab no longer exists",
+      stage: "selected-tab",
+    })
+
+    expect(deps.logger.warn).toHaveBeenCalledWith("[Ripple Extension] failed to read selected tab", {
+      reason: "No tab with id: 7",
+      tabId: 7,
+    })
+  })
 })
