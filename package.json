@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "workspaces": ["extension"],
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -12,7 +13,11 @@
     "check": "biome check --write .",
     "test": "vitest",
     "test:run": "vitest run",
-    "test:ui": "vitest --ui"
+    "test:ui": "vitest --ui",
+    "extension:dev": "bun --cwd extension run dev",
+    "extension:build": "bun --cwd extension run build",
+    "extension:test": "bun --cwd extension run test",
+    "extension:typecheck": "bun --cwd extension run typecheck"
   },
   "dependencies": {
     "@base-ui/react": "^1.3.0",
