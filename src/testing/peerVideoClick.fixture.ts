@@ -1,4 +1,4 @@
-import type { PeerVideoClick } from "@/types/peerVideoClick"
+import type { PeerVideoClick } from "@shared/remoteInputProtocol"
 
 export const samplePeerVideoClick: PeerVideoClick = {
   x: 120,
