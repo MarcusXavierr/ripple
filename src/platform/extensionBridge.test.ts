@@ -33,7 +33,11 @@ describe("extensionBridge", () => {
       targetTabId: 7,
     })
 
-    expect(sendMessage).toHaveBeenCalledWith("abc123", { type: "remote-click", click }, expect.any(Function))
+    expect(sendMessage).toHaveBeenCalledWith(
+      "abc123",
+      { type: "remote-click", click },
+      expect.any(Function)
+    )
     expect(logger.debug).toHaveBeenCalledWith("[Ripple Extension] remote-click ack", {
       ok: true,
       type: "remote-click-applied",
@@ -46,14 +50,24 @@ describe("extensionBridge", () => {
     const bridge = createExtensionBridge({ extensionId: "abc123", runtime: undefined, logger })
 
     await expect(bridge.sendRemoteClick(click)).resolves.toBeNull()
-    expect(logger.debug).toHaveBeenCalledWith("[Ripple Extension] unavailable", "chrome.runtime.sendMessage unavailable")
+    expect(logger.debug).toHaveBeenCalledWith(
+      "[Ripple Extension] unavailable",
+      "chrome.runtime.sendMessage unavailable"
+    )
   })
 
   it("resolves null when the extension id is missing", async () => {
     const logger = { debug: vi.fn() }
-    const bridge = createExtensionBridge({ extensionId: "", runtime: { sendMessage: vi.fn() }, logger })
+    const bridge = createExtensionBridge({
+      extensionId: "",
+      runtime: { sendMessage: vi.fn() },
+      logger,
+    })
 
     await expect(bridge.sendRemoteClick(click)).resolves.toBeNull()
-    expect(logger.debug).toHaveBeenCalledWith("[Ripple Extension] unavailable", "missing extension id")
+    expect(logger.debug).toHaveBeenCalledWith(
+      "[Ripple Extension] unavailable",
+      "missing extension id"
+    )
   })
 })

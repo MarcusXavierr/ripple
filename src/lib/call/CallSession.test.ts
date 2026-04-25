@@ -108,7 +108,11 @@ describe("incoming peer video click relay", () => {
   it("forwards inbound peer-video-click to the extension when local peer is screen sharing", async () => {
     const session = new CallSession("room-1", vi.fn())
     useCallStore.setState({ isScreenSharing: true, screenShareSurface: "browser" })
-    sendRemoteClickMock.mockResolvedValue({ ok: true, type: "remote-click-applied", targetTabId: 7 })
+    sendRemoteClickMock.mockResolvedValue({
+      ok: true,
+      type: "remote-click-applied",
+      targetTabId: 7,
+    })
 
     await signalingCallbacks?.onMessage({ type: "peer-video-click", click: samplePeerVideoClick })
 

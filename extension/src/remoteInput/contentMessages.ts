@@ -16,14 +16,19 @@ export const ContentMessageSchema = v.variant("type", [ExecuteRemoteClickMessage
 
 export type ContentMessage = v.InferOutput<typeof ContentMessageSchema>
 
-export type ContentMessageResult = ClickExecutionResult | { ok: false; reason: string; stage: "message" }
+export type ContentMessageResult =
+  | ClickExecutionResult
+  | { ok: false; reason: string; stage: "message" }
 
 type ContentHandlerDeps = {
   viewport: { width: number; height: number }
   execute: (point: { x: number; y: number }) => ClickExecutionResult
 }
 
-export function handleContentMessage(message: unknown, deps: ContentHandlerDeps): ContentMessageResult {
+export function handleContentMessage(
+  message: unknown,
+  deps: ContentHandlerDeps
+): ContentMessageResult {
   const parsed = v.safeParse(ContentMessageSchema, message)
   if (!parsed.success) {
     return { ok: false, reason: "unknown content message", stage: "message" }

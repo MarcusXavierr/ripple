@@ -109,11 +109,15 @@ export class CallSession {
 
       const { isScreenSharing, screenShareSurface } = useCallStore.getState()
       if (!isScreenSharing) {
-        console.debug("[Ripple Extension] skipping remote click because local peer is not screen sharing")
+        console.debug(
+          "[Ripple Extension] skipping remote click because local peer is not screen sharing"
+        )
         return
       }
       if (screenShareSurface !== "browser") {
-        console.debug("[Ripple Extension] skipping remote click because local peer is not sharing a tab")
+        console.debug(
+          "[Ripple Extension] skipping remote click because local peer is not sharing a tab"
+        )
         return
       }
 

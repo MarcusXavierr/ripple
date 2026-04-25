@@ -21,7 +21,9 @@ describe("translateRemoteClick", () => {
   })
 
   it("clamps ratios to viewport bounds", () => {
-    expect(translateRemoteClick({ ...click, xRatio: 1.2, yRatio: -0.2 }, { width: 1000, height: 800 })).toEqual({
+    expect(
+      translateRemoteClick({ ...click, xRatio: 1.2, yRatio: -0.2 }, { width: 1000, height: 800 })
+    ).toEqual({
       x: 999,
       y: 0,
     })

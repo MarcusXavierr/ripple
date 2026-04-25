@@ -36,7 +36,12 @@ export function PopupView({ selectedTab, currentTab, onUseCurrentTab }: PopupVie
         )}
       </section>
 
-      <button className="popup__button" type="button" disabled={!currentTab.compatible} onClick={onUseCurrentTab}>
+      <button
+        className="popup__button"
+        type="button"
+        disabled={!currentTab.compatible}
+        onClick={onUseCurrentTab}
+      >
         Use current tab
       </button>
 

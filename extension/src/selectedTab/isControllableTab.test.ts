@@ -14,7 +14,9 @@ describe("isControllableTabUrl", () => {
   })
 
   it("returns readable reasons for incompatible tabs", () => {
-    expect(getIncompatibleTabReason("chrome://extensions")).toBe("Chrome internal pages cannot be controlled.")
+    expect(getIncompatibleTabReason("chrome://extensions")).toBe(
+      "Chrome internal pages cannot be controlled."
+    )
     expect(getIncompatibleTabReason(undefined)).toBe("This tab has no controllable URL.")
   })
 })

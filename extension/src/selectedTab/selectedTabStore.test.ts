@@ -45,7 +45,9 @@ describe("selectedTabStore", () => {
 
   it("returns null for tabs without required fields", () => {
     expect(createSelectedTabFromTab({ windowId: 3, url: "https://example.com" }, 1)).toBeNull()
-    expect(createSelectedTabFromTab({ id: 7, windowId: 3, url: "chrome://extensions" }, 1)).toBeNull()
+    expect(
+      createSelectedTabFromTab({ id: 7, windowId: 3, url: "chrome://extensions" }, 1)
+    ).toBeNull()
   })
 
   it("saves, reads, and clears selected tab state", async () => {

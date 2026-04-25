@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react"
 import { browser, type Browser } from "wxt/browser"
-import { getIncompatibleTabReason, isControllableTabUrl } from "../../src/selectedTab/isControllableTab"
+import {
+  getIncompatibleTabReason,
+  isControllableTabUrl,
+} from "../../src/selectedTab/isControllableTab"
 import {
   createSelectedTabFromTab,
   readSelectedTab,

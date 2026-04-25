@@ -12,7 +12,10 @@ export type ClickExecutionResult =
  * The extension uses this after translating a remote click into local
  * coordinates, and it reports failures as return values instead of throwing.
  */
-export function executeRemoteClick(point: ViewportPoint, doc: Document = document): ClickExecutionResult {
+export function executeRemoteClick(
+  point: ViewportPoint,
+  doc: Document = document
+): ClickExecutionResult {
   const target = doc.elementFromPoint(point.x, point.y)
   if (!target) {
     return { ok: false, reason: "click target cannot be found", stage: "target" }

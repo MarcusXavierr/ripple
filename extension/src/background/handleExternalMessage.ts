@@ -10,7 +10,10 @@ export type BackgroundDeps = {
   logger: Pick<Console, "debug" | "warn">
 }
 
-export async function handleExternalMessage(message: unknown, deps: BackgroundDeps): Promise<ExtensionAck> {
+export async function handleExternalMessage(
+  message: unknown,
+  deps: BackgroundDeps
+): Promise<ExtensionAck> {
   if (!isRemoteInputMessage(message)) {
     deps.logger.warn("[Ripple Extension] rejected external message", message)
     return reject("invalid remote input message", "message")

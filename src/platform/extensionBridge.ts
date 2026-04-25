@@ -7,7 +7,11 @@ import {
 
 type RuntimeLike = {
   lastError?: { message?: string }
-  sendMessage: (extensionId: string, message: RemoteInputMessage, callback: (response: unknown) => void) => void
+  sendMessage: (
+    extensionId: string,
+    message: RemoteInputMessage,
+    callback: (response: unknown) => void
+  ) => void
 }
 
 type ExtensionBridgeDeps = {
@@ -32,7 +36,10 @@ export function createExtensionBridge({ extensionId, runtime, logger }: Extensio
       return new Promise((resolve) => {
         runtime.sendMessage(extensionId, { type: "remote-click", click }, (response) => {
           if (runtime.lastError) {
-            logger.debug("[Ripple Extension] unavailable", runtime.lastError.message ?? "runtime error")
+            logger.debug(
+              "[Ripple Extension] unavailable",
+              runtime.lastError.message ?? "runtime error"
+            )
             resolve(null)
             return
           }

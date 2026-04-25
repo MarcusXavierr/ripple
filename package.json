@@ -3,7 +3,9 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "workspaces": ["extension"],
+  "workspaces": [
+    "extension"
+  ],
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",

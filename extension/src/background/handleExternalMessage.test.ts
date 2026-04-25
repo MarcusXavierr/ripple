@@ -49,7 +49,12 @@ describe("handleExternalMessage", () => {
   })
 
   it("rejects when no tab is selected", async () => {
-    await expect(handleExternalMessage(message, createDeps({ readSelectedTab: vi.fn().mockResolvedValue(null) }))).resolves.toEqual({
+    await expect(
+      handleExternalMessage(
+        message,
+        createDeps({ readSelectedTab: vi.fn().mockResolvedValue(null) })
+      )
+    ).resolves.toEqual({
       ok: false,
       type: "remote-click-rejected",
       reason: "no selected tab",
@@ -101,9 +106,12 @@ describe("handleExternalMessage", () => {
       stage: "selected-tab",
     })
 
-    expect(deps.logger.warn).toHaveBeenCalledWith("[Ripple Extension] failed to read selected tab", {
-      reason: "No tab with id: 7",
-      tabId: 7,
-    })
+    expect(deps.logger.warn).toHaveBeenCalledWith(
+      "[Ripple Extension] failed to read selected tab",
+      {
+        reason: "No tab with id: 7",
+        tabId: 7,
+      }
+    )
   })
 })

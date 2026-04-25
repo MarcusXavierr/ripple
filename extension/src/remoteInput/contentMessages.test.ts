@@ -42,7 +42,11 @@ describe("handleContentMessage", () => {
   })
 
   it("exports a schema for valid content messages", () => {
-    expect(v.safeParse(ContentMessageSchema, { type: "execute-remote-click", click }).success).toBe(true)
-    expect(v.safeParse(ContentMessageSchema, { type: "execute-remote-click", click: { x: 1 } }).success).toBe(false)
+    expect(v.safeParse(ContentMessageSchema, { type: "execute-remote-click", click }).success).toBe(
+      true
+    )
+    expect(
+      v.safeParse(ContentMessageSchema, { type: "execute-remote-click", click: { x: 1 } }).success
+    ).toBe(false)
   })
 })

@@ -14,7 +14,11 @@ describe("executeRemoteClick", () => {
     }
 
     const fromPoint = vi.fn().mockReturnValue(target)
-    Object.defineProperty(document, "elementFromPoint", { value: fromPoint, configurable: true, writable: true })
+    Object.defineProperty(document, "elementFromPoint", {
+      value: fromPoint,
+      configurable: true,
+      writable: true,
+    })
 
     const result = executeRemoteClick({ x: 20, y: 30 }, document)
 
@@ -25,7 +29,11 @@ describe("executeRemoteClick", () => {
 
   it("rejects when no element exists at the target point", () => {
     const fromPoint = vi.fn().mockReturnValue(null)
-    Object.defineProperty(document, "elementFromPoint", { value: fromPoint, configurable: true, writable: true })
+    Object.defineProperty(document, "elementFromPoint", {
+      value: fromPoint,
+      configurable: true,
+      writable: true,
+    })
 
     expect(executeRemoteClick({ x: 20, y: 30 }, document)).toEqual({
       ok: false,

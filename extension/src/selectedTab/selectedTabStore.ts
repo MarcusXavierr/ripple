@@ -25,7 +25,10 @@ export type SelectedTabStorage = {
 
 type TabLike = Pick<Browser.tabs.Tab, "id" | "windowId" | "title" | "url">
 
-export function createSelectedTabFromTab(tab: TabLike, selectedAt = Date.now()): SelectedTab | null {
+export function createSelectedTabFromTab(
+  tab: TabLike,
+  selectedAt = Date.now()
+): SelectedTab | null {
   if (typeof tab.id !== "number" || typeof tab.windowId !== "number" || !tab.url) return null
   if (!isControllableTabUrl(tab.url)) return null
 
