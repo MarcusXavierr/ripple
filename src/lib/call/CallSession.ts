@@ -2,7 +2,8 @@
 
 import { getPeerId } from "@/lib/peerId"
 import { useCallStore } from "@/store/call"
-import type { PeerVideoClick } from "@/types/peerVideoClick"
+import { extensionBridge } from "@/platform/extensionBridge"
+import type { PeerVideoClick } from "@shared/remoteInputProtocol"
 import { CLOSE_CODES, MESSAGE_TYPES } from "@/types/signaling"
 import type { ReceivedMessage } from "@/types/signaling"
 import { MediaController } from "./MediaController"
@@ -102,10 +103,18 @@ export class CallSession {
 
   // ── Signaling message dispatch ──────────────────────────────────────────────
 
-  private handleMessage(msg: ReceivedMessage): Promise<void> {
+  private async handleMessage(msg: ReceivedMessage): Promise<void> {
     if (msg.type === MESSAGE_TYPES.PEER_VIDEO_CLICK) {
-      console.log("[Peer Video Click]", msg.click)
-      return Promise.resolve()
+      console.debug("[Peer Video Click]", msg.click)
+
+      // TODO: [Question] Tem como eu saber qual é o tipo de tela sendo compartilhado? pq eu só quero que funcione enquanto eu compartilho tab. Todo o resto vai bugar
+      if (!useCallStore.getState().isScreenSharing) {
+        console.debug("[Ripple Extension] skipping remote click because local peer is not screen sharing")
+        return
+      }
+
+      await extensionBridge.sendRemoteClick(msg.click)
+      return
     }
 
     return this.machine.handleProtocolMessage(msg)
