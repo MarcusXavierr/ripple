@@ -7,7 +7,11 @@ export type ClickExecutionResult =
   | { ok: true; stage: "dispatched" }
   | { ok: false; reason: string; stage: "target" | "dispatch" }
 
-// TODO: [Refactor] Funções exportadas poderiam ter um docbloc explicando o que elas fazem. até umas 3/4 linhas de comentario
+/**
+ * Dispatches the click sequence at a viewport point in the current document.
+ * The extension uses this after translating a remote click into local
+ * coordinates, and it reports failures as return values instead of throwing.
+ */
 export function executeRemoteClick(point: ViewportPoint, doc: Document = document): ClickExecutionResult {
   const target = doc.elementFromPoint(point.x, point.y)
   if (!target) {
@@ -15,7 +19,6 @@ export function executeRemoteClick(point: ViewportPoint, doc: Document = documen
   }
 
   try {
-    // TODO: [Question] Bom, tá funcionando, mas essa sequencia tá certa?
     dispatchPointerEvent(target, "pointerdown", point, doc)
     dispatchMouseEvent(target, "mousedown", point, doc)
     dispatchPointerEvent(target, "pointerup", point, doc)
@@ -38,6 +41,7 @@ function dispatchPointerEvent(target: Element, type: string, point: ViewportPoin
       new EventCtor(type, {
         bubbles: true,
         cancelable: true,
+        composed: true,
         clientX: point.x,
         clientY: point.y,
         pointerType: "mouse",
@@ -57,6 +61,7 @@ function dispatchMouseEvent(target: Element, type: string, point: ViewportPoint,
     new EventCtor(type, {
       bubbles: true,
       cancelable: true,
+      composed: true,
       clientX: point.x,
       clientY: point.y,
       button: 0,
