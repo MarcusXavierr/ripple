@@ -1,4 +1,4 @@
-import type { PeerVideoClick } from "@/types/peerVideoClick"
+import type { PeerVideoClick } from "@shared/remoteInputProtocol"
 
 type ClickPoint = {
   clientX: number

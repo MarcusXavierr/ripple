@@ -17,6 +17,7 @@ describe("useCallStore", () => {
       error: "oops",
       role: "caller",
       isScreenSharing: true,
+      screenShareSurface: "browser",
       isMicMuted: true,
       isCameraOff: true,
       peerId: "abc",
@@ -30,6 +31,7 @@ describe("useCallStore", () => {
     expect(s.remoteStream).toBeNull()
     expect(s.pc).toBeNull()
     expect(s.isScreenSharing).toBe(false)
+    expect(s.screenShareSurface).toBeNull()
     expect(s.isMicMuted).toBe(false)
     expect(s.isCameraOff).toBe(false)
     expect(s.peerId).toBe("")

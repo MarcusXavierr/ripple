@@ -10,6 +10,8 @@ export type CallStatus =
   | "disconnected"
   | "ended"
 
+export type ScreenShareSurface = "browser" | "window" | "monitor" | null
+
 type CallStore = {
   peerId: string
   pc: RTCPeerConnection | null
@@ -17,6 +19,7 @@ type CallStore = {
   localStream: MediaStream | null
   remoteStream: MediaStream | null
   isScreenSharing: boolean
+  screenShareSurface: ScreenShareSurface
   isMicMuted: boolean
   isCameraOff: boolean
   status: CallStatus
@@ -32,6 +35,7 @@ const INITIAL_STATE = {
   localStream: null,
   remoteStream: null,
   isScreenSharing: false,
+  screenShareSurface: null,
   isMicMuted: false,
   isCameraOff: false,
   status: "idle" as CallStatus,

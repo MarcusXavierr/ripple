@@ -125,6 +125,11 @@ describe("MediaController", () => {
       expect(useCallStore.getState().isScreenSharing).toBe(true)
     })
 
+    it("stores the shared surface type when screen share starts", async () => {
+      await media.startScreenShare()
+      expect(useCallStore.getState().screenShareSurface).toBe("browser")
+    })
+
     it("is a no-op when no PC has been attached", async () => {
       const mediaWithoutPC = new MediaController()
       await mediaWithoutPC.init()
@@ -138,6 +143,7 @@ describe("MediaController", () => {
       )
       await expect(media.startScreenShare()).resolves.not.toThrow()
       expect(useCallStore.getState().isScreenSharing).toBe(false)
+      expect(useCallStore.getState().screenShareSurface).toBeNull()
     })
   })
 
@@ -161,6 +167,11 @@ describe("MediaController", () => {
     it("sets isScreenSharing to false", async () => {
       await media.stopScreenShare()
       expect(useCallStore.getState().isScreenSharing).toBe(false)
+    })
+
+    it("clears the shared surface when screen share stops", async () => {
+      await media.stopScreenShare()
+      expect(useCallStore.getState().screenShareSurface).toBeNull()
     })
 
     it("replaces the screen track with the camera track on the sender", async () => {

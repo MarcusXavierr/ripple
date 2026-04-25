@@ -103,6 +103,7 @@ export const mockScreenTrack = {
   kind: "video" as const,
   stop: vi.fn(),
   onended: null as (() => void) | null,
+  getSettings: vi.fn().mockReturnValue({ displaySurface: "browser" }),
 }
 
 export const mockScreenStream = {
@@ -123,6 +124,8 @@ export function resetMocks() {
   mockVideoTrack.onended = null
   mockScreenTrack.stop.mockClear()
   mockScreenTrack.onended = null
+  mockScreenTrack.getSettings.mockReset()
+  mockScreenTrack.getSettings.mockReturnValue({ displaySurface: "browser" })
 
   // Re-apply mock implementations after vi.clearAllMocks may have wiped them
   ;(navigator.mediaDevices.getUserMedia as ReturnType<typeof vi.fn>).mockResolvedValue(

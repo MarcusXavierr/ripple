@@ -1,6 +1,6 @@
 // SYNC: keep identical to backend types.ts
 
-import type { PeerVideoClick } from "./peerVideoClick"
+import type { PeerVideoClick } from "@shared/remoteInputProtocol"
 
 // Server → Client
 export type ServerMessage =

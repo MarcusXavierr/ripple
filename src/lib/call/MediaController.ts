@@ -1,4 +1,4 @@
-import { useCallStore } from "@/store/call"
+import { useCallStore, type ScreenShareSurface } from "@/store/call"
 
 export class MediaController {
   private stream: MediaStream | null = null
@@ -35,20 +35,24 @@ export class MediaController {
     try {
       const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true })
       const screenTrack = screenStream.getVideoTracks()[0]
+      const screenShareSurface = toScreenShareSurface(screenTrack.getSettings().displaySurface)
       const sender = this.pc.getSenders().find((s) => s.track?.kind === "video")
       if (sender) {
         await sender.replaceTrack(screenTrack)
       } else {
         this.pc.addTrack(screenTrack, screenStream)
       }
-      useCallStore.setState({ isScreenSharing: true })
+      useCallStore.setState({ isScreenSharing: true, screenShareSurface })
       screenTrack.onended = () => {
         void this.stopScreenShare()
       }
     } catch (err) {
-      if (err instanceof DOMException && err.name === "NotAllowedError") return
+      if (err instanceof DOMException && err.name === "NotAllowedError") {
+        useCallStore.setState({ isScreenSharing: false, screenShareSurface: null })
+        return
+      }
       console.error("[Screenshare] failed to start", err)
-      useCallStore.setState({ error: "Could not start screen share." })
+      useCallStore.setState({ error: "Could not start screen share.", screenShareSurface: null })
     }
   }
 
@@ -63,7 +67,7 @@ export class MediaController {
     } catch (err) {
       console.error("[Screenshare] failed to stop", err)
     } finally {
-      useCallStore.setState({ isScreenSharing: false })
+      useCallStore.setState({ isScreenSharing: false, screenShareSurface: null })
     }
   }
 
@@ -71,5 +75,13 @@ export class MediaController {
     this.stream?.getTracks().forEach((t) => t.stop())
     this.stream = null
     this.pc = null
+    useCallStore.setState({ screenShareSurface: null })
   }
+}
+
+function toScreenShareSurface(value: string | undefined): ScreenShareSurface {
+  if (value === "browser" || value === "window" || value === "monitor") {
+    return value
+  }
+  return null
 }

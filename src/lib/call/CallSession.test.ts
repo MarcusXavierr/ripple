@@ -1,7 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { samplePeerVideoClick } from "@/testing/peerVideoClick.fixture"
 import type { ReceivedMessage } from "@/types/signaling"
+import { useCallStore } from "@/store/call"
 import { CallSession } from "./CallSession"
+
+const sendRemoteClickMock = vi.fn()
+
+vi.mock("@/platform/extensionBridge", () => ({
+  extensionBridge: {
+    sendRemoteClick: (...args: unknown[]) => sendRemoteClickMock(...args),
+  },
+}))
 
 const signalingSend = vi.fn()
 const machineHandleProtocolMessage = vi.fn()
@@ -65,6 +74,7 @@ beforeEach(() => {
   signalingCallbacks = null
   signalingSend.mockReset()
   machineHandleProtocolMessage.mockReset()
+  sendRemoteClickMock.mockReset()
 })
 
 describe("sendPeerVideoClick", () => {
@@ -93,5 +103,40 @@ describe("incoming peer video click relay", () => {
     await signalingCallbacks?.onMessage({ type: "ping" })
 
     expect(machineHandleProtocolMessage).toHaveBeenCalledWith({ type: "ping" })
+  })
+
+  it("forwards inbound peer-video-click to the extension when local peer is screen sharing", async () => {
+    const session = new CallSession("room-1", vi.fn())
+    useCallStore.setState({ isScreenSharing: true, screenShareSurface: "browser" })
+    sendRemoteClickMock.mockResolvedValue({
+      ok: true,
+      type: "remote-click-applied",
+      targetTabId: 7,
+    })
+
+    await signalingCallbacks?.onMessage({ type: "peer-video-click", click: samplePeerVideoClick })
+
+    expect(sendRemoteClickMock).toHaveBeenCalledWith(samplePeerVideoClick)
+    session.teardown()
+  })
+
+  it("does not forward inbound peer-video-click when local peer is not screen sharing", async () => {
+    const session = new CallSession("room-1", vi.fn())
+    useCallStore.setState({ isScreenSharing: false })
+
+    await signalingCallbacks?.onMessage({ type: "peer-video-click", click: samplePeerVideoClick })
+
+    expect(sendRemoteClickMock).not.toHaveBeenCalled()
+    session.teardown()
+  })
+
+  it("does not forward inbound peer-video-click when local peer is sharing a window instead of a tab", async () => {
+    const session = new CallSession("room-1", vi.fn())
+    useCallStore.setState({ isScreenSharing: true, screenShareSurface: "window" })
+
+    await signalingCallbacks?.onMessage({ type: "peer-video-click", click: samplePeerVideoClick })
+
+    expect(sendRemoteClickMock).not.toHaveBeenCalled()
+    session.teardown()
   })
 })
