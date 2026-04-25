@@ -107,9 +107,13 @@ export class CallSession {
     if (msg.type === MESSAGE_TYPES.PEER_VIDEO_CLICK) {
       console.debug("[Peer Video Click]", msg.click)
 
-      // TODO: [Question] Tem como eu saber qual é o tipo de tela sendo compartilhado? pq eu só quero que funcione enquanto eu compartilho tab. Todo o resto vai bugar
-      if (!useCallStore.getState().isScreenSharing) {
+      const { isScreenSharing, screenShareSurface } = useCallStore.getState()
+      if (!isScreenSharing) {
         console.debug("[Ripple Extension] skipping remote click because local peer is not screen sharing")
+        return
+      }
+      if (screenShareSurface !== "browser") {
+        console.debug("[Ripple Extension] skipping remote click because local peer is not sharing a tab")
         return
       }
 
