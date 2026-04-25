@@ -1,30 +1,35 @@
+import * as v from "valibot"
 import { isPeerVideoClick, type PeerVideoClick } from "@shared/remoteInputProtocol"
 import { executeRemoteClick, type ClickExecutionResult } from "./executeRemoteClick"
 import { translateRemoteClick } from "./translateRemoteClick"
 
-export type ExecuteRemoteClickMessage = {
-  type: "execute-remote-click"
-  click: PeerVideoClick
-}
+const PeerVideoClickSchema = v.custom<PeerVideoClick>(isPeerVideoClick)
 
-export type ContentMessage = ExecuteRemoteClickMessage
+export const ExecuteRemoteClickMessageSchema = v.object({
+  type: v.literal("execute-remote-click"),
+  click: PeerVideoClickSchema,
+})
 
-export type ContentMessageResult =
-  | ClickExecutionResult
-  | { ok: false; reason: string; stage: "message" }
+export type ExecuteRemoteClickMessage = v.InferOutput<typeof ExecuteRemoteClickMessageSchema>
+
+export const ContentMessageSchema = v.variant("type", [ExecuteRemoteClickMessageSchema])
+
+export type ContentMessage = v.InferOutput<typeof ContentMessageSchema>
+
+export type ContentMessageResult = ClickExecutionResult | { ok: false; reason: string; stage: "message" }
 
 type ContentHandlerDeps = {
   viewport: { width: number; height: number }
   execute: (point: { x: number; y: number }) => ClickExecutionResult
 }
 
-// TODO: [Refactor] Isso aqui pode evoluir pra alguma validação tipo zod, e talvez validar uma lista de tipos, pq logo logo vou adicionar mais tipos de eventos heheh
 export function handleContentMessage(message: unknown, deps: ContentHandlerDeps): ContentMessageResult {
-  if (!isExecuteRemoteClickMessage(message)) {
+  const parsed = v.safeParse(ContentMessageSchema, message)
+  if (!parsed.success) {
     return { ok: false, reason: "unknown content message", stage: "message" }
   }
 
-  const point = translateRemoteClick(message.click, deps.viewport)
+  const point = translateRemoteClick(parsed.output.click, deps.viewport)
   return deps.execute(point)
 }
 
@@ -36,10 +41,4 @@ export function createContentMessageDeps(doc: Document = document): ContentHandl
     },
     execute: (point) => executeRemoteClick(point, doc),
   }
-}
-
-function isExecuteRemoteClickMessage(value: unknown): value is ExecuteRemoteClickMessage {
-  if (typeof value !== "object" || value === null) return false
-  const record = value as Record<string, unknown>
-  return record.type === "execute-remote-click" && isPeerVideoClick(record.click)
 }

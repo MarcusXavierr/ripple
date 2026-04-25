@@ -1,5 +1,6 @@
+import * as v from "valibot"
 import type { PeerVideoClick } from "@shared/remoteInputProtocol"
-import { handleContentMessage } from "./contentMessages"
+import { ContentMessageSchema, handleContentMessage } from "./contentMessages"
 
 const click: PeerVideoClick = {
   x: 10,
@@ -38,5 +39,10 @@ describe("handleContentMessage", () => {
     )
 
     expect(result).toEqual({ ok: false, reason: "unknown content message", stage: "message" })
+  })
+
+  it("exports a schema for valid content messages", () => {
+    expect(v.safeParse(ContentMessageSchema, { type: "execute-remote-click", click }).success).toBe(true)
+    expect(v.safeParse(ContentMessageSchema, { type: "execute-remote-click", click: { x: 1 } }).success).toBe(false)
   })
 })
