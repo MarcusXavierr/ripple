@@ -62,4 +62,20 @@ describe("selectedTabStore", () => {
     await clearSelectedTab(storage)
     await expect(readSelectedTab(storage)).resolves.toBeNull()
   })
+
+  it("returns null when persisted state is malformed", async () => {
+    const storage = createMemoryStorage()
+
+    await storage.set({
+      "ripple.selectedTab": {
+        tabId: 7,
+        windowId: 3,
+        url: "https://example.com/path",
+        origin: "https://example.com",
+        selectedAt: Number.NaN,
+      },
+    })
+
+    await expect(readSelectedTab(storage)).resolves.toBeNull()
+  })
 })

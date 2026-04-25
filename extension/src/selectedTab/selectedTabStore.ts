@@ -1,16 +1,21 @@
 import type { Browser } from "wxt/browser"
+import * as v from "valibot"
 import { getTabOrigin, isControllableTabUrl } from "./isControllableTab"
 
 const SELECTED_TAB_KEY = "ripple.selectedTab"
 
-export type SelectedTab = {
-  tabId: number
-  windowId: number
-  title?: string
-  url: string
-  origin: string
-  selectedAt: number
-}
+const FiniteNumberSchema = v.pipe(v.number(), v.finite())
+
+export const SelectedTabSchema = v.object({
+  tabId: FiniteNumberSchema,
+  windowId: FiniteNumberSchema,
+  title: v.optional(v.string()),
+  url: v.string(),
+  origin: v.string(),
+  selectedAt: FiniteNumberSchema,
+})
+
+export type SelectedTab = v.InferOutput<typeof SelectedTabSchema>
 
 export type SelectedTabStorage = {
   get(key: string): Promise<Record<string, unknown>>
@@ -41,24 +46,11 @@ export async function saveSelectedTab(storage: SelectedTabStorage, selectedTab: 
 export async function readSelectedTab(storage: SelectedTabStorage): Promise<SelectedTab | null> {
   const result = await storage.get(SELECTED_TAB_KEY)
   const value = result[SELECTED_TAB_KEY]
-  if (!isSelectedTab(value)) return null
-  return value
+  const parsed = v.safeParse(SelectedTabSchema, value)
+  if (!parsed.success) return null
+  return parsed.output
 }
 
 export async function clearSelectedTab(storage: SelectedTabStorage) {
   await storage.remove(SELECTED_TAB_KEY)
-}
-
-// TODO: [Refactor] Outro lugar bom pra usar zod
-function isSelectedTab(value: unknown): value is SelectedTab {
-  if (typeof value !== "object" || value === null) return false
-  const record = value as Record<string, unknown>
-  return (
-    typeof record.tabId === "number" &&
-    typeof record.windowId === "number" &&
-    (record.title === undefined || typeof record.title === "string") &&
-    typeof record.url === "string" &&
-    typeof record.origin === "string" &&
-    typeof record.selectedAt === "number"
-  )
 }
