@@ -41,4 +41,32 @@ describe("executeRemoteClick", () => {
       stage: "target",
     })
   })
+
+  it("focuses native text inputs after the remote click sequence", () => {
+    document.body.innerHTML = `<input id="target" />`
+    const target = document.getElementById("target") as HTMLInputElement
+    Object.defineProperty(document, "elementFromPoint", {
+      value: vi.fn().mockReturnValue(target),
+      configurable: true,
+      writable: true,
+    })
+
+    executeRemoteClick({ x: 20, y: 30 }, document)
+
+    expect(document.activeElement).toBe(target)
+  })
+
+  it("does not force focus onto non-text controls", () => {
+    document.body.innerHTML = `<button id="target" type="button">Click</button>`
+    const target = document.getElementById("target") as HTMLButtonElement
+    Object.defineProperty(document, "elementFromPoint", {
+      value: vi.fn().mockReturnValue(target),
+      configurable: true,
+      writable: true,
+    })
+
+    executeRemoteClick({ x: 20, y: 30 }, document)
+
+    expect(document.activeElement).not.toBe(target)
+  })
 })

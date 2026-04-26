@@ -1,5 +1,7 @@
 import { act, fireEvent, render, screen } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { useRef } from "react"
+import type { PeerKeyboardInput } from "@shared/remoteInputProtocol"
 import { samplePeerVideoClick } from "@/testing/peerVideoClick.fixture"
 import { samplePeerVideoScroll } from "@/testing/peerVideoScroll.fixture"
 import { usePeerVideoRemoteInput } from "./usePeerVideoRemoteInput"
@@ -35,9 +37,35 @@ function PeerVideoRemoteInputHarness({
     remoteVideoRef,
     sendPeerVideoClick,
     sendPeerVideoScroll,
+    sendPeerKeyboardInput: vi.fn(),
   })
 
   return <video ref={remoteVideoRef} data-testid="remote-video" onClick={handleRemoteVideoClick} />
+}
+
+function KeyboardHarness({
+  sendPeerKeyboardInput,
+}: {
+  sendPeerKeyboardInput: (input: PeerKeyboardInput) => void
+}) {
+  const remoteVideoRef = useRef<HTMLVideoElement | null>(null)
+  const { handleRemoteVideoClick } = usePeerVideoRemoteInput({
+    remoteVideoRef,
+    sendPeerVideoClick: vi.fn(),
+    sendPeerVideoScroll: vi.fn(),
+    sendPeerKeyboardInput,
+  })
+
+  return (
+    <>
+      <video
+        ref={remoteVideoRef}
+        data-testid="remote-video"
+        onClick={handleRemoteVideoClick}
+      />
+      <button type="button">local control</button>
+    </>
+  )
 }
 
 beforeEach(() => {
@@ -136,4 +164,50 @@ it("disposes the scroll coalescer on unmount", () => {
   unmount()
 
   expect(scrollCoalescerDisposeMock).toHaveBeenCalledTimes(1)
+})
+
+describe("usePeerVideoRemoteInput keyboard capture", () => {
+  it("sends allowed keys only after the remote video arms keyboard capture", async () => {
+    const user = userEvent.setup()
+    const sendPeerKeyboardInput = vi.fn()
+    render(<KeyboardHarness sendPeerKeyboardInput={sendPeerKeyboardInput} />)
+
+    await user.keyboard("a")
+    expect(sendPeerKeyboardInput).not.toHaveBeenCalled()
+
+    await user.click(screen.getByTestId("remote-video"))
+    await user.keyboard("a")
+
+    expect(sendPeerKeyboardInput).toHaveBeenCalledWith({
+      key: "a",
+      code: "KeyA",
+      location: 0,
+      repeat: false,
+    })
+  })
+
+  it("disarms keyboard capture after clicking outside the remote video", async () => {
+    const user = userEvent.setup()
+    const sendPeerKeyboardInput = vi.fn()
+    render(<KeyboardHarness sendPeerKeyboardInput={sendPeerKeyboardInput} />)
+
+    await user.click(screen.getByTestId("remote-video"))
+    await user.click(screen.getByRole("button", { name: "local control" }))
+    await user.keyboard("a")
+
+    expect(sendPeerKeyboardInput).not.toHaveBeenCalled()
+  })
+
+  it("ignores shortcuts and disallowed keys", async () => {
+    const user = userEvent.setup()
+    const sendPeerKeyboardInput = vi.fn()
+    render(<KeyboardHarness sendPeerKeyboardInput={sendPeerKeyboardInput} />)
+
+    await user.click(screen.getByTestId("remote-video"))
+    await user.keyboard("{Control>}a{/Control}")
+    await user.keyboard("{Tab}")
+    await user.keyboard("{ArrowLeft}")
+
+    expect(sendPeerKeyboardInput).not.toHaveBeenCalled()
+  })
 })

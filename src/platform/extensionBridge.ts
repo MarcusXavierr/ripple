@@ -1,6 +1,7 @@
 import {
   isExtensionAck,
   type ExtensionAck,
+  type PeerKeyboardInput,
   type PeerVideoClick,
   type PeerVideoScroll,
   type RemoteInputMessage,
@@ -24,7 +25,7 @@ type ExtensionBridgeDeps = {
 export function createExtensionBridge({ extensionId, runtime, logger }: ExtensionBridgeDeps) {
   function sendRemoteInput(
     message: RemoteInputMessage,
-    logType: "remote-click" | "remote-scroll"
+    logType: "remote-click" | "remote-scroll" | "remote-keyboard"
   ): Promise<ExtensionAck | null> {
     if (!extensionId) {
       logger.debug("[Ripple Extension] unavailable", "missing extension id")
@@ -65,6 +66,9 @@ export function createExtensionBridge({ extensionId, runtime, logger }: Extensio
     },
     sendRemoteScroll(scroll: PeerVideoScroll): Promise<ExtensionAck | null> {
       return sendRemoteInput({ type: "remote-scroll", scroll }, "remote-scroll")
+    },
+    sendRemoteKeyboard(keyboard: PeerKeyboardInput): Promise<ExtensionAck | null> {
+      return sendRemoteInput({ type: "remote-keyboard", keyboard }, "remote-keyboard")
     },
   }
 }

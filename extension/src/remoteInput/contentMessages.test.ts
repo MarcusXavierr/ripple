@@ -31,6 +31,7 @@ describe("handleContentMessage", () => {
         viewport: { width: 1000, height: 800 },
         execute: vi.fn().mockReturnValue({ ok: true, stage: "dispatched" }),
         executeScroll: vi.fn(),
+        executeKeyboard: vi.fn(),
       }
     )
 
@@ -44,6 +45,7 @@ describe("handleContentMessage", () => {
         viewport: { width: 1000, height: 800 },
         execute: vi.fn(),
         executeScroll: vi.fn(),
+        executeKeyboard: vi.fn(),
       }
     )
 
@@ -67,6 +69,7 @@ describe("handleContentMessage", () => {
         viewport: { width: 1000, height: 800 },
         execute: vi.fn(),
         executeScroll,
+        executeKeyboard: vi.fn(),
       }
     )
 
@@ -80,6 +83,34 @@ describe("handleContentMessage", () => {
     ).toBe(true)
     expect(
       v.safeParse(ContentMessageSchema, { type: "execute-remote-scroll", scroll: { x: 1 } }).success
+    ).toBe(false)
+  })
+
+  it("executes valid remote keyboard input", () => {
+    const keyboard = { key: "a", code: "KeyA", location: 0, repeat: false }
+    const executeKeyboard = vi.fn().mockReturnValue({ ok: true, stage: "applied" })
+    const result = handleContentMessage(
+      { type: "execute-remote-keyboard", keyboard },
+      {
+        viewport: { width: 1000, height: 800 },
+        execute: vi.fn(),
+        executeScroll: vi.fn(),
+        executeKeyboard,
+      }
+    )
+
+    expect(result).toEqual({ ok: true, stage: "applied" })
+    expect(executeKeyboard).toHaveBeenCalledWith(keyboard)
+  })
+
+  it("exports a schema for valid remote keyboard content messages", () => {
+    const keyboard = { key: "a", code: "KeyA", location: 0, repeat: false }
+    expect(
+      v.safeParse(ContentMessageSchema, { type: "execute-remote-keyboard", keyboard }).success
+    ).toBe(true)
+    expect(
+      v.safeParse(ContentMessageSchema, { type: "execute-remote-keyboard", keyboard: { key: "Tab" } })
+        .success
     ).toBe(false)
   })
 })

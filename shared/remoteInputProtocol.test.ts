@@ -2,9 +2,11 @@ import * as v from "valibot"
 import {
   ExtensionAckSchema,
   isExtensionAck,
+  isPeerKeyboardInput,
   isPeerVideoClick,
   isPeerVideoScroll,
   isRemoteInputMessage,
+  PeerKeyboardInputSchema,
   type PeerVideoClick,
   PeerVideoClickSchema,
   type PeerVideoScroll,
@@ -33,6 +35,13 @@ const scroll: PeerVideoScroll = {
   deltaX: 0,
   deltaY: 42,
   deltaMode: 0,
+}
+
+const keyboard = {
+  key: "a",
+  code: "KeyA",
+  location: 0,
+  repeat: false,
 }
 
 describe("remote input protocol guards", () => {
@@ -126,6 +135,54 @@ describe("remote input protocol guards", () => {
     expect(
       v.safeParse(ExtensionAckSchema, { ok: true, type: "remote-scroll-applied", targetTabId: 7 })
         .success
+    ).toBe(true)
+  })
+
+  it("accepts valid peer keyboard input", () => {
+    expect(isPeerKeyboardInput(keyboard)).toBe(true)
+    expect(isPeerKeyboardInput({ ...keyboard, key: " " })).toBe(true)
+    expect(isPeerKeyboardInput({ ...keyboard, key: "Backspace", code: "Backspace" })).toBe(true)
+    expect(isPeerKeyboardInput({ ...keyboard, key: "Delete", code: "Delete" })).toBe(true)
+    expect(isPeerKeyboardInput({ ...keyboard, key: "Enter", code: "Enter" })).toBe(true)
+  })
+
+  it("rejects keys outside the V1 keyboard scope", () => {
+    expect(isPeerKeyboardInput({ ...keyboard, key: "Tab", code: "Tab" })).toBe(false)
+    expect(isPeerKeyboardInput({ ...keyboard, key: "ArrowLeft", code: "ArrowLeft" })).toBe(false)
+    expect(isPeerKeyboardInput({ ...keyboard, key: "F1", code: "F1" })).toBe(false)
+    expect(isPeerKeyboardInput({ ...keyboard, key: "Control", code: "ControlLeft" })).toBe(false)
+    expect(isPeerKeyboardInput({ ...keyboard, key: "" })).toBe(false)
+  })
+
+  it("accepts a valid remote-keyboard message", () => {
+    expect(isRemoteInputMessage({ type: "remote-keyboard", keyboard })).toBe(true)
+  })
+
+  it("accepts keyboard extension acks", () => {
+    expect(
+      isExtensionAck({ ok: true, type: "remote-keyboard-applied", targetTabId: 42 })
+    ).toBe(true)
+    expect(
+      isExtensionAck({
+        ok: false,
+        type: "remote-keyboard-rejected",
+        reason: "invalid selection",
+        stage: "selection",
+      })
+    ).toBe(true)
+  })
+
+  it("exports reusable schemas for remote keyboard validation", () => {
+    expect(v.safeParse(PeerKeyboardInputSchema, keyboard).success).toBe(true)
+    expect(
+      v.safeParse(RemoteInputMessageSchema, { type: "remote-keyboard", keyboard }).success
+    ).toBe(true)
+    expect(
+      v.safeParse(ExtensionAckSchema, {
+        ok: true,
+        type: "remote-keyboard-applied",
+        targetTabId: 7,
+      }).success
     ).toBe(true)
   })
 })

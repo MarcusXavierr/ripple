@@ -44,12 +44,36 @@ const RemoteScrollRequestSchema = v.object({
   scroll: PeerVideoScrollSchema,
 })
 
+const AllowedKeyboardKeySchema = v.union([
+  v.pipe(v.string(), v.length(1)),
+  v.literal("Backspace"),
+  v.literal("Delete"),
+  v.literal("Enter"),
+])
+
+export const PeerKeyboardInputSchema = v.object({
+  key: AllowedKeyboardKeySchema,
+  code: v.string(),
+  location: FiniteNumberSchema,
+  repeat: v.boolean(),
+})
+
+export type PeerKeyboardInput = v.InferOutput<typeof PeerKeyboardInputSchema>
+
+const RemoteKeyboardRequestSchema = v.object({
+  type: v.literal("remote-keyboard"),
+  keyboard: PeerKeyboardInputSchema,
+})
+
+export type RemoteKeyboardRequest = v.InferOutput<typeof RemoteKeyboardRequestSchema>
+
 export type RemoteClickRequest = v.InferOutput<typeof RemoteClickRequestSchema>
 export type RemoteScrollRequest = v.InferOutput<typeof RemoteScrollRequestSchema>
 
 export const RemoteInputMessageSchema = v.variant("type", [
   RemoteClickRequestSchema,
   RemoteScrollRequestSchema,
+  RemoteKeyboardRequestSchema,
 ])
 
 export type RemoteInputMessage = v.InferOutput<typeof RemoteInputMessageSchema>
@@ -57,12 +81,20 @@ export type RemoteInputMessage = v.InferOutput<typeof RemoteInputMessageSchema>
 export const ExtensionAckSchema = v.variant("ok", [
   v.object({
     ok: v.literal(true),
-    type: v.union([v.literal("remote-click-applied"), v.literal("remote-scroll-applied")]),
+    type: v.union([
+      v.literal("remote-click-applied"),
+      v.literal("remote-scroll-applied"),
+      v.literal("remote-keyboard-applied"),
+    ]),
     targetTabId: FiniteNumberSchema,
   }),
   v.object({
     ok: v.literal(false),
-    type: v.union([v.literal("remote-click-rejected"), v.literal("remote-scroll-rejected")]),
+    type: v.union([
+      v.literal("remote-click-rejected"),
+      v.literal("remote-scroll-rejected"),
+      v.literal("remote-keyboard-rejected"),
+    ]),
     reason: v.string(),
     stage: v.optional(v.string()),
   }),
@@ -84,4 +116,8 @@ export function isRemoteInputMessage(value: unknown): value is RemoteInputMessag
 
 export function isExtensionAck(value: unknown): value is ExtensionAck {
   return v.safeParse(ExtensionAckSchema, value).success
+}
+
+export function isPeerKeyboardInput(value: unknown): value is PeerKeyboardInput {
+  return v.safeParse(PeerKeyboardInputSchema, value).success
 }
