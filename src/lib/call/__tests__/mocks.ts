@@ -60,6 +60,15 @@ export class MockRTCPeerConnection {
 
   addTrack = vi.fn()
   getSenders = vi.fn().mockReturnValue([])
+  addTransceiver = vi.fn().mockImplementation((_kind: string, _init?: RTCRtpTransceiverInit) => {
+    const sender = {
+      track: null as MediaStreamTrack | null,
+      replaceTrack: vi.fn().mockImplementation(async (track: MediaStreamTrack | null) => {
+        sender.track = track
+      }),
+    }
+    return { sender, direction: _init?.direction ?? "sendrecv" }
+  })
   setLocalDescription = vi.fn().mockImplementation(async (desc?: RTCSessionDescriptionInit) => {
     if (desc?.type === "rollback") {
       this.localDescription = null

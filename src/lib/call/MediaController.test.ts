@@ -50,6 +50,25 @@ describe("MediaController", () => {
       media.attachPC(pc)
       expect(pc.addTrack).not.toHaveBeenCalled()
     })
+
+    it("allocates a sendrecv audio transceiver bundled into the local stream", async () => {
+      await media.init()
+      const pc = new MockRTCPeerConnection() as unknown as RTCPeerConnection
+      media.attachPC(pc)
+      expect(pc.addTransceiver).toHaveBeenCalledWith("audio", {
+        direction: "sendrecv",
+        streams: [mockStream],
+      })
+    })
+
+    it("creates the transceiver with no streams when called before init", () => {
+      const pc = new MockRTCPeerConnection() as unknown as RTCPeerConnection
+      media.attachPC(pc)
+      expect(pc.addTransceiver).toHaveBeenCalledWith("audio", {
+        direction: "sendrecv",
+        streams: [],
+      })
+    })
   })
 
   describe("toggleMic()", () => {

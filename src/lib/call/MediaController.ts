@@ -1,8 +1,9 @@
-import { useCallStore, type ScreenShareSurface } from "@/store/call"
+import { type ScreenShareSurface, useCallStore } from "@/store/call"
 
 export class MediaController {
   private stream: MediaStream | null = null
   private pc: RTCPeerConnection | null = null
+  private screenAudioTransceiver: RTCRtpTransceiver | null = null
 
   async init(): Promise<MediaStream> {
     const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
@@ -14,6 +15,14 @@ export class MediaController {
     this.pc = pc
     const stream = this.stream
     if (stream) stream.getTracks().forEach((t) => pc.addTrack(t, stream))
+    this.screenAudioTransceiver = pc.addTransceiver("audio", {
+      direction: "sendrecv",
+      // Bundle into the existing local stream so the remote's `ontrack` event
+      // carries the same MediaStream id as mic/camera. Without this, the remote
+      // gets a streamless track and `e.streams[0]` is undefined, which would
+      // cause PeerConnection.ts:52 to null out remoteStream.
+      streams: stream ? [stream] : [],
+    })
   }
 
   toggleMic() {
