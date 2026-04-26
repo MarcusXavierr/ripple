@@ -81,6 +81,10 @@ export class MediaController {
       const screenTrack = sender?.track ?? null
       if (sender) await sender.replaceTrack(cameraTrack)
       if (screenTrack && screenTrack !== cameraTrack) screenTrack.stop()
+      const audioSender = this.screenAudioTransceiver?.sender
+      const screenAudioTrack = audioSender?.track ?? null
+      if (audioSender) await audioSender.replaceTrack(null)
+      screenAudioTrack?.stop()
     } catch (err) {
       console.error("[Screenshare] failed to stop", err)
     } finally {
