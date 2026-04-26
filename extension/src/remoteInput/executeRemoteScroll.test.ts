@@ -96,6 +96,54 @@ describe("executeRemoteScroll", () => {
     expect(scrollBy).toHaveBeenCalledWith({ left: 200, top: 100, behavior: "instant" })
   })
 
+  it("falls back to document scroll when element scrollBy has no effect", () => {
+    document.body.innerHTML = `
+      <div id="scroller" style="height: 100px; overflow: auto;">
+        <button id="target">Target</button>
+      </div>
+    `
+    const scroller = document.getElementById("scroller") as HTMLDivElement
+    const target = document.getElementById("target") as HTMLButtonElement
+    Object.defineProperties(scroller, {
+      clientHeight: { value: 100, configurable: true },
+      scrollHeight: { value: 300, configurable: true },
+      scrollTop: { value: 50, writable: true, configurable: true },
+    })
+    // scrollBy on the element does NOT change scrollTop (simulates a virtual scroller)
+    const elementScrollBy = vi.fn()
+    Object.defineProperty(scroller, "scrollBy", { value: elementScrollBy, configurable: true })
+    mockElementFromPoint(target)
+
+    // Create a standalone element to act as the document scroller so we have full control
+    const fakeDocScroller = document.createElement("div")
+    Object.defineProperties(fakeDocScroller, {
+      clientHeight: { value: 600, configurable: true },
+      scrollHeight: { value: 1200, configurable: true },
+      scrollTop: { value: 0, writable: true, configurable: true },
+    })
+    const docScrollBy = vi.fn()
+    Object.defineProperty(fakeDocScroller, "scrollBy", { value: docScrollBy, configurable: true })
+    Object.defineProperty(document, "scrollingElement", {
+      get: () => fakeDocScroller,
+      configurable: true,
+    })
+
+    try {
+      expect(executeRemoteScroll({ x: 10, y: 20 }, scroll, document)).toEqual({
+        ok: true,
+        stage: "scrolled",
+      })
+      expect(elementScrollBy).toHaveBeenCalledWith({ left: 0, top: 40, behavior: "instant" })
+      expect(docScrollBy).toHaveBeenCalledWith({ left: 0, top: 40, behavior: "instant" })
+    } finally {
+      // Restore scrollingElement so it doesn't bleed into subsequent tests
+      Object.defineProperty(document, "scrollingElement", {
+        get: () => document.documentElement,
+        configurable: true,
+      })
+    }
+  })
+
   it("rejects when no scrollable target can be found", () => {
     document.body.innerHTML = `<button id="target">Target</button>`
     mockElementFromPoint(document.getElementById("target"))
