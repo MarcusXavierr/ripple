@@ -121,14 +121,14 @@ describe("MediaController", () => {
 
     it("stops the screen video and screen audio tracks if a share is active", async () => {
       await media.init()
-      const mockVideoSender = {
+      const mockVideoSender: { track: unknown; replaceTrack: ReturnType<typeof vi.fn> } = {
         track: mockVideoTrack,
         replaceTrack: vi.fn().mockImplementation(async (track: unknown) => {
           mockVideoSender.track = track
         }),
       }
-      const mockScreenAudioSender = {
-        track: null as unknown,
+      const mockScreenAudioSender: { track: unknown; replaceTrack: ReturnType<typeof vi.fn> } = {
+        track: null,
         replaceTrack: vi.fn().mockImplementation(async (track: unknown) => {
           mockScreenAudioSender.track = track
         }),
