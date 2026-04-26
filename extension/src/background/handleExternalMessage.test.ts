@@ -28,6 +28,16 @@ const message: RemoteInputMessage = {
   },
 }
 
+const scrollMessage: RemoteInputMessage = {
+  type: "remote-scroll",
+  scroll: {
+    ...message.click,
+    deltaX: 0,
+    deltaY: 40,
+    deltaMode: 0,
+  },
+}
+
 function createDeps(overrides: Partial<BackgroundDeps> = {}): BackgroundDeps {
   return {
     readSelectedTab: vi.fn().mockResolvedValue(selectedTab),
@@ -113,5 +123,39 @@ describe("handleExternalMessage", () => {
         tabId: 7,
       }
     )
+  })
+
+  it("forwards a remote scroll to the selected tab", async () => {
+    const deps = createDeps({
+      sendMessageToTab: vi.fn().mockResolvedValue({ ok: true, stage: "scrolled" }),
+    })
+
+    await expect(handleExternalMessage(scrollMessage, deps)).resolves.toEqual({
+      ok: true,
+      type: "remote-scroll-applied",
+      targetTabId: 7,
+    })
+
+    expect(deps.sendMessageToTab).toHaveBeenCalledWith(7, {
+      type: "execute-remote-scroll",
+      scroll: scrollMessage.scroll,
+    })
+  })
+
+  it("rejects remote scroll content-script failures with a scroll ack", async () => {
+    const deps = createDeps({
+      sendMessageToTab: vi.fn().mockResolvedValue({
+        ok: false,
+        reason: "scroll target cannot be found",
+        stage: "target",
+      }),
+    })
+
+    await expect(handleExternalMessage(scrollMessage, deps)).resolves.toEqual({
+      ok: false,
+      type: "remote-scroll-rejected",
+      reason: "scroll target cannot be found",
+      stage: "target",
+    })
   })
 })

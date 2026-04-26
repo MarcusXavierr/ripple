@@ -2,7 +2,7 @@
 
 import type { TFunction } from "i18next"
 import { Mic, MicOff, Monitor, PhoneOff, Video, VideoOff } from "lucide-react"
-import { useEffect, useRef, type MouseEvent } from "react"
+import { useEffect, useRef } from "react"
 import { useTranslation } from "react-i18next"
 import { useNavigate, useParams } from "react-router-dom"
 import { Button } from "@/components/ui/button"
@@ -15,7 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { useCallSession } from "@/hooks/useCallSession"
-import { createPeerVideoClick } from "@/lib/call/createPeerVideoClick"
+import { usePeerVideoRemoteInput } from "@/hooks/usePeerVideoRemoteInput"
 import type { CallStatus } from "@/store/call"
 
 function getStatusLabel(status: CallStatus, t: TFunction): string {
@@ -47,6 +47,7 @@ export default function Room() {
     startScreenShare,
     stopScreenShare,
     sendPeerVideoClick,
+    sendPeerVideoScroll,
     hangup,
     toggleMic,
     toggleCamera,
@@ -56,6 +57,11 @@ export default function Room() {
 
   const localVideoRef = useRef<HTMLVideoElement>(null)
   const remoteVideoRef = useRef<HTMLVideoElement>(null)
+  const { handleRemoteVideoClick } = usePeerVideoRemoteInput({
+    remoteVideoRef,
+    sendPeerVideoClick,
+    sendPeerVideoScroll,
+  })
 
   useEffect(() => {
     if (localVideoRef.current) localVideoRef.current.srcObject = localStream
@@ -67,16 +73,6 @@ export default function Room() {
 
   function handleCopyLink() {
     void navigator.clipboard.writeText(`${window.location.origin}/room/${roomId}`)
-  }
-
-  function handleRemoteVideoClick(event: MouseEvent<HTMLVideoElement>) {
-    const click = createPeerVideoClick(event.currentTarget, {
-      clientX: event.clientX,
-      clientY: event.clientY,
-    })
-
-    if (!click) return
-    sendPeerVideoClick(click)
   }
 
   return (

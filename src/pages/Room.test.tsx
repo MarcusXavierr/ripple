@@ -3,16 +3,13 @@ import { fireEvent, render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { MemoryRouter, Route, Routes } from "react-router-dom"
 import { useCallSession } from "@/hooks/useCallSession"
-import { samplePeerVideoClick } from "@/testing/peerVideoClick.fixture"
+import { usePeerVideoRemoteInput } from "@/hooks/usePeerVideoRemoteInput"
 import Room from "./Room"
 
 vi.mock("@/hooks/useCallSession", () => ({ useCallSession: vi.fn() }))
+vi.mock("@/hooks/usePeerVideoRemoteInput", () => ({ usePeerVideoRemoteInput: vi.fn() }))
 
-const createPeerVideoClickMock = vi.fn()
-
-vi.mock("@/lib/call/createPeerVideoClick", () => ({
-  createPeerVideoClick: (...args: unknown[]) => createPeerVideoClickMock(...args),
-}))
+const handleRemoteVideoClickMock = vi.fn()
 
 const baseMock = {
   localStream: null as MediaStream | null,
@@ -29,6 +26,7 @@ const baseMock = {
   toggleMic: vi.fn(),
   toggleCamera: vi.fn(),
   sendPeerVideoClick: vi.fn(),
+  sendPeerVideoScroll: vi.fn(),
   dismissError: vi.fn(),
   dismissReconnectModal: vi.fn(),
 }
@@ -44,10 +42,14 @@ function renderRoom(roomId = "coral-tiger-42") {
 }
 
 const useCallSessionMock = useCallSession as ReturnType<typeof vi.fn>
+const usePeerVideoRemoteInputMock = usePeerVideoRemoteInput as ReturnType<typeof vi.fn>
 
 beforeEach(() => {
   vi.clearAllMocks()
   useCallSessionMock.mockReturnValue({ ...baseMock })
+  usePeerVideoRemoteInputMock.mockReturnValue({
+    handleRemoteVideoClick: handleRemoteVideoClickMock,
+  })
 })
 
 it("renders the room page", () => {
@@ -87,26 +89,23 @@ describe("status bar", () => {
 })
 
 describe("control bar", () => {
-  it("forwards remote video clicks through the hook boundary", async () => {
-    createPeerVideoClickMock.mockReturnValue(samplePeerVideoClick)
+  it("wires the remote video sender hook with the session callbacks", () => {
     renderRoom()
     const remoteVideo = screen.getByTestId("remote-video")
-    const clientX = 120
-    const clientY = 45
 
-    fireEvent.click(remoteVideo, { clientX, clientY })
-
-    expect(createPeerVideoClickMock).toHaveBeenCalledWith(remoteVideo, { clientX, clientY })
-    expect(baseMock.sendPeerVideoClick).toHaveBeenCalledWith(samplePeerVideoClick)
+    const [args] = usePeerVideoRemoteInputMock.mock.calls[0]
+    expect(args.remoteVideoRef.current).toBe(remoteVideo)
+    expect(args.sendPeerVideoClick).toBe(baseMock.sendPeerVideoClick)
+    expect(args.sendPeerVideoScroll).toBe(baseMock.sendPeerVideoScroll)
+    expect(handleRemoteVideoClickMock).not.toHaveBeenCalled()
   })
 
-  it("does not send anything when the geometry helper rejects the click", async () => {
-    createPeerVideoClickMock.mockReturnValue(null)
+  it("forwards remote video clicks through the extracted sender hook", () => {
     renderRoom()
 
-    await userEvent.click(screen.getByTestId("remote-video"))
+    fireEvent.click(screen.getByTestId("remote-video"), { clientX: 120, clientY: 45 })
 
-    expect(baseMock.sendPeerVideoClick).not.toHaveBeenCalled()
+    expect(handleRemoteVideoClickMock).toHaveBeenCalledTimes(1)
   })
 
   it("ignores clicks on the local self-view video", async () => {
@@ -114,8 +113,7 @@ describe("control bar", () => {
 
     await userEvent.click(screen.getByTestId("local-video"))
 
-    expect(createPeerVideoClickMock).not.toHaveBeenCalled()
-    expect(baseMock.sendPeerVideoClick).not.toHaveBeenCalled()
+    expect(handleRemoteVideoClickMock).not.toHaveBeenCalled()
   })
 
   it("renders all four control buttons", () => {
