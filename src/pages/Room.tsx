@@ -14,6 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { useCallNotices } from "@/hooks/useCallNotices"
 import { useCallSession } from "@/hooks/useCallSession"
 import { usePeerVideoRemoteInput } from "@/hooks/usePeerVideoRemoteInput"
 import type { CallStatus } from "@/store/call"
@@ -55,6 +56,8 @@ export default function Room() {
     dismissError,
     dismissReconnectModal,
   } = useCallSession(roomId!)
+
+  useCallNotices()
 
   const localVideoRef = useRef<HTMLVideoElement>(null)
   const remoteVideoRef = useRef<HTMLVideoElement>(null)
