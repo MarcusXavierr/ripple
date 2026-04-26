@@ -42,7 +42,7 @@ export class MediaController {
   async startScreenShare() {
     if (!this.pc) return
     try {
-      const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true })
+      const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true })
       const screenTrack = screenStream.getVideoTracks()[0]
       const screenShareSurface = toScreenShareSurface(screenTrack.getSettings().displaySurface)
       const sender = this.pc.getSenders().find((s) => s.track?.kind === "video")
@@ -50,6 +50,10 @@ export class MediaController {
         await sender.replaceTrack(screenTrack)
       } else {
         this.pc.addTrack(screenTrack, screenStream)
+      }
+      const screenAudio = screenStream.getAudioTracks()[0] ?? null
+      if (screenAudio && this.screenAudioTransceiver) {
+        await this.screenAudioTransceiver.sender.replaceTrack(screenAudio)
       }
       useCallStore.setState({ isScreenSharing: true, screenShareSurface })
       screenTrack.onended = () => {
