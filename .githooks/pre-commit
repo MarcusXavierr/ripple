@@ -1,0 +1,9 @@
+#!/usr/bin/env sh
+set -e
+
+# Run Biome on staged files only. --staged restricts the scope to
+# files in the git index; --write applies safe auto-fixes.
+bunx biome check --write --staged --no-errors-on-unmatched
+
+# Re-stage anything Biome rewrote so the fixes land in this commit.
+git update-index --again
