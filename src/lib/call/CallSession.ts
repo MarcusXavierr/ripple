@@ -3,7 +3,7 @@
 import { getPeerId } from "@/lib/peerId"
 import { useCallStore } from "@/store/call"
 import { extensionBridge } from "@/platform/extensionBridge"
-import type { PeerVideoClick, PeerVideoScroll } from "@shared/remoteInputProtocol"
+import type { PeerKeyboardInput, PeerVideoClick, PeerVideoScroll } from "@shared/remoteInputProtocol"
 import { CLOSE_CODES, MESSAGE_TYPES } from "@/types/signaling"
 import type { ReceivedMessage } from "@/types/signaling"
 import { MediaController } from "./MediaController"
@@ -105,9 +105,13 @@ export class CallSession {
     this.signalingChannel.send({ type: MESSAGE_TYPES.PEER_VIDEO_SCROLL, scroll })
   }
 
+  sendPeerKeyboardInput(keyboard: PeerKeyboardInput) {
+    this.signalingChannel.send({ type: MESSAGE_TYPES.PEER_KEYBOARD_INPUT, keyboard })
+  }
+
   // ── Signaling message dispatch ──────────────────────────────────────────────
 
-  private canForwardRemoteInputToExtension(kind: "click" | "scroll"): boolean {
+  private canForwardRemoteInputToExtension(kind: "click" | "scroll" | "keyboard"): boolean {
     const { isScreenSharing, screenShareSurface } = useCallStore.getState()
     if (!isScreenSharing) {
       console.debug(
@@ -134,12 +138,15 @@ export class CallSession {
 
     if (msg.type === MESSAGE_TYPES.PEER_VIDEO_SCROLL) {
       console.debug("[Peer Video Scroll]", msg.scroll)
-      // TODO(remote-input-keyboard): Revisit remote-input dispatch ordering before
-      // adding keyboard events. Scroll forwarding is best-effort and coalesced, but
-      // keyboard events may need stricter ordering and should not wait behind a stream
-      // of scroll extension acks.
       if (!this.canForwardRemoteInputToExtension("scroll")) return
       await extensionBridge.sendRemoteScroll(msg.scroll)
+      return
+    }
+
+    if (msg.type === MESSAGE_TYPES.PEER_KEYBOARD_INPUT) {
+      console.debug("[Peer Keyboard Input]", msg.keyboard)
+      if (!this.canForwardRemoteInputToExtension("keyboard")) return
+      void extensionBridge.sendRemoteKeyboard(msg.keyboard)
       return
     }
 

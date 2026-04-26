@@ -1,17 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { samplePeerVideoClick } from "@/testing/peerVideoClick.fixture"
 import { samplePeerVideoScroll } from "@/testing/peerVideoScroll.fixture"
+import { samplePeerKeyboardInput } from "@/testing/peerKeyboardInput.fixture"
 import type { ReceivedMessage } from "@/types/signaling"
 import { useCallStore } from "@/store/call"
 import { CallSession } from "./CallSession"
 
 const sendRemoteClickMock = vi.fn()
 const sendRemoteScrollMock = vi.fn()
+const sendRemoteKeyboardMock = vi.fn()
 
 vi.mock("@/platform/extensionBridge", () => ({
   extensionBridge: {
     sendRemoteClick: (...args: unknown[]) => sendRemoteClickMock(...args),
     sendRemoteScroll: (...args: unknown[]) => sendRemoteScrollMock(...args),
+    sendRemoteKeyboard: (...args: unknown[]) => sendRemoteKeyboardMock(...args),
   },
 }))
 
@@ -79,6 +82,7 @@ beforeEach(() => {
   machineHandleProtocolMessage.mockReset()
   sendRemoteClickMock.mockReset()
   sendRemoteScrollMock.mockReset()
+  sendRemoteKeyboardMock.mockReset()
 })
 
 describe("sendPeerVideoClick", () => {
@@ -197,6 +201,62 @@ describe("incoming peer video scroll relay", () => {
     })
 
     expect(sendRemoteScrollMock).not.toHaveBeenCalled()
+    session.teardown()
+  })
+})
+
+describe("sendPeerKeyboardInput", () => {
+  it("sends the keyboard payload through the signaling channel", () => {
+    const session = new CallSession("room-1", vi.fn())
+
+    session.sendPeerKeyboardInput(samplePeerKeyboardInput)
+
+    expect(signalingSend).toHaveBeenCalledWith({
+      type: "peer-keyboard-input",
+      keyboard: samplePeerKeyboardInput,
+    })
+  })
+})
+
+describe("incoming peer keyboard relay", () => {
+  it("does not forward keyboard input to the FSM", async () => {
+    new CallSession("room-1", vi.fn())
+    await signalingCallbacks?.onMessage({
+      type: "peer-keyboard-input",
+      keyboard: samplePeerKeyboardInput,
+    })
+
+    expect(machineHandleProtocolMessage).not.toHaveBeenCalled()
+  })
+
+  it("forwards inbound keyboard input to the extension when local peer is sharing a browser tab", async () => {
+    const session = new CallSession("room-1", vi.fn())
+    useCallStore.setState({ isScreenSharing: true, screenShareSurface: "browser" })
+    sendRemoteKeyboardMock.mockResolvedValue({
+      ok: true,
+      type: "remote-keyboard-applied",
+      targetTabId: 7,
+    })
+
+    await signalingCallbacks?.onMessage({
+      type: "peer-keyboard-input",
+      keyboard: samplePeerKeyboardInput,
+    })
+
+    expect(sendRemoteKeyboardMock).toHaveBeenCalledWith(samplePeerKeyboardInput)
+    session.teardown()
+  })
+
+  it("does not forward inbound keyboard input when local peer is not sharing a browser tab", async () => {
+    const session = new CallSession("room-1", vi.fn())
+    useCallStore.setState({ isScreenSharing: true, screenShareSurface: "window" })
+
+    await signalingCallbacks?.onMessage({
+      type: "peer-keyboard-input",
+      keyboard: samplePeerKeyboardInput,
+    })
+
+    expect(sendRemoteKeyboardMock).not.toHaveBeenCalled()
     session.teardown()
   })
 })

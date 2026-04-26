@@ -3,7 +3,7 @@ import type { ClientMessage, ReceivedMessage } from "@/types/signaling"
 
 type RemoteInputRelayMessage = Extract<
   ReceivedMessage,
-  { type: "peer-video-click" | "peer-video-scroll" }
+  { type: "peer-video-click" | "peer-video-scroll" | "peer-keyboard-input" }
 >
 
 export type MachineReceivedMessage = Exclude<ReceivedMessage, RemoteInputRelayMessage>

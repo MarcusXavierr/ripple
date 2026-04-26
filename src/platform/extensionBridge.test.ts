@@ -1,5 +1,6 @@
 import type { PeerVideoClick } from "@shared/remoteInputProtocol"
 import { samplePeerVideoScroll } from "@/testing/peerVideoScroll.fixture"
+import { samplePeerKeyboardInput } from "@/testing/peerKeyboardInput.fixture"
 import { createExtensionBridge } from "./extensionBridge"
 
 const click: PeerVideoClick = {
@@ -73,6 +74,30 @@ describe("extensionBridge", () => {
       type: "remote-scroll-applied",
       targetTabId: 7,
     })
+  })
+
+  it("sends remote keyboard input to the extension", async () => {
+    const sendMessage = vi.fn((_extensionId, _message, callback) => {
+      callback({ ok: true, type: "remote-keyboard-applied", targetTabId: 7 })
+    })
+    const logger = { debug: vi.fn() }
+    const bridge = createExtensionBridge({
+      extensionId: "extension-id",
+      runtime: { sendMessage },
+      logger,
+    })
+
+    await expect(bridge.sendRemoteKeyboard(samplePeerKeyboardInput)).resolves.toEqual({
+      ok: true,
+      type: "remote-keyboard-applied",
+      targetTabId: 7,
+    })
+
+    expect(sendMessage).toHaveBeenCalledWith(
+      "extension-id",
+      { type: "remote-keyboard", keyboard: samplePeerKeyboardInput },
+      expect.any(Function)
+    )
   })
 
   it("resolves null when extension messaging is unavailable", async () => {

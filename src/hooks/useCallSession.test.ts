@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { CallSession } from "@/lib/call/CallSession"
 import { samplePeerVideoClick } from "@/testing/peerVideoClick.fixture"
 import { samplePeerVideoScroll } from "@/testing/peerVideoScroll.fixture"
+import { samplePeerKeyboardInput } from "@/testing/peerKeyboardInput.fixture"
 import { useCallStore } from "@/store/call"
 import { useCallSession } from "./useCallSession"
 
@@ -21,6 +22,7 @@ vi.mock("@/lib/call/CallSession", () => ({
       hangup: vi.fn(),
       sendPeerVideoClick: vi.fn(),
       sendPeerVideoScroll: vi.fn(),
+      sendPeerKeyboardInput: vi.fn(),
       media: {
         toggleMic: vi.fn(),
         toggleCamera: vi.fn(),
@@ -56,6 +58,15 @@ it("delegates sendPeerVideoScroll to the session", () => {
   act(() => result.current.sendPeerVideoScroll(samplePeerVideoScroll))
 
   expect(session.sendPeerVideoScroll).toHaveBeenCalledWith(samplePeerVideoScroll)
+})
+
+it("delegates sendPeerKeyboardInput to the session", () => {
+  const { result } = renderHook(() => useCallSession("test-room"))
+  const session = vi.mocked(CallSession).mock.results[0]?.value
+
+  act(() => result.current.sendPeerKeyboardInput(samplePeerKeyboardInput))
+
+  expect(session.sendPeerKeyboardInput).toHaveBeenCalledWith(samplePeerKeyboardInput)
 })
 
 it("keeps remote input actions stable across store-driven rerenders", () => {
