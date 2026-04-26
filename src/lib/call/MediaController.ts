@@ -93,10 +93,22 @@ export class MediaController {
   }
 
   teardown() {
+    if (this.pc) {
+      const videoSender = this.pc.getSenders().find((s) => s.track?.kind === "video")
+      const screenVideoTrack = videoSender?.track ?? null
+      const cameraVideoTrack = this.stream?.getVideoTracks()[0] ?? null
+      if (screenVideoTrack && screenVideoTrack !== cameraVideoTrack) {
+        screenVideoTrack.stop()
+      }
+    }
+    const screenAudioTrack = this.screenAudioTransceiver?.sender.track ?? null
+    screenAudioTrack?.stop()
+
     this.stream?.getTracks().forEach((t) => t.stop())
     this.stream = null
     this.pc = null
-    useCallStore.setState({ screenShareSurface: null })
+    this.screenAudioTransceiver = null
+    useCallStore.setState({ screenShareSurface: null, isScreenSharing: false })
   }
 }
 

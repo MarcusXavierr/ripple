@@ -118,6 +118,35 @@ describe("MediaController", () => {
     it("does not throw when called before init", () => {
       expect(() => media.teardown()).not.toThrow()
     })
+
+    it("stops the screen video and screen audio tracks if a share is active", async () => {
+      await media.init()
+      const mockVideoSender = {
+        track: mockVideoTrack,
+        replaceTrack: vi.fn().mockImplementation(async (track: unknown) => {
+          mockVideoSender.track = track
+        }),
+      }
+      const mockScreenAudioSender = {
+        track: null as unknown,
+        replaceTrack: vi.fn().mockImplementation(async (track: unknown) => {
+          mockScreenAudioSender.track = track
+        }),
+      }
+      const pc = new MockRTCPeerConnection() as unknown as RTCPeerConnection
+      vi.mocked(pc.getSenders).mockReturnValue([mockVideoSender as unknown as RTCRtpSender])
+      vi.mocked(pc.addTransceiver).mockReturnValueOnce({
+        sender: mockScreenAudioSender,
+        direction: "sendrecv",
+      } as unknown as RTCRtpTransceiver)
+      media.attachPC(pc)
+      await media.startScreenShare()
+
+      media.teardown()
+
+      expect(mockScreenTrack.stop).toHaveBeenCalled()
+      expect(mockScreenAudioTrack.stop).toHaveBeenCalled()
+    })
   })
 
   describe("startScreenShare()", () => {
