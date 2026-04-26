@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { samplePeerVideoClick } from "@/testing/peerVideoClick.fixture"
+import { samplePeerVideoScroll } from "@/testing/peerVideoScroll.fixture"
 import { MESSAGE_TYPES } from "./signaling"
 import type { ClientMessage, ReceivedMessage } from "./signaling"
 
@@ -12,6 +13,10 @@ type PeerVideoClickReceivedMessage = Extract<
   ReceivedMessage,
   { type: typeof MESSAGE_TYPES.PEER_VIDEO_CLICK }
 >
+
+type PeerVideoScrollClientMessage = Extract<ClientMessage, { type: "peer-video-scroll" }>
+
+type PeerVideoScrollReceivedMessage = Extract<ReceivedMessage, { type: "peer-video-scroll" }>
 
 describe("MESSAGE_TYPES", () => {
   it("has all server message type constants", () => {
@@ -31,7 +36,6 @@ describe("MESSAGE_TYPES", () => {
   })
 
   it("accepts peer video click as both client and relay message", () => {
-    // Compile-time coverage: if either union drops this branch, these assignments fail under TypeScript.
     const outbound: PeerVideoClickClientMessage = {
       type: "peer-video-click",
       click: samplePeerVideoClick,
@@ -43,5 +47,20 @@ describe("MESSAGE_TYPES", () => {
 
     expect(outbound.type).toBe("peer-video-click")
     expect(inbound.type).toBe("peer-video-click")
+  })
+
+  it("includes peer-video-scroll in client and received message unions", () => {
+    const outbound: PeerVideoScrollClientMessage = {
+      type: "peer-video-scroll",
+      scroll: samplePeerVideoScroll,
+    }
+    const inbound: PeerVideoScrollReceivedMessage = {
+      type: "peer-video-scroll",
+      scroll: samplePeerVideoScroll,
+    }
+
+    expect(MESSAGE_TYPES.PEER_VIDEO_SCROLL).toBe("peer-video-scroll")
+    expect(outbound.type).toBe("peer-video-scroll")
+    expect(inbound.type).toBe("peer-video-scroll")
   })
 })
