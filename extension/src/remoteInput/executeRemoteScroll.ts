@@ -11,9 +11,10 @@ export function executeRemoteScroll(
   doc: Document = document
 ): ScrollExecutionResult {
   const target = doc.elementFromPoint(point.x, point.y)
+  const docScroller = getDocumentScroller(doc, scroll)
   const scrollTarget = target
-    ? (findScrollableTarget(target, scroll) ?? getDocumentScroller(doc, scroll))
-    : getDocumentScroller(doc, scroll)
+    ? (findScrollableTarget(target, scroll) ?? docScroller)
+    : docScroller
   if (!scrollTarget) {
     return { ok: false, reason: "scroll target cannot be found", stage: "target" }
   }
@@ -21,7 +22,16 @@ export function executeRemoteScroll(
   const { left, top } = convertWheelDeltaToPixels(scroll, scrollTarget, doc)
 
   try {
+    const beforeTop = scrollTarget.scrollTop
+    const beforeLeft = scrollTarget.scrollLeft
     scrollTarget.scrollBy({ left, top, behavior: "instant" })
+
+    const moved = scrollTarget.scrollTop !== beforeTop || scrollTarget.scrollLeft !== beforeLeft
+    if (!moved && scrollTarget !== docScroller && docScroller) {
+      const docPixels = convertWheelDeltaToPixels(scroll, docScroller, doc)
+      docScroller.scrollBy({ left: docPixels.left, top: docPixels.top, behavior: "instant" })
+    }
+
     return { ok: true, stage: "scrolled" }
   } catch (error) {
     return {
