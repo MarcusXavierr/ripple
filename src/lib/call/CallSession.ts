@@ -3,7 +3,7 @@
 import { getPeerId } from "@/lib/peerId"
 import { useCallStore } from "@/store/call"
 import { extensionBridge } from "@/platform/extensionBridge"
-import type { PeerVideoClick } from "@shared/remoteInputProtocol"
+import type { PeerVideoClick, PeerVideoScroll } from "@shared/remoteInputProtocol"
 import { CLOSE_CODES, MESSAGE_TYPES } from "@/types/signaling"
 import type { ReceivedMessage } from "@/types/signaling"
 import { MediaController } from "./MediaController"
@@ -101,27 +101,45 @@ export class CallSession {
     this.signalingChannel.send({ type: MESSAGE_TYPES.PEER_VIDEO_CLICK, click })
   }
 
+  sendPeerVideoScroll(scroll: PeerVideoScroll) {
+    this.signalingChannel.send({ type: MESSAGE_TYPES.PEER_VIDEO_SCROLL, scroll })
+  }
+
   // ── Signaling message dispatch ──────────────────────────────────────────────
+
+  private canForwardRemoteInputToExtension(kind: "click" | "scroll"): boolean {
+    const { isScreenSharing, screenShareSurface } = useCallStore.getState()
+    if (!isScreenSharing) {
+      console.debug(
+        `[Ripple Extension] skipping remote ${kind} because local peer is not screen sharing`
+      )
+      return false
+    }
+    if (screenShareSurface !== "browser") {
+      console.debug(
+        `[Ripple Extension] skipping remote ${kind} because local peer is not sharing a tab`
+      )
+      return false
+    }
+    return true
+  }
 
   private async handleMessage(msg: ReceivedMessage): Promise<void> {
     if (msg.type === MESSAGE_TYPES.PEER_VIDEO_CLICK) {
       console.debug("[Peer Video Click]", msg.click)
-
-      const { isScreenSharing, screenShareSurface } = useCallStore.getState()
-      if (!isScreenSharing) {
-        console.debug(
-          "[Ripple Extension] skipping remote click because local peer is not screen sharing"
-        )
-        return
-      }
-      if (screenShareSurface !== "browser") {
-        console.debug(
-          "[Ripple Extension] skipping remote click because local peer is not sharing a tab"
-        )
-        return
-      }
-
+      if (!this.canForwardRemoteInputToExtension("click")) return
       await extensionBridge.sendRemoteClick(msg.click)
+      return
+    }
+
+    if (msg.type === MESSAGE_TYPES.PEER_VIDEO_SCROLL) {
+      console.debug("[Peer Video Scroll]", msg.scroll)
+      // TODO(remote-input-keyboard): Revisit remote-input dispatch ordering before
+      // adding keyboard events. Scroll forwarding is best-effort and coalesced, but
+      // keyboard events may need stricter ordering and should not wait behind a stream
+      // of scroll extension acks.
+      if (!this.canForwardRemoteInputToExtension("scroll")) return
+      await extensionBridge.sendRemoteScroll(msg.scroll)
       return
     }
 

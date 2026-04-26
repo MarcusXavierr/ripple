@@ -1,14 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { samplePeerVideoClick } from "@/testing/peerVideoClick.fixture"
+import { samplePeerVideoScroll } from "@/testing/peerVideoScroll.fixture"
 import type { ReceivedMessage } from "@/types/signaling"
 import { useCallStore } from "@/store/call"
 import { CallSession } from "./CallSession"
 
 const sendRemoteClickMock = vi.fn()
+const sendRemoteScrollMock = vi.fn()
 
 vi.mock("@/platform/extensionBridge", () => ({
   extensionBridge: {
     sendRemoteClick: (...args: unknown[]) => sendRemoteClickMock(...args),
+    sendRemoteScroll: (...args: unknown[]) => sendRemoteScrollMock(...args),
   },
 }))
 
@@ -75,6 +78,7 @@ beforeEach(() => {
   signalingSend.mockReset()
   machineHandleProtocolMessage.mockReset()
   sendRemoteClickMock.mockReset()
+  sendRemoteScrollMock.mockReset()
 })
 
 describe("sendPeerVideoClick", () => {
@@ -86,6 +90,19 @@ describe("sendPeerVideoClick", () => {
     expect(signalingSend).toHaveBeenCalledWith({
       type: "peer-video-click",
       click: samplePeerVideoClick,
+    })
+  })
+})
+
+describe("sendPeerVideoScroll", () => {
+  it("sends the scroll payload through the signaling channel", () => {
+    const session = new CallSession("room-1", vi.fn())
+
+    session.sendPeerVideoScroll(samplePeerVideoScroll)
+
+    expect(signalingSend).toHaveBeenCalledWith({
+      type: "peer-video-scroll",
+      scroll: samplePeerVideoScroll,
     })
   })
 })
@@ -137,6 +154,49 @@ describe("incoming peer video click relay", () => {
     await signalingCallbacks?.onMessage({ type: "peer-video-click", click: samplePeerVideoClick })
 
     expect(sendRemoteClickMock).not.toHaveBeenCalled()
+    session.teardown()
+  })
+})
+
+describe("incoming peer video scroll relay", () => {
+  it("does not forward the scroll to the FSM", async () => {
+    new CallSession("room-1", vi.fn())
+    await signalingCallbacks?.onMessage({
+      type: "peer-video-scroll",
+      scroll: samplePeerVideoScroll,
+    })
+
+    expect(machineHandleProtocolMessage).not.toHaveBeenCalled()
+  })
+
+  it("forwards inbound peer-video-scroll to the extension when local peer is sharing a browser tab", async () => {
+    const session = new CallSession("room-1", vi.fn())
+    useCallStore.setState({ isScreenSharing: true, screenShareSurface: "browser" })
+    sendRemoteScrollMock.mockResolvedValue({
+      ok: true,
+      type: "remote-scroll-applied",
+      targetTabId: 7,
+    })
+
+    await signalingCallbacks?.onMessage({
+      type: "peer-video-scroll",
+      scroll: samplePeerVideoScroll,
+    })
+
+    expect(sendRemoteScrollMock).toHaveBeenCalledWith(samplePeerVideoScroll)
+    session.teardown()
+  })
+
+  it("does not forward inbound peer-video-scroll when local peer is not sharing a browser tab", async () => {
+    const session = new CallSession("room-1", vi.fn())
+    useCallStore.setState({ isScreenSharing: true, screenShareSurface: "window" })
+
+    await signalingCallbacks?.onMessage({
+      type: "peer-video-scroll",
+      scroll: samplePeerVideoScroll,
+    })
+
+    expect(sendRemoteScrollMock).not.toHaveBeenCalled()
     session.teardown()
   })
 })

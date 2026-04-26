@@ -1,7 +1,12 @@
 import type { CallStatus } from "@/store/call"
 import type { ClientMessage, ReceivedMessage } from "@/types/signaling"
 
-export type MachineReceivedMessage = Exclude<ReceivedMessage, { type: "peer-video-click" }>
+type RemoteInputRelayMessage = Extract<
+  ReceivedMessage,
+  { type: "peer-video-click" | "peer-video-scroll" }
+>
+
+export type MachineReceivedMessage = Exclude<ReceivedMessage, RemoteInputRelayMessage>
 
 export type MachineState =
   | "IDLE"

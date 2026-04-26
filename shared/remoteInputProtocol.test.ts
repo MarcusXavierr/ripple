@@ -3,13 +3,16 @@ import {
   ExtensionAckSchema,
   isExtensionAck,
   isPeerVideoClick,
+  isPeerVideoScroll,
   isRemoteInputMessage,
   type PeerVideoClick,
   PeerVideoClickSchema,
+  type PeerVideoScroll,
+  PeerVideoScrollSchema,
   RemoteInputMessageSchema,
 } from "./remoteInputProtocol"
 
-const click: PeerVideoClick = {
+const location = {
   x: 120,
   y: 80,
   width: 640,
@@ -21,6 +24,15 @@ const click: PeerVideoClick = {
   clickerScreenWidth: 1920,
   clickerScreenHeight: 1080,
   devicePixelRatio: 1,
+}
+
+const click: PeerVideoClick = location
+
+const scroll: PeerVideoScroll = {
+  ...location,
+  deltaX: 0,
+  deltaY: 42,
+  deltaMode: 0,
 }
 
 describe("remote input protocol guards", () => {
@@ -39,7 +51,6 @@ describe("remote input protocol guards", () => {
   })
 
   it("rejects unknown remote input messages", () => {
-    expect(isRemoteInputMessage({ type: "remote-scroll", click })).toBe(false)
     expect(isRemoteInputMessage({ type: "remote-click", click: { x: 1 } })).toBe(false)
   })
 
@@ -79,5 +90,42 @@ describe("remote input protocol guards", () => {
     expect(
       v.safeParse(ExtensionAckSchema, { ok: false, type: "remote-click-rejected" }).success
     ).toBe(false)
+  })
+
+  it("accepts a valid peer video scroll", () => {
+    expect(isPeerVideoScroll(scroll)).toBe(true)
+  })
+
+  it("rejects malformed peer video scroll values", () => {
+    expect(isPeerVideoScroll({ ...scroll, deltaY: Number.NaN })).toBe(false)
+    expect(isPeerVideoScroll({ ...scroll, deltaMode: 3 })).toBe(false)
+    expect(isPeerVideoScroll({ ...scroll, xRatio: "0.5" })).toBe(false)
+  })
+
+  it("accepts a valid remote-scroll message", () => {
+    expect(isRemoteInputMessage({ type: "remote-scroll", scroll })).toBe(true)
+  })
+
+  it("accepts scroll extension acks", () => {
+    expect(isExtensionAck({ ok: true, type: "remote-scroll-applied", targetTabId: 42 })).toBe(true)
+    expect(
+      isExtensionAck({
+        ok: false,
+        type: "remote-scroll-rejected",
+        reason: "no scrollable target",
+        stage: "target",
+      })
+    ).toBe(true)
+  })
+
+  it("exports reusable schemas for remote scroll validation", () => {
+    expect(v.safeParse(PeerVideoScrollSchema, scroll).success).toBe(true)
+    expect(v.safeParse(RemoteInputMessageSchema, { type: "remote-scroll", scroll }).success).toBe(
+      true
+    )
+    expect(
+      v.safeParse(ExtensionAckSchema, { ok: true, type: "remote-scroll-applied", targetTabId: 7 })
+        .success
+    ).toBe(true)
   })
 })

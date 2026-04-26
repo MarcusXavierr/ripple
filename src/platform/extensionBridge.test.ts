@@ -1,4 +1,5 @@
 import type { PeerVideoClick } from "@shared/remoteInputProtocol"
+import { samplePeerVideoScroll } from "@/testing/peerVideoScroll.fixture"
 import { createExtensionBridge } from "./extensionBridge"
 
 const click: PeerVideoClick = {
@@ -41,6 +42,35 @@ describe("extensionBridge", () => {
     expect(logger.debug).toHaveBeenCalledWith("[Ripple Extension] remote-click ack", {
       ok: true,
       type: "remote-click-applied",
+      targetTabId: 7,
+    })
+  })
+
+  it("sends remote scroll messages to the extension", async () => {
+    const sendMessage = vi.fn((_extensionId, _message, callback) => {
+      callback({ ok: true, type: "remote-scroll-applied", targetTabId: 7 })
+    })
+    const logger = { debug: vi.fn() }
+    const bridge = createExtensionBridge({
+      extensionId: "abc123",
+      runtime: { sendMessage },
+      logger,
+    })
+
+    await expect(bridge.sendRemoteScroll(samplePeerVideoScroll)).resolves.toEqual({
+      ok: true,
+      type: "remote-scroll-applied",
+      targetTabId: 7,
+    })
+
+    expect(sendMessage).toHaveBeenCalledWith(
+      "abc123",
+      { type: "remote-scroll", scroll: samplePeerVideoScroll },
+      expect.any(Function)
+    )
+    expect(logger.debug).toHaveBeenCalledWith("[Ripple Extension] remote-scroll ack", {
+      ok: true,
+      type: "remote-scroll-applied",
       targetTabId: 7,
     })
   })

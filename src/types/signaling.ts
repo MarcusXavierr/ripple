@@ -1,6 +1,6 @@
 // SYNC: keep identical to backend types.ts
 
-import type { PeerVideoClick } from "@shared/remoteInputProtocol"
+import type { PeerVideoClick, PeerVideoScroll } from "@shared/remoteInputProtocol"
 
 // Server → Client
 export type ServerMessage =
@@ -16,6 +16,7 @@ export type ClientMessage =
   | { type: "answer"; answer: RTCSessionDescriptionInit }
   | { type: "ice-candidate"; candidate: RTCIceCandidateInit }
   | { type: "peer-video-click"; click: PeerVideoClick }
+  | { type: "peer-video-scroll"; scroll: PeerVideoScroll }
   | { type: "pong" }
 
 export const CLOSE_CODES = {
@@ -36,6 +37,7 @@ export const MESSAGE_TYPES = {
   ANSWER: "answer",
   ICE_CANDIDATE: "ice-candidate",
   PEER_VIDEO_CLICK: "peer-video-click",
+  PEER_VIDEO_SCROLL: "peer-video-scroll",
   PONG: "pong",
 } as const
 
@@ -46,3 +48,4 @@ export type ReceivedMessage =
   | { type: "answer"; answer: RTCSessionDescriptionInit }
   | { type: "ice-candidate"; candidate: RTCIceCandidateInit }
   | { type: "peer-video-click"; click: PeerVideoClick }
+  | { type: "peer-video-scroll"; scroll: PeerVideoScroll }

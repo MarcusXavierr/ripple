@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import { CallSession } from "@/lib/call/CallSession"
 import { useCallStore } from "@/store/call"
-import type { PeerVideoClick } from "@shared/remoteInputProtocol"
+import type { PeerVideoClick, PeerVideoScroll } from "@shared/remoteInputProtocol"
 
 export function useCallSession(roomId: string) {
   const navigate = useNavigate()
@@ -43,6 +43,34 @@ export function useCallSession(roomId: string) {
     useCallStore.setState({ showReconnectModal: false })
   }, [])
 
+  const toggleMic = useCallback(() => {
+    sessionRef.current?.media.toggleMic()
+  }, [])
+
+  const toggleCamera = useCallback(() => {
+    sessionRef.current?.media.toggleCamera()
+  }, [])
+
+  const startScreenShare = useCallback(() => {
+    sessionRef.current?.media.startScreenShare()
+  }, [])
+
+  const stopScreenShare = useCallback(() => {
+    sessionRef.current?.media.stopScreenShare()
+  }, [])
+
+  const sendPeerVideoClick = useCallback((click: PeerVideoClick) => {
+    sessionRef.current?.sendPeerVideoClick(click)
+  }, [])
+
+  const sendPeerVideoScroll = useCallback((scroll: PeerVideoScroll) => {
+    sessionRef.current?.sendPeerVideoScroll(scroll)
+  }, [])
+
+  const hangup = useCallback(() => {
+    sessionRef.current?.hangup()
+  }, [])
+
   return {
     localStream,
     remoteStream,
@@ -52,12 +80,13 @@ export function useCallSession(roomId: string) {
     isMicMuted,
     isCameraOff,
     isScreenSharing,
-    toggleMic: () => sessionRef.current?.media.toggleMic(),
-    toggleCamera: () => sessionRef.current?.media.toggleCamera(),
-    startScreenShare: () => sessionRef.current?.media.startScreenShare(),
-    stopScreenShare: () => sessionRef.current?.media.stopScreenShare(),
-    sendPeerVideoClick: (click: PeerVideoClick) => sessionRef.current?.sendPeerVideoClick(click),
-    hangup: () => sessionRef.current?.hangup(),
+    toggleMic,
+    toggleCamera,
+    startScreenShare,
+    stopScreenShare,
+    sendPeerVideoClick,
+    sendPeerVideoScroll,
+    hangup,
     dismissError,
     dismissReconnectModal,
   }
