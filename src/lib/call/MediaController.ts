@@ -1,8 +1,9 @@
-import { useCallStore, type ScreenShareSurface } from "@/store/call"
+import { type ScreenShareSurface, useCallStore } from "@/store/call"
 
 export class MediaController {
   private stream: MediaStream | null = null
   private pc: RTCPeerConnection | null = null
+  private screenAudioTransceiver: RTCRtpTransceiver | null = null
 
   async init(): Promise<MediaStream> {
     const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
@@ -14,6 +15,14 @@ export class MediaController {
     this.pc = pc
     const stream = this.stream
     if (stream) stream.getTracks().forEach((t) => pc.addTrack(t, stream))
+    this.screenAudioTransceiver = pc.addTransceiver("audio", {
+      direction: "sendrecv",
+      // Bundle into the existing local stream so the remote's `ontrack` event
+      // carries the same MediaStream id as mic/camera. Without this, the remote
+      // gets a streamless track and `e.streams[0]` is undefined, which would
+      // cause PeerConnection.ts:52 to null out remoteStream.
+      streams: stream ? [stream] : [],
+    })
   }
 
   toggleMic() {
@@ -33,7 +42,7 @@ export class MediaController {
   async startScreenShare() {
     if (!this.pc) return
     try {
-      const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true })
+      const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true })
       const screenTrack = screenStream.getVideoTracks()[0]
       const screenShareSurface = toScreenShareSurface(screenTrack.getSettings().displaySurface)
       const sender = this.pc.getSenders().find((s) => s.track?.kind === "video")
@@ -41,6 +50,14 @@ export class MediaController {
         await sender.replaceTrack(screenTrack)
       } else {
         this.pc.addTrack(screenTrack, screenStream)
+      }
+      const screenAudio = screenStream.getAudioTracks()[0] ?? null
+      if (screenAudio && this.screenAudioTransceiver) {
+        await this.screenAudioTransceiver.sender.replaceTrack(screenAudio)
+      } else {
+        useCallStore.setState({
+          notice: { kind: "info", messageKey: "room.toast.computerAudioUnavailable" },
+        })
       }
       useCallStore.setState({ isScreenSharing: true, screenShareSurface })
       screenTrack.onended = () => {
@@ -64,6 +81,10 @@ export class MediaController {
       const screenTrack = sender?.track ?? null
       if (sender) await sender.replaceTrack(cameraTrack)
       if (screenTrack && screenTrack !== cameraTrack) screenTrack.stop()
+      const audioSender = this.screenAudioTransceiver?.sender
+      const screenAudioTrack = audioSender?.track ?? null
+      if (audioSender) await audioSender.replaceTrack(null)
+      screenAudioTrack?.stop()
     } catch (err) {
       console.error("[Screenshare] failed to stop", err)
     } finally {
@@ -72,10 +93,22 @@ export class MediaController {
   }
 
   teardown() {
+    if (this.pc) {
+      const videoSender = this.pc.getSenders().find((s) => s.track?.kind === "video")
+      const screenVideoTrack = videoSender?.track ?? null
+      const cameraVideoTrack = this.stream?.getVideoTracks()[0] ?? null
+      if (screenVideoTrack && screenVideoTrack !== cameraVideoTrack) {
+        screenVideoTrack.stop()
+      }
+    }
+    const screenAudioTrack = this.screenAudioTransceiver?.sender.track ?? null
+    screenAudioTrack?.stop()
+
     this.stream?.getTracks().forEach((t) => t.stop())
     this.stream = null
     this.pc = null
-    useCallStore.setState({ screenShareSurface: null })
+    this.screenAudioTransceiver = null
+    useCallStore.setState({ screenShareSurface: null, isScreenSharing: false })
   }
 }
 

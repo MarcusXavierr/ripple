@@ -66,6 +66,9 @@
       "description": "A outra pessoa saiu. Você pode aguardar a reconexão ou voltar ao início.",
       "stay": "Permanecer na sala",
       "goHome": "Voltar ao início"
+    },
+    "toast": {
+      "computerAudioUnavailable": "O áudio do computador não foi incluído neste compartilhamento."
     }
   },
   "callEnded": {

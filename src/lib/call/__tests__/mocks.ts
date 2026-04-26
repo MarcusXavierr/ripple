@@ -60,6 +60,15 @@ export class MockRTCPeerConnection {
 
   addTrack = vi.fn()
   getSenders = vi.fn().mockReturnValue([])
+  addTransceiver = vi.fn().mockImplementation((_kind: string, _init?: RTCRtpTransceiverInit) => {
+    const sender = {
+      track: null as MediaStreamTrack | null,
+      replaceTrack: vi.fn().mockImplementation(async (track: MediaStreamTrack | null) => {
+        sender.track = track
+      }),
+    }
+    return { sender, direction: _init?.direction ?? "sendrecv" }
+  })
   setLocalDescription = vi.fn().mockImplementation(async (desc?: RTCSessionDescriptionInit) => {
     if (desc?.type === "rollback") {
       this.localDescription = null
@@ -106,8 +115,14 @@ export const mockScreenTrack = {
   getSettings: vi.fn().mockReturnValue({ displaySurface: "browser" }),
 }
 
+export const mockScreenAudioTrack = {
+  kind: "audio" as const,
+  stop: vi.fn(),
+}
+
 export const mockScreenStream = {
   getVideoTracks: vi.fn().mockReturnValue([mockScreenTrack]),
+  getAudioTracks: vi.fn().mockReturnValue([mockScreenAudioTrack]),
 }
 
 // ── Setup helpers ─────────────────────────────────────────────────────────────
@@ -126,6 +141,9 @@ export function resetMocks() {
   mockScreenTrack.onended = null
   mockScreenTrack.getSettings.mockReset()
   mockScreenTrack.getSettings.mockReturnValue({ displaySurface: "browser" })
+  mockScreenAudioTrack.stop.mockClear()
+  mockScreenStream.getAudioTracks.mockReset()
+  mockScreenStream.getAudioTracks.mockReturnValue([mockScreenAudioTrack])
 
   // Re-apply mock implementations after vi.clearAllMocks may have wiped them
   ;(navigator.mediaDevices.getUserMedia as ReturnType<typeof vi.fn>).mockResolvedValue(

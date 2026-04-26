@@ -12,6 +12,11 @@ export type CallStatus =
 
 export type ScreenShareSurface = "browser" | "window" | "monitor" | null
 
+export type CallNotice = {
+  kind: "info" | "warning"
+  messageKey: string
+}
+
 type CallStore = {
   peerId: string
   pc: RTCPeerConnection | null
@@ -25,6 +30,7 @@ type CallStore = {
   status: CallStatus
   error: string | null
   showReconnectModal: boolean
+  notice: CallNotice | null
   reset: () => void
 }
 
@@ -41,6 +47,7 @@ const INITIAL_STATE = {
   status: "idle" as CallStatus,
   error: null,
   showReconnectModal: false,
+  notice: null,
 }
 
 export const useCallStore = create<CallStore>()((set) => ({

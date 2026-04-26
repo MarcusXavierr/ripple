@@ -4,6 +4,8 @@ import {
   installGlobalMocks,
   MockRTCPeerConnection,
   mockAudioTrack,
+  mockScreenAudioTrack,
+  mockScreenStream,
   mockScreenTrack,
   mockStream,
   mockVideoTrack,
@@ -49,6 +51,25 @@ describe("MediaController", () => {
       const pc = new MockRTCPeerConnection() as unknown as RTCPeerConnection
       media.attachPC(pc)
       expect(pc.addTrack).not.toHaveBeenCalled()
+    })
+
+    it("allocates a sendrecv audio transceiver bundled into the local stream", async () => {
+      await media.init()
+      const pc = new MockRTCPeerConnection() as unknown as RTCPeerConnection
+      media.attachPC(pc)
+      expect(pc.addTransceiver).toHaveBeenCalledWith("audio", {
+        direction: "sendrecv",
+        streams: [mockStream],
+      })
+    })
+
+    it("creates the transceiver with no streams when called before init", () => {
+      const pc = new MockRTCPeerConnection() as unknown as RTCPeerConnection
+      media.attachPC(pc)
+      expect(pc.addTransceiver).toHaveBeenCalledWith("audio", {
+        direction: "sendrecv",
+        streams: [],
+      })
     })
   })
 
@@ -97,10 +118,40 @@ describe("MediaController", () => {
     it("does not throw when called before init", () => {
       expect(() => media.teardown()).not.toThrow()
     })
+
+    it("stops the screen video and screen audio tracks if a share is active", async () => {
+      await media.init()
+      const mockVideoSender: { track: unknown; replaceTrack: ReturnType<typeof vi.fn> } = {
+        track: mockVideoTrack,
+        replaceTrack: vi.fn().mockImplementation(async (track: unknown) => {
+          mockVideoSender.track = track
+        }),
+      }
+      const mockScreenAudioSender: { track: unknown; replaceTrack: ReturnType<typeof vi.fn> } = {
+        track: null,
+        replaceTrack: vi.fn().mockImplementation(async (track: unknown) => {
+          mockScreenAudioSender.track = track
+        }),
+      }
+      const pc = new MockRTCPeerConnection() as unknown as RTCPeerConnection
+      vi.mocked(pc.getSenders).mockReturnValue([mockVideoSender as unknown as RTCRtpSender])
+      vi.mocked(pc.addTransceiver).mockReturnValueOnce({
+        sender: mockScreenAudioSender,
+        direction: "sendrecv",
+      } as unknown as RTCRtpTransceiver)
+      media.attachPC(pc)
+      await media.startScreenShare()
+
+      media.teardown()
+
+      expect(mockScreenTrack.stop).toHaveBeenCalled()
+      expect(mockScreenAudioTrack.stop).toHaveBeenCalled()
+    })
   })
 
   describe("startScreenShare()", () => {
     let mockVideoSender: { track: unknown; replaceTrack: ReturnType<typeof vi.fn> }
+    let mockScreenAudioSender: { track: unknown; replaceTrack: ReturnType<typeof vi.fn> }
 
     beforeEach(async () => {
       await media.init()
@@ -110,8 +161,18 @@ describe("MediaController", () => {
           mockVideoSender.track = track
         }),
       }
+      mockScreenAudioSender = {
+        track: null,
+        replaceTrack: vi.fn().mockImplementation(async (track: unknown) => {
+          mockScreenAudioSender.track = track
+        }),
+      }
       const pc = new MockRTCPeerConnection() as unknown as RTCPeerConnection
       vi.mocked(pc.getSenders).mockReturnValue([mockVideoSender as unknown as RTCRtpSender])
+      vi.mocked(pc.addTransceiver).mockReturnValueOnce({
+        sender: mockScreenAudioSender,
+        direction: "sendrecv",
+      } as unknown as RTCRtpTransceiver)
       media.attachPC(pc)
     })
 
@@ -145,10 +206,27 @@ describe("MediaController", () => {
       expect(useCallStore.getState().isScreenSharing).toBe(false)
       expect(useCallStore.getState().screenShareSurface).toBeNull()
     })
+
+    it("routes the screen audio track to the dedicated transceiver, not the mic", async () => {
+      await media.startScreenShare()
+      expect(mockScreenAudioSender.replaceTrack).toHaveBeenCalledWith(mockScreenAudioTrack)
+    })
+
+    it("sets an info notice and skips audio when the picker returned no audio track", async () => {
+      vi.mocked(mockScreenStream.getAudioTracks).mockReturnValueOnce([])
+      await media.startScreenShare()
+      expect(mockScreenAudioSender.replaceTrack).not.toHaveBeenCalled()
+      expect(useCallStore.getState().notice).toEqual({
+        kind: "info",
+        messageKey: "room.toast.computerAudioUnavailable",
+      })
+      expect(useCallStore.getState().isScreenSharing).toBe(true)
+    })
   })
 
   describe("stopScreenShare()", () => {
     let mockVideoSender: { track: unknown; replaceTrack: ReturnType<typeof vi.fn> }
+    let mockScreenAudioSender: { track: unknown; replaceTrack: ReturnType<typeof vi.fn> }
 
     beforeEach(async () => {
       await media.init()
@@ -158,8 +236,18 @@ describe("MediaController", () => {
           mockVideoSender.track = track
         }),
       }
+      mockScreenAudioSender = {
+        track: null,
+        replaceTrack: vi.fn().mockImplementation(async (track: unknown) => {
+          mockScreenAudioSender.track = track
+        }),
+      }
       const pc = new MockRTCPeerConnection() as unknown as RTCPeerConnection
       vi.mocked(pc.getSenders).mockReturnValue([mockVideoSender as unknown as RTCRtpSender])
+      vi.mocked(pc.addTransceiver).mockReturnValueOnce({
+        sender: mockScreenAudioSender,
+        direction: "sendrecv",
+      } as unknown as RTCRtpTransceiver)
       media.attachPC(pc)
       await media.startScreenShare()
     })
@@ -183,6 +271,16 @@ describe("MediaController", () => {
       mockVideoSender.replaceTrack.mockRejectedValueOnce(new Error("track error"))
       await media.stopScreenShare()
       expect(useCallStore.getState().isScreenSharing).toBe(false)
+    })
+
+    it("clears the screen-audio sender on stop", async () => {
+      await media.stopScreenShare()
+      expect(mockScreenAudioSender.replaceTrack).toHaveBeenLastCalledWith(null)
+    })
+
+    it("stops the screen audio track on stop", async () => {
+      await media.stopScreenShare()
+      expect(mockScreenAudioTrack.stop).toHaveBeenCalled()
     })
   })
 })

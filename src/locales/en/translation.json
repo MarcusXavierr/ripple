@@ -66,6 +66,9 @@
       "description": "The other person has left. You can wait for them to reconnect or go back home.",
       "stay": "Stay in room",
       "goHome": "Go home"
+    },
+    "toast": {
+      "computerAudioUnavailable": "Computer audio wasn't included in this share."
     }
   },
   "callEnded": {
