@@ -5,6 +5,7 @@ import {
   MockRTCPeerConnection,
   mockAudioTrack,
   mockScreenAudioTrack,
+  mockScreenStream,
   mockScreenTrack,
   mockStream,
   mockVideoTrack,
@@ -180,6 +181,17 @@ describe("MediaController", () => {
     it("routes the screen audio track to the dedicated transceiver, not the mic", async () => {
       await media.startScreenShare()
       expect(mockScreenAudioSender.replaceTrack).toHaveBeenCalledWith(mockScreenAudioTrack)
+    })
+
+    it("sets an info notice and skips audio when the picker returned no audio track", async () => {
+      vi.mocked(mockScreenStream.getAudioTracks).mockReturnValueOnce([])
+      await media.startScreenShare()
+      expect(mockScreenAudioSender.replaceTrack).not.toHaveBeenCalled()
+      expect(useCallStore.getState().notice).toEqual({
+        kind: "info",
+        messageKey: "room.toast.computerAudioUnavailable",
+      })
+      expect(useCallStore.getState().isScreenSharing).toBe(true)
     })
   })
 

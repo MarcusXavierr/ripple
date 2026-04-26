@@ -54,6 +54,10 @@ export class MediaController {
       const screenAudio = screenStream.getAudioTracks()[0] ?? null
       if (screenAudio && this.screenAudioTransceiver) {
         await this.screenAudioTransceiver.sender.replaceTrack(screenAudio)
+      } else {
+        useCallStore.setState({
+          notice: { kind: "info", messageKey: "room.toast.computerAudioUnavailable" },
+        })
       }
       useCallStore.setState({ isScreenSharing: true, screenShareSurface })
       screenTrack.onended = () => {
