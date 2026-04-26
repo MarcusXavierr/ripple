@@ -158,4 +158,56 @@ describe("handleExternalMessage", () => {
       stage: "target",
     })
   })
+
+  it("forwards remote keyboard input to the selected tab", async () => {
+    const keyboardMessage: RemoteInputMessage = {
+      type: "remote-keyboard",
+      keyboard: {
+        key: "a",
+        code: "KeyA",
+        location: 0,
+        repeat: false,
+      },
+    }
+    const deps = createDeps({
+      sendMessageToTab: vi.fn().mockResolvedValue({ ok: true, stage: "applied" }),
+    })
+
+    await expect(handleExternalMessage(keyboardMessage, deps)).resolves.toEqual({
+      ok: true,
+      type: "remote-keyboard-applied",
+      targetTabId: 7,
+    })
+
+    expect(deps.sendMessageToTab).toHaveBeenCalledWith(7, {
+      type: "execute-remote-keyboard",
+      keyboard: keyboardMessage.keyboard,
+    })
+  })
+
+  it("rejects remote keyboard content-script failures with a keyboard ack", async () => {
+    const keyboardMessage: RemoteInputMessage = {
+      type: "remote-keyboard",
+      keyboard: {
+        key: "a",
+        code: "KeyA",
+        location: 0,
+        repeat: false,
+      },
+    }
+    const deps = createDeps({
+      sendMessageToTab: vi.fn().mockResolvedValue({
+        ok: false,
+        reason: "invalid selection",
+        stage: "selection",
+      }),
+    })
+
+    await expect(handleExternalMessage(keyboardMessage, deps)).resolves.toEqual({
+      ok: false,
+      type: "remote-keyboard-rejected",
+      reason: "invalid selection",
+      stage: "selection",
+    })
+  })
 })

@@ -44,10 +44,7 @@ export async function handleExternalMessage(
     return rejected(message, "selected tab URL is not controllable", "selected-tab")
   }
 
-  const contentMessage: ContentMessage =
-    message.type === "remote-click"
-      ? { type: "execute-remote-click", click: message.click }
-      : { type: "execute-remote-scroll", scroll: message.scroll }
+  const contentMessage: ContentMessage = toContentMessage(message)
 
   const result = await deps.sendMessageToTab(selectedTab.tabId, contentMessage)
 
@@ -59,12 +56,24 @@ export async function handleExternalMessage(
   return applied(message, selectedTab.tabId)
 }
 
-function applied(message: RemoteInputMessage, targetTabId: number): ExtensionAck {
-  return {
-    ok: true,
-    type: message.type === "remote-click" ? "remote-click-applied" : "remote-scroll-applied",
-    targetTabId,
+function toContentMessage(message: RemoteInputMessage): ContentMessage {
+  if (message.type === "remote-click") {
+    return { type: "execute-remote-click", click: message.click }
   }
+  if (message.type === "remote-scroll") {
+    return { type: "execute-remote-scroll", scroll: message.scroll }
+  }
+  return { type: "execute-remote-keyboard", keyboard: message.keyboard }
+}
+
+function applied(message: RemoteInputMessage, targetTabId: number): ExtensionAck {
+  const typeByMessage = {
+    "remote-click": "remote-click-applied",
+    "remote-scroll": "remote-scroll-applied",
+    "remote-keyboard": "remote-keyboard-applied",
+  } as const
+
+  return { ok: true, type: typeByMessage[message.type], targetTabId }
 }
 
 function rejected(
@@ -72,10 +81,12 @@ function rejected(
   reason: string,
   stage?: string
 ): ExtensionAck {
-  return {
-    ok: false,
-    type: message?.type === "remote-scroll" ? "remote-scroll-rejected" : "remote-click-rejected",
-    reason,
-    stage,
-  }
+  const type =
+    message?.type === "remote-scroll"
+      ? "remote-scroll-rejected"
+      : message?.type === "remote-keyboard"
+        ? "remote-keyboard-rejected"
+        : "remote-click-rejected"
+
+  return { ok: false, type, reason, stage }
 }
