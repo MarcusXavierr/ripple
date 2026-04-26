@@ -2,6 +2,7 @@ import {
   isExtensionAck,
   type ExtensionAck,
   type PeerVideoClick,
+  type PeerVideoScroll,
   type RemoteInputMessage,
 } from "@shared/remoteInputProtocol"
 
@@ -21,46 +22,56 @@ type ExtensionBridgeDeps = {
 }
 
 export function createExtensionBridge({ extensionId, runtime, logger }: ExtensionBridgeDeps) {
+  function sendRemoteInput(
+    message: RemoteInputMessage,
+    logType: "remote-click" | "remote-scroll"
+  ): Promise<ExtensionAck | null> {
+    if (!extensionId) {
+      logger.debug("[Ripple Extension] unavailable", "missing extension id")
+      return Promise.resolve(null)
+    }
+
+    if (!runtime?.sendMessage) {
+      logger.debug("[Ripple Extension] unavailable", "chrome.runtime.sendMessage unavailable")
+      return Promise.resolve(null)
+    }
+
+    return new Promise((resolve) => {
+      runtime.sendMessage(extensionId, message, (response) => {
+        if (runtime.lastError) {
+          logger.debug(
+            "[Ripple Extension] unavailable",
+            runtime.lastError.message ?? "runtime error"
+          )
+          resolve(null)
+          return
+        }
+
+        if (!isExtensionAck(response)) {
+          logger.debug("[Ripple Extension] unavailable", "invalid extension ack")
+          resolve(null)
+          return
+        }
+
+        logger.debug(`[Ripple Extension] ${logType} ack`, response)
+        resolve(response)
+      })
+    })
+  }
+
   return {
     sendRemoteClick(click: PeerVideoClick): Promise<ExtensionAck | null> {
-      if (!extensionId) {
-        logger.debug("[Ripple Extension] unavailable", "missing extension id")
-        return Promise.resolve(null)
-      }
-
-      if (!runtime?.sendMessage) {
-        logger.debug("[Ripple Extension] unavailable", "chrome.runtime.sendMessage unavailable")
-        return Promise.resolve(null)
-      }
-
-      return new Promise((resolve) => {
-        runtime.sendMessage(extensionId, { type: "remote-click", click }, (response) => {
-          if (runtime.lastError) {
-            logger.debug(
-              "[Ripple Extension] unavailable",
-              runtime.lastError.message ?? "runtime error"
-            )
-            resolve(null)
-            return
-          }
-
-          if (!isExtensionAck(response)) {
-            logger.debug("[Ripple Extension] unavailable", "invalid extension ack")
-            resolve(null)
-            return
-          }
-
-          logger.debug("[Ripple Extension] remote-click ack", response)
-          resolve(response)
-        })
-      })
+      return sendRemoteInput({ type: "remote-click", click }, "remote-click")
+    },
+    sendRemoteScroll(scroll: PeerVideoScroll): Promise<ExtensionAck | null> {
+      return sendRemoteInput({ type: "remote-scroll", scroll }, "remote-scroll")
     },
   }
 }
 
 function getChromeRuntime(): RuntimeLike | undefined {
   const g = globalThis as Record<string, unknown>
-  const maybeChrome = g["chrome"] as { runtime?: RuntimeLike } | undefined
+  const maybeChrome = g.chrome as { runtime?: RuntimeLike } | undefined
   return maybeChrome?.runtime
 }
 
