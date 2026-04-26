@@ -1,4 +1,8 @@
-import { isRemoteInputMessage, type ExtensionAck } from "@shared/remoteInputProtocol"
+import {
+  isRemoteInputMessage,
+  type ExtensionAck,
+  type RemoteInputMessage,
+} from "@shared/remoteInputProtocol"
 import type { ContentMessage, ContentMessageResult } from "../remoteInput/contentMessages"
 import { isControllableTabUrl } from "../selectedTab/isControllableTab"
 import type { SelectedTab } from "../selectedTab/selectedTabStore"
@@ -16,14 +20,14 @@ export async function handleExternalMessage(
 ): Promise<ExtensionAck> {
   if (!isRemoteInputMessage(message)) {
     deps.logger.warn("[Ripple Extension] rejected external message", message)
-    return reject("invalid remote input message", "message")
+    return rejected(null, "invalid remote input message", "message")
   }
 
-  deps.logger.debug("[Ripple Extension] received remote-click", message)
+  deps.logger.debug("[Ripple Extension] received remote input", message)
 
   const selectedTab = await deps.readSelectedTab()
   if (!selectedTab) {
-    return reject("no selected tab", "selected-tab")
+    return rejected(message, "no selected tab", "selected-tab")
   }
 
   const tab = await deps.getTab(selectedTab.tabId).catch((error) => {
@@ -34,25 +38,44 @@ export async function handleExternalMessage(
     return null
   })
   if (!tab) {
-    return reject("selected tab no longer exists", "selected-tab")
+    return rejected(message, "selected tab no longer exists", "selected-tab")
   }
   if (!isControllableTabUrl(tab.url)) {
-    return reject("selected tab URL is not controllable", "selected-tab")
+    return rejected(message, "selected tab URL is not controllable", "selected-tab")
   }
 
-  const result = await deps.sendMessageToTab(selectedTab.tabId, {
-    type: "execute-remote-click",
-    click: message.click,
-  })
+  const contentMessage: ContentMessage =
+    message.type === "remote-click"
+      ? { type: "execute-remote-click", click: message.click }
+      : { type: "execute-remote-scroll", scroll: message.scroll }
+
+  const result = await deps.sendMessageToTab(selectedTab.tabId, contentMessage)
 
   if (!result.ok) {
-    return reject(result.reason, result.stage)
+    return rejected(message, result.reason, result.stage)
   }
 
   deps.logger.debug("[Ripple Extension] forwarded to tab", selectedTab.tabId)
-  return { ok: true, type: "remote-click-applied", targetTabId: selectedTab.tabId }
+  return applied(message, selectedTab.tabId)
 }
 
-function reject(reason: string, stage?: string): ExtensionAck {
-  return { ok: false, type: "remote-click-rejected", reason, stage }
+function applied(message: RemoteInputMessage, targetTabId: number): ExtensionAck {
+  return {
+    ok: true,
+    type: message.type === "remote-click" ? "remote-click-applied" : "remote-scroll-applied",
+    targetTabId,
+  }
+}
+
+function rejected(
+  message: RemoteInputMessage | null,
+  reason: string,
+  stage?: string
+): ExtensionAck {
+  return {
+    ok: false,
+    type: message?.type === "remote-scroll" ? "remote-scroll-rejected" : "remote-click-rejected",
+    reason,
+    stage,
+  }
 }

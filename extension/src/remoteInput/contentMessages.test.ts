@@ -1,5 +1,5 @@
 import * as v from "valibot"
-import type { PeerVideoClick } from "@shared/remoteInputProtocol"
+import type { PeerVideoClick, PeerVideoScroll } from "@shared/remoteInputProtocol"
 import { ContentMessageSchema, handleContentMessage } from "./contentMessages"
 
 const click: PeerVideoClick = {
@@ -16,6 +16,13 @@ const click: PeerVideoClick = {
   devicePixelRatio: 1,
 }
 
+const scroll: PeerVideoScroll = {
+  ...click,
+  deltaX: 0,
+  deltaY: 40,
+  deltaMode: 0,
+}
+
 describe("handleContentMessage", () => {
   it("executes a valid remote click", () => {
     const result = handleContentMessage(
@@ -23,6 +30,7 @@ describe("handleContentMessage", () => {
       {
         viewport: { width: 1000, height: 800 },
         execute: vi.fn().mockReturnValue({ ok: true, stage: "dispatched" }),
+        executeScroll: vi.fn(),
       }
     )
 
@@ -35,6 +43,7 @@ describe("handleContentMessage", () => {
       {
         viewport: { width: 1000, height: 800 },
         execute: vi.fn(),
+        executeScroll: vi.fn(),
       }
     )
 
@@ -47,6 +56,30 @@ describe("handleContentMessage", () => {
     )
     expect(
       v.safeParse(ContentMessageSchema, { type: "execute-remote-click", click: { x: 1 } }).success
+    ).toBe(false)
+  })
+
+  it("executes a valid remote scroll", () => {
+    const executeScroll = vi.fn().mockReturnValue({ ok: true, stage: "scrolled" })
+    const result = handleContentMessage(
+      { type: "execute-remote-scroll", scroll },
+      {
+        viewport: { width: 1000, height: 800 },
+        execute: vi.fn(),
+        executeScroll,
+      }
+    )
+
+    expect(result).toEqual({ ok: true, stage: "scrolled" })
+    expect(executeScroll).toHaveBeenCalledWith({ x: 500, y: 200 }, scroll)
+  })
+
+  it("exports a schema for valid remote scroll content messages", () => {
+    expect(
+      v.safeParse(ContentMessageSchema, { type: "execute-remote-scroll", scroll }).success
+    ).toBe(true)
+    expect(
+      v.safeParse(ContentMessageSchema, { type: "execute-remote-scroll", scroll: { x: 1 } }).success
     ).toBe(false)
   })
 })
