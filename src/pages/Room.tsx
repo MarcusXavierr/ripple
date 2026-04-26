@@ -48,6 +48,7 @@ export default function Room() {
     stopScreenShare,
     sendPeerVideoClick,
     sendPeerVideoScroll,
+    sendPeerKeyboardInput,
     hangup,
     toggleMic,
     toggleCamera,
@@ -61,6 +62,7 @@ export default function Room() {
     remoteVideoRef,
     sendPeerVideoClick,
     sendPeerVideoScroll,
+    sendPeerKeyboardInput,
   })
 
   useEffect(() => {

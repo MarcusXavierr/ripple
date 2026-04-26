@@ -27,6 +27,7 @@ const baseMock = {
   toggleCamera: vi.fn(),
   sendPeerVideoClick: vi.fn(),
   sendPeerVideoScroll: vi.fn(),
+  sendPeerKeyboardInput: vi.fn(),
   dismissError: vi.fn(),
   dismissReconnectModal: vi.fn(),
 }
