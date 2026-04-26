@@ -1,4 +1,3 @@
-import * as v from "valibot"
 import {
   isPeerKeyboardInput,
   isPeerVideoClick,
@@ -7,7 +6,8 @@ import {
   type PeerVideoClick,
   type PeerVideoScroll,
 } from "@shared/remoteInputProtocol"
-import { executeRemoteClick, type ClickExecutionResult } from "./executeRemoteClick"
+import * as v from "valibot"
+import { type ClickExecutionResult, executeRemoteClick } from "./executeRemoteClick"
 import { executeRemoteKeyboard, type KeyboardExecutionResult } from "./executeRemoteKeyboard"
 import { executeRemoteScroll, type ScrollExecutionResult } from "./executeRemoteScroll"
 import { translateRemoteClick } from "./translateRemoteClick"

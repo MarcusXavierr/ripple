@@ -1,7 +1,7 @@
-import { describe, it, expect } from "vitest"
 import fc from "fast-check"
-import { transition } from "./signalingFSM"
+import { describe, expect, it } from "vitest"
 import type { FullMachineState, MachineEvent, MachineState } from "./signalingFSM"
+import { transition } from "./signalingFSM"
 
 const arbRole = fc.constantFrom("caller" as const, "callee" as const)
 

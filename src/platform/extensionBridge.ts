@@ -1,6 +1,6 @@
 import {
-  isExtensionAck,
   type ExtensionAck,
+  isExtensionAck,
   type PeerKeyboardInput,
   type PeerVideoClick,
   type PeerVideoScroll,

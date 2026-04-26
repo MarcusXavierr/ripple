@@ -2,8 +2,8 @@ import {
   clearSelectedTab,
   createSelectedTabFromTab,
   readSelectedTab,
-  saveSelectedTab,
   type SelectedTabStorage,
+  saveSelectedTab,
 } from "./selectedTabStore"
 
 function createMemoryStorage(): SelectedTabStorage {

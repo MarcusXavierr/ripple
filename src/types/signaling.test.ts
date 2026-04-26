@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest"
 import { samplePeerVideoClick } from "@/testing/peerVideoClick.fixture"
 import { samplePeerVideoScroll } from "@/testing/peerVideoScroll.fixture"
-import { MESSAGE_TYPES } from "./signaling"
 import type { ClientMessage, ReceivedMessage } from "./signaling"
+import { MESSAGE_TYPES } from "./signaling"
 
 type PeerVideoClickClientMessage = Extract<
   ClientMessage,

@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
+import { useCallStore } from "@/store/call"
+import { samplePeerKeyboardInput } from "@/testing/peerKeyboardInput.fixture"
 import { samplePeerVideoClick } from "@/testing/peerVideoClick.fixture"
 import { samplePeerVideoScroll } from "@/testing/peerVideoScroll.fixture"
-import { samplePeerKeyboardInput } from "@/testing/peerKeyboardInput.fixture"
 import type { ReceivedMessage } from "@/types/signaling"
-import { useCallStore } from "@/store/call"
 import { CallSession } from "./CallSession"
 
 const sendRemoteClickMock = vi.fn()

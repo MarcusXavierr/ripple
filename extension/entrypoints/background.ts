@@ -35,7 +35,7 @@ async function injectIntoExistingTabs() {
         browser.scripting.executeScript({
           target: { tabId: tab.id!, allFrames: true },
           files: ["/content-scripts/content.js"],
-        }),
-      ),
+        })
+      )
   )
 }

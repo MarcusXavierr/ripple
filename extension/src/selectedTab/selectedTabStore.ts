@@ -1,5 +1,5 @@
-import type { Browser } from "wxt/browser"
 import * as v from "valibot"
+import type { Browser } from "wxt/browser"
 import { getTabOrigin, isControllableTabUrl } from "./isControllableTab"
 
 const SELECTED_TAB_KEY = "ripple.selectedTab"

@@ -1,11 +1,15 @@
 // src/lib/call/CallSession.ts
 
+import type {
+  PeerKeyboardInput,
+  PeerVideoClick,
+  PeerVideoScroll,
+} from "@shared/remoteInputProtocol"
 import { getPeerId } from "@/lib/peerId"
-import { useCallStore } from "@/store/call"
 import { extensionBridge } from "@/platform/extensionBridge"
-import type { PeerKeyboardInput, PeerVideoClick, PeerVideoScroll } from "@shared/remoteInputProtocol"
-import { CLOSE_CODES, MESSAGE_TYPES } from "@/types/signaling"
+import { useCallStore } from "@/store/call"
 import type { ReceivedMessage } from "@/types/signaling"
+import { CLOSE_CODES, MESSAGE_TYPES } from "@/types/signaling"
 import { MediaController } from "./MediaController"
 import { PeerConnection } from "./PeerConnection"
 import { SignalingChannel } from "./SignalingChannel"

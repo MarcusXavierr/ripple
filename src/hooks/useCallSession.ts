@@ -1,8 +1,12 @@
+import type {
+  PeerKeyboardInput,
+  PeerVideoClick,
+  PeerVideoScroll,
+} from "@shared/remoteInputProtocol"
 import { useCallback, useEffect, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import { CallSession } from "@/lib/call/CallSession"
 import { useCallStore } from "@/store/call"
-import type { PeerKeyboardInput, PeerVideoClick, PeerVideoScroll } from "@shared/remoteInputProtocol"
 
 export function useCallSession(roomId: string) {
   const navigate = useNavigate()

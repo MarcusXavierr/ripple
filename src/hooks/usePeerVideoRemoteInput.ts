@@ -1,8 +1,12 @@
-import { useCallback, useEffect, useRef, type MouseEvent, type RefObject } from "react"
+import type {
+  PeerKeyboardInput,
+  PeerVideoClick,
+  PeerVideoScroll,
+} from "@shared/remoteInputProtocol"
+import { type MouseEvent, type RefObject, useCallback, useEffect, useRef } from "react"
 import { createPeerVideoScrollCoalescer } from "@/lib/call/coalescePeerVideoScroll"
-import { createPeerVideoClick, createPeerVideoScroll } from "@/lib/call/createPeerVideoInput"
 import { createPeerKeyboardInput } from "@/lib/call/createPeerKeyboardInput"
-import type { PeerKeyboardInput, PeerVideoClick, PeerVideoScroll } from "@shared/remoteInputProtocol"
+import { createPeerVideoClick, createPeerVideoScroll } from "@/lib/call/createPeerVideoInput"
 
 const MAX_SCROLL_MESSAGES_PER_SECOND = 35
 

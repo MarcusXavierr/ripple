@@ -1,5 +1,5 @@
-import * as v from "valibot"
 import type { PeerVideoClick, PeerVideoScroll } from "@shared/remoteInputProtocol"
+import * as v from "valibot"
 import { ContentMessageSchema, handleContentMessage } from "./contentMessages"
 
 const click: PeerVideoClick = {
@@ -109,8 +109,10 @@ describe("handleContentMessage", () => {
       v.safeParse(ContentMessageSchema, { type: "execute-remote-keyboard", keyboard }).success
     ).toBe(true)
     expect(
-      v.safeParse(ContentMessageSchema, { type: "execute-remote-keyboard", keyboard: { key: "Tab" } })
-        .success
+      v.safeParse(ContentMessageSchema, {
+        type: "execute-remote-keyboard",
+        keyboard: { key: "Tab" },
+      }).success
     ).toBe(false)
   })
 })

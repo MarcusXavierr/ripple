@@ -1,6 +1,6 @@
 import type { RemoteInputMessage } from "@shared/remoteInputProtocol"
-import { handleExternalMessage, type BackgroundDeps } from "./handleExternalMessage"
 import type { SelectedTab } from "../selectedTab/selectedTabStore"
+import { type BackgroundDeps, handleExternalMessage } from "./handleExternalMessage"
 
 const selectedTab: SelectedTab = {
   tabId: 7,

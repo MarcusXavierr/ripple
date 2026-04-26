@@ -1,6 +1,6 @@
 import type { PeerVideoClick } from "@shared/remoteInputProtocol"
-import { samplePeerVideoScroll } from "@/testing/peerVideoScroll.fixture"
 import { samplePeerKeyboardInput } from "@/testing/peerKeyboardInput.fixture"
+import { samplePeerVideoScroll } from "@/testing/peerVideoScroll.fixture"
 import { createExtensionBridge } from "./extensionBridge"
 
 const click: PeerVideoClick = {

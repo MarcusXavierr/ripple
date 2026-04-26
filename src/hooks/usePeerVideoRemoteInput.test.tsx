@@ -1,7 +1,7 @@
+import type { PeerKeyboardInput } from "@shared/remoteInputProtocol"
 import { act, fireEvent, render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { useRef } from "react"
-import type { PeerKeyboardInput } from "@shared/remoteInputProtocol"
 import { samplePeerVideoClick } from "@/testing/peerVideoClick.fixture"
 import { samplePeerVideoScroll } from "@/testing/peerVideoScroll.fixture"
 import { usePeerVideoRemoteInput } from "./usePeerVideoRemoteInput"
@@ -58,11 +58,7 @@ function KeyboardHarness({
 
   return (
     <>
-      <video
-        ref={remoteVideoRef}
-        data-testid="remote-video"
-        onClick={handleRemoteVideoClick}
-      />
+      <video ref={remoteVideoRef} data-testid="remote-video" onClick={handleRemoteVideoClick} />
       <button type="button">local control</button>
     </>
   )

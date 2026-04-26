@@ -127,7 +127,9 @@ function computeTextEdit(value: string, start: number, end: number, key: string)
 
 function setNativeValue(target: TextTarget, value: string) {
   const prototype =
-    target instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype
+    target instanceof HTMLTextAreaElement
+      ? HTMLTextAreaElement.prototype
+      : HTMLInputElement.prototype
   const setter = Object.getOwnPropertyDescriptor(prototype, "value")?.set
   if (!setter) throw new Error("native value setter is unavailable")
   setter.call(target, value)

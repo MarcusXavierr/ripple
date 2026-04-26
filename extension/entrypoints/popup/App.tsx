@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
-import { browser, type Browser } from "wxt/browser"
+import { type Browser, browser } from "wxt/browser"
+import { PopupView } from "../../src/popup/PopupView"
 import {
   getIncompatibleTabReason,
   isControllableTabUrl,
@@ -7,10 +8,9 @@ import {
 import {
   createSelectedTabFromTab,
   readSelectedTab,
-  saveSelectedTab,
   type SelectedTab,
+  saveSelectedTab,
 } from "../../src/selectedTab/selectedTabStore"
-import { PopupView } from "../../src/popup/PopupView"
 import "./App.css"
 
 type CurrentTabState =

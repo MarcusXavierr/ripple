@@ -23,9 +23,7 @@ describe("createPeerKeyboardInput", () => {
       repeat: false,
     })
     expect(createPeerKeyboardInput(keyboardEvent({ key: ":", code: "Semicolon" }))?.key).toBe(":")
-    expect(createPeerKeyboardInput(keyboardEvent({ key: "\\", code: "Backslash" }))?.key).toBe(
-      "\\"
-    )
+    expect(createPeerKeyboardInput(keyboardEvent({ key: "\\", code: "Backslash" }))?.key).toBe("\\")
     expect(createPeerKeyboardInput(keyboardEvent({ key: " " }))?.key).toBe(" ")
     expect(createPeerKeyboardInput(keyboardEvent({ key: "Backspace" }))?.key).toBe("Backspace")
     expect(createPeerKeyboardInput(keyboardEvent({ key: "Delete" }))?.key).toBe("Delete")

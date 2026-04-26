@@ -1,10 +1,10 @@
 import { act, renderHook } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { CallSession } from "@/lib/call/CallSession"
+import { useCallStore } from "@/store/call"
+import { samplePeerKeyboardInput } from "@/testing/peerKeyboardInput.fixture"
 import { samplePeerVideoClick } from "@/testing/peerVideoClick.fixture"
 import { samplePeerVideoScroll } from "@/testing/peerVideoScroll.fixture"
-import { samplePeerKeyboardInput } from "@/testing/peerKeyboardInput.fixture"
-import { useCallStore } from "@/store/call"
 import { useCallSession } from "./useCallSession"
 
 const mockNavigate = vi.fn()

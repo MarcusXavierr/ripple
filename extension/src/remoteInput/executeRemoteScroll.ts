@@ -12,9 +12,7 @@ export function executeRemoteScroll(
 ): ScrollExecutionResult {
   const target = doc.elementFromPoint(point.x, point.y)
   const docScroller = getDocumentScroller(doc, scroll)
-  const scrollTarget = target
-    ? (findScrollableTarget(target, scroll) ?? docScroller)
-    : docScroller
+  const scrollTarget = target ? (findScrollableTarget(target, scroll) ?? docScroller) : docScroller
   if (!scrollTarget) {
     return { ok: false, reason: "scroll target cannot be found", stage: "target" }
   }

@@ -1,6 +1,6 @@
 import {
-  isRemoteInputMessage,
   type ExtensionAck,
+  isRemoteInputMessage,
   type RemoteInputMessage,
 } from "@shared/remoteInputProtocol"
 import type { ContentMessage, ContentMessageResult } from "../remoteInput/contentMessages"

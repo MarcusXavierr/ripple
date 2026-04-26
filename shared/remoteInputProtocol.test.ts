@@ -159,9 +159,9 @@ describe("remote input protocol guards", () => {
   })
 
   it("accepts keyboard extension acks", () => {
-    expect(
-      isExtensionAck({ ok: true, type: "remote-keyboard-applied", targetTabId: 42 })
-    ).toBe(true)
+    expect(isExtensionAck({ ok: true, type: "remote-keyboard-applied", targetTabId: 42 })).toBe(
+      true
+    )
     expect(
       isExtensionAck({
         ok: false,
