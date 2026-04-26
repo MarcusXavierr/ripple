@@ -27,6 +27,9 @@ export function executeRemoteClick(
     dispatchPointerEvent(target, "pointerup", point, doc)
     dispatchMouseEvent(target, "mouseup", point, doc)
     dispatchMouseEvent(target, "click", point, doc)
+    if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) {
+      target.focus()
+    }
     return { ok: true, stage: "dispatched" }
   } catch (error) {
     return {
