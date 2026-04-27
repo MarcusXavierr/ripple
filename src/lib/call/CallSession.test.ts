@@ -1,14 +1,54 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } from "vitest"
 import { useCallStore } from "@/store/call"
 import { samplePeerKeyboardInput } from "@/testing/peerKeyboardInput.fixture"
 import { samplePeerVideoClick } from "@/testing/peerVideoClick.fixture"
 import { samplePeerVideoScroll } from "@/testing/peerVideoScroll.fixture"
-import type { ReceivedMessage } from "@/types/signaling"
 import { CallSession } from "./CallSession"
+import type { PeerConnectionCallbacks } from "./PeerConnection"
+import { RemoteInputTransport } from "./RemoteInputTransport"
 
-const sendRemoteClickMock = vi.fn()
-const sendRemoteScrollMock = vi.fn()
-const sendRemoteKeyboardMock = vi.fn()
+const {
+  sendRemoteClickMock,
+  sendRemoteScrollMock,
+  sendRemoteKeyboardMock,
+  signalingSend,
+  machineHandleProtocolMessage,
+  mockedPeerConnection,
+  PeerConnectionConstructorSpy,
+  capturedPeerConnectionCallbacksRef,
+} = vi.hoisted(() => {
+  const capturedPeerConnectionCallbacksRef: { value: PeerConnectionCallbacks | null } = {
+    value: null,
+  }
+  const mockedPeerConnection = {
+    raw: null,
+    close: vi.fn(),
+    setup: vi.fn(),
+    handleOffer: vi.fn(),
+    handleAnswer: vi.fn(),
+    handleIceCandidate: vi.fn(),
+    rollbackAndRestartIce: vi.fn(),
+    sendOnChannel: vi.fn().mockReturnValue(true),
+  }
+  const PeerConnectionConstructorSpy = vi.fn(function PeerConnectionMock(
+    _transport: unknown,
+    callbacks: PeerConnectionCallbacks,
+    _dataChannels: unknown
+  ) {
+    capturedPeerConnectionCallbacksRef.value = callbacks
+    return mockedPeerConnection
+  })
+  return {
+    sendRemoteClickMock: vi.fn(),
+    sendRemoteScrollMock: vi.fn(),
+    sendRemoteKeyboardMock: vi.fn(),
+    signalingSend: vi.fn(),
+    machineHandleProtocolMessage: vi.fn(),
+    mockedPeerConnection,
+    PeerConnectionConstructorSpy,
+    capturedPeerConnectionCallbacksRef,
+  }
+})
 
 vi.mock("@/platform/extensionBridge", () => ({
   extensionBridge: {
@@ -17,12 +57,6 @@ vi.mock("@/platform/extensionBridge", () => ({
     sendRemoteKeyboard: (...args: unknown[]) => sendRemoteKeyboardMock(...args),
   },
 }))
-
-const signalingSend = vi.fn()
-const machineHandleProtocolMessage = vi.fn()
-let signalingCallbacks: {
-  onMessage: (msg: ReceivedMessage) => Promise<void>
-} | null = null
 
 vi.mock("@/lib/peerId", () => ({
   getPeerId: () => "peer-123",
@@ -39,17 +73,7 @@ vi.mock("./MediaController", () => ({
 }))
 
 vi.mock("./PeerConnection", () => ({
-  PeerConnection: vi.fn().mockImplementation(function PeerConnectionMock() {
-    return {
-      raw: null,
-      close: vi.fn(),
-      setup: vi.fn(),
-      handleOffer: vi.fn(),
-      handleAnswer: vi.fn(),
-      handleIceCandidate: vi.fn(),
-      rollbackAndRestartIce: vi.fn(),
-    }
-  }),
+  PeerConnection: PeerConnectionConstructorSpy,
 }))
 
 vi.mock("./SignalingMachine", () => ({
@@ -62,11 +86,7 @@ vi.mock("./SignalingMachine", () => ({
 }))
 
 vi.mock("./SignalingChannel", () => ({
-  SignalingChannel: vi.fn().mockImplementation(function SignalingChannelMock(
-    _url: string,
-    callbacks
-  ) {
-    signalingCallbacks = callbacks
+  SignalingChannel: vi.fn().mockImplementation(function SignalingChannelMock() {
     return {
       send: signalingSend,
       connect: vi.fn(),
@@ -76,187 +96,90 @@ vi.mock("./SignalingChannel", () => ({
   }),
 }))
 
+let sendSpy: MockInstance<RemoteInputTransport["send"]>
+let handleChannelMessageSpy: MockInstance<RemoteInputTransport["handleChannelMessage"]>
+
 beforeEach(() => {
-  signalingCallbacks = null
+  capturedPeerConnectionCallbacksRef.value = null
+  mockedPeerConnection.sendOnChannel.mockReset()
+  mockedPeerConnection.sendOnChannel.mockReturnValue(true)
   signalingSend.mockReset()
   machineHandleProtocolMessage.mockReset()
   sendRemoteClickMock.mockReset()
   sendRemoteScrollMock.mockReset()
   sendRemoteKeyboardMock.mockReset()
+  sendSpy = vi.spyOn(RemoteInputTransport.prototype, "send")
+  handleChannelMessageSpy = vi.spyOn(RemoteInputTransport.prototype, "handleChannelMessage")
+})
+
+afterEach(() => {
+  sendSpy.mockRestore()
+  handleChannelMessageSpy.mockRestore()
 })
 
 describe("sendPeerVideoClick", () => {
-  it("sends the click payload through the signaling channel", () => {
+  it("delegates to the remote input transport with a remote-click message", () => {
     const session = new CallSession("room-1", vi.fn())
-
-    session.sendPeerVideoClick(samplePeerVideoClick)
-
-    expect(signalingSend).toHaveBeenCalledWith({
-      type: "peer-video-click",
-      click: samplePeerVideoClick,
-    })
+    const click = samplePeerVideoClick
+    session.sendPeerVideoClick(click)
+    expect(sendSpy).toHaveBeenCalledWith({ type: "remote-click", click })
+    expect(signalingSend).not.toHaveBeenCalledWith(
+      expect.objectContaining({ type: "peer-video-click" })
+    )
   })
 })
 
 describe("sendPeerVideoScroll", () => {
-  it("sends the scroll payload through the signaling channel", () => {
+  it("delegates to the remote input transport", () => {
     const session = new CallSession("room-1", vi.fn())
-
-    session.sendPeerVideoScroll(samplePeerVideoScroll)
-
-    expect(signalingSend).toHaveBeenCalledWith({
-      type: "peer-video-scroll",
-      scroll: samplePeerVideoScroll,
-    })
+    const scroll = samplePeerVideoScroll
+    session.sendPeerVideoScroll(scroll)
+    expect(sendSpy).toHaveBeenCalledWith({ type: "remote-scroll", scroll })
   })
 })
 
-describe("incoming peer video click relay", () => {
-  it("does not forward the click to the FSM", async () => {
-    new CallSession("room-1", vi.fn())
-    await signalingCallbacks?.onMessage({ type: "peer-video-click", click: samplePeerVideoClick })
-
-    expect(machineHandleProtocolMessage).not.toHaveBeenCalled()
-  })
-
-  it("still forwards normal signaling messages to the FSM", async () => {
-    new CallSession("room-1", vi.fn())
-    await signalingCallbacks?.onMessage({ type: "ping" })
-
-    expect(machineHandleProtocolMessage).toHaveBeenCalledWith({ type: "ping" })
-  })
-
-  it("forwards inbound peer-video-click to the extension when local peer is screen sharing", async () => {
+describe("sendPeerKeyboardInput", () => {
+  it("delegates to the remote input transport", () => {
     const session = new CallSession("room-1", vi.fn())
+    const keyboard = samplePeerKeyboardInput
+    session.sendPeerKeyboardInput(keyboard)
+    expect(sendSpy).toHaveBeenCalledWith({ type: "remote-keyboard", keyboard })
+  })
+})
+
+describe("PeerConnection channel message forwarding", () => {
+  it("forwards PeerConnection channel messages straight to the transport", () => {
+    new CallSession("room-1", vi.fn())
+    capturedPeerConnectionCallbacksRef.value!.onChannelMessage("input", "anything")
+    expect(handleChannelMessageSpy).toHaveBeenCalledWith("input", "anything")
+  })
+
+  it("dispatches a transport message to the extension bridge when sharing a tab", async () => {
+    handleChannelMessageSpy.mockRestore()
     useCallStore.setState({ isScreenSharing: true, screenShareSurface: "browser" })
     sendRemoteClickMock.mockResolvedValue({
       ok: true,
       type: "remote-click-applied",
       targetTabId: 7,
     })
-
-    await signalingCallbacks?.onMessage({ type: "peer-video-click", click: samplePeerVideoClick })
-
-    expect(sendRemoteClickMock).toHaveBeenCalledWith(samplePeerVideoClick)
-    session.teardown()
-  })
-
-  it("does not forward inbound peer-video-click when local peer is not screen sharing", async () => {
-    const session = new CallSession("room-1", vi.fn())
-    useCallStore.setState({ isScreenSharing: false })
-
-    await signalingCallbacks?.onMessage({ type: "peer-video-click", click: samplePeerVideoClick })
-
-    expect(sendRemoteClickMock).not.toHaveBeenCalled()
-    session.teardown()
-  })
-
-  it("does not forward inbound peer-video-click when local peer is sharing a window instead of a tab", async () => {
-    const session = new CallSession("room-1", vi.fn())
-    useCallStore.setState({ isScreenSharing: true, screenShareSurface: "window" })
-
-    await signalingCallbacks?.onMessage({ type: "peer-video-click", click: samplePeerVideoClick })
-
-    expect(sendRemoteClickMock).not.toHaveBeenCalled()
-    session.teardown()
-  })
-})
-
-describe("incoming peer video scroll relay", () => {
-  it("does not forward the scroll to the FSM", async () => {
     new CallSession("room-1", vi.fn())
-    await signalingCallbacks?.onMessage({
-      type: "peer-video-scroll",
-      scroll: samplePeerVideoScroll,
-    })
-
-    expect(machineHandleProtocolMessage).not.toHaveBeenCalled()
-  })
-
-  it("forwards inbound peer-video-scroll to the extension when local peer is sharing a browser tab", async () => {
-    const session = new CallSession("room-1", vi.fn())
-    useCallStore.setState({ isScreenSharing: true, screenShareSurface: "browser" })
-    sendRemoteScrollMock.mockResolvedValue({
-      ok: true,
-      type: "remote-scroll-applied",
-      targetTabId: 7,
-    })
-
-    await signalingCallbacks?.onMessage({
-      type: "peer-video-scroll",
-      scroll: samplePeerVideoScroll,
-    })
-
-    expect(sendRemoteScrollMock).toHaveBeenCalledWith(samplePeerVideoScroll)
-    session.teardown()
-  })
-
-  it("does not forward inbound peer-video-scroll when local peer is not sharing a browser tab", async () => {
-    const session = new CallSession("room-1", vi.fn())
-    useCallStore.setState({ isScreenSharing: true, screenShareSurface: "window" })
-
-    await signalingCallbacks?.onMessage({
-      type: "peer-video-scroll",
-      scroll: samplePeerVideoScroll,
-    })
-
-    expect(sendRemoteScrollMock).not.toHaveBeenCalled()
-    session.teardown()
+    const click = samplePeerVideoClick
+    capturedPeerConnectionCallbacksRef.value!.onChannelMessage(
+      "input",
+      JSON.stringify({ type: "remote-click", click })
+    )
+    await Promise.resolve()
+    expect(sendRemoteClickMock).toHaveBeenCalledWith(click)
   })
 })
 
-describe("sendPeerKeyboardInput", () => {
-  it("sends the keyboard payload through the signaling channel", () => {
-    const session = new CallSession("room-1", vi.fn())
-
-    session.sendPeerKeyboardInput(samplePeerKeyboardInput)
-
-    expect(signalingSend).toHaveBeenCalledWith({
-      type: "peer-keyboard-input",
-      keyboard: samplePeerKeyboardInput,
-    })
-  })
-})
-
-describe("incoming peer keyboard relay", () => {
-  it("does not forward keyboard input to the FSM", async () => {
+describe("PeerConnection constructor args", () => {
+  it("constructs PeerConnection with RemoteInputTransport.CHANNEL_SPECS", () => {
     new CallSession("room-1", vi.fn())
-    await signalingCallbacks?.onMessage({
-      type: "peer-keyboard-input",
-      keyboard: samplePeerKeyboardInput,
-    })
-
-    expect(machineHandleProtocolMessage).not.toHaveBeenCalled()
-  })
-
-  it("forwards inbound keyboard input to the extension when local peer is sharing a browser tab", async () => {
-    const session = new CallSession("room-1", vi.fn())
-    useCallStore.setState({ isScreenSharing: true, screenShareSurface: "browser" })
-    sendRemoteKeyboardMock.mockResolvedValue({
-      ok: true,
-      type: "remote-keyboard-applied",
-      targetTabId: 7,
-    })
-
-    await signalingCallbacks?.onMessage({
-      type: "peer-keyboard-input",
-      keyboard: samplePeerKeyboardInput,
-    })
-
-    expect(sendRemoteKeyboardMock).toHaveBeenCalledWith(samplePeerKeyboardInput)
-    session.teardown()
-  })
-
-  it("does not forward inbound keyboard input when local peer is not sharing a browser tab", async () => {
-    const session = new CallSession("room-1", vi.fn())
-    useCallStore.setState({ isScreenSharing: true, screenShareSurface: "window" })
-
-    await signalingCallbacks?.onMessage({
-      type: "peer-keyboard-input",
-      keyboard: samplePeerKeyboardInput,
-    })
-
-    expect(sendRemoteKeyboardMock).not.toHaveBeenCalled()
-    session.teardown()
+    expect(PeerConnectionConstructorSpy).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      RemoteInputTransport.CHANNEL_SPECS
+    )
   })
 })
