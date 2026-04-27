@@ -32,7 +32,6 @@ export class PeerConnection {
   private channels: Record<string, RTCDataChannel> = {}
   private generation = 0
   private readonly dataChannelSpecs: DataChannelSpec[]
-  private readonly allowedChannelLabels: Set<string>
 
   private readonly transport: PeerConnectionTransport
   private readonly callbacks: PeerConnectionCallbacks
@@ -45,12 +44,10 @@ export class PeerConnection {
     this.transport = transport
     this.callbacks = callbacks
     const labels = dataChannels.map((s) => s.label)
-    const allowed = new Set(labels)
-    if (allowed.size !== labels.length) {
+    if (new Set(labels).size !== labels.length) {
       throw new Error(`PeerConnection: duplicate DataChannelSpec labels: ${labels.join(", ")}`)
     }
     this.dataChannelSpecs = dataChannels
-    this.allowedChannelLabels = allowed
   }
 
   get raw(): RTCPeerConnection | null {
@@ -68,7 +65,7 @@ export class PeerConnection {
     this.pendingCandidates = []
     this._makingOffer = false
 
-    const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS })
+    const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS, bundlePolicy: "max-bundle" })
     this.pc = pc
 
     pc.onicecandidate = (e) => {
@@ -102,6 +99,15 @@ export class PeerConnection {
       }
     }
 
+    pc.onconnectionstatechange = () => {
+      console.debug(
+        `[PC:state] connection=${pc.connectionState} ice=${pc.iceConnectionState} signaling=${pc.signalingState}`
+      )
+    }
+
+    console.debug(
+      `[PC:setup] role=${role} gen=${gen} specs=${this.dataChannelSpecs.map((s) => s.label).join(",")}`
+    )
     if (role === "caller") {
       for (const spec of this.dataChannelSpecs) {
         const ch = pc.createDataChannel(spec.label, spec.init)
@@ -109,9 +115,10 @@ export class PeerConnection {
       }
     } else {
       pc.ondatachannel = (e) => {
-        if (this.allowedChannelLabels.has(e.channel.label)) {
-          this.bindDataChannel(e.channel.label, e.channel, gen)
-        }
+        console.debug(
+          `[PC:setup] ondatachannel fired label=${e.channel.label} readyState=${e.channel.readyState}`
+        )
+        this.bindDataChannel(e.channel.label, e.channel, gen)
       }
     }
   }
@@ -138,8 +145,12 @@ export class PeerConnection {
 
   sendOnChannel(label: string, data: string): boolean {
     const ch = this.channels[label]
-    if (!ch || ch.readyState !== "open") {
-      console.debug(`[PeerConnection] channel ${label} not open, dropping`)
+    if (!ch) {
+      console.debug(`[PC:channel] ${label} does not exist in channels map`)
+      return false
+    }
+    if (ch.readyState !== "open") {
+      console.debug(`[PC:channel] ${label} is "${ch.readyState}", dropping`)
       return false
     }
     ch.send(data)

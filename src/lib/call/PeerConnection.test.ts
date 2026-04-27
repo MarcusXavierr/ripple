@@ -52,10 +52,6 @@ function openChannel(_pc: PeerConnection, label: string): MockRTCDataChannel {
   return ch
 }
 
-function makeMockChannel(label: string): MockRTCDataChannel {
-  return new MockRTCDataChannel(label)
-}
-
 beforeEach(() => {
   resetMocks()
 })
@@ -170,28 +166,18 @@ describe("channel receive path", () => {
     expect(cbs.onChannelMessage).toHaveBeenCalledWith("alpha", "not json")
   })
 
-  it("callee binds incoming channels whose label is in the spec", () => {
+  it("callee binds incoming channels from ondatachannel", () => {
     const cbs = makeCallbacks()
     const pc = new PeerConnection(createTransport(), cbs, [{ label: "alpha" }, { label: "beta" }])
     pc.setup("callee")
-    const a = makeMockChannel("alpha")
-    const b = makeMockChannel("beta")
+    const a = new MockRTCDataChannel("alpha")
+    const b = new MockRTCDataChannel("beta")
     ;(pc.raw as any).ondatachannel({ channel: a })
     ;(pc.raw as any).ondatachannel({ channel: b })
     a._fireOpen()
     b._fireOpen()
     expect(cbs.onChannelOpen).toHaveBeenCalledWith("alpha")
     expect(cbs.onChannelOpen).toHaveBeenCalledWith("beta")
-  })
-
-  it("callee ignores incoming channels with unknown labels", () => {
-    const cbs = makeCallbacks()
-    const pc = new PeerConnection(createTransport(), cbs, [{ label: "alpha" }])
-    pc.setup("callee")
-    const garbage = makeMockChannel("garbage")
-    ;(pc.raw as any).ondatachannel({ channel: garbage })
-    garbage._fireOpen()
-    expect(cbs.onChannelOpen).not.toHaveBeenCalled()
   })
 
   it("clears the channel reference and notifies on close", () => {
