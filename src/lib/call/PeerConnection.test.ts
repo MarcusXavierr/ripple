@@ -1,7 +1,12 @@
 // src/lib/call/PeerConnection.test.ts
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import type { ClientMessage } from "@/types/signaling"
-import { installGlobalMocks, MockRTCPeerConnection, resetMocks } from "./__tests__/mocks"
+import {
+  installGlobalMocks,
+  MockRTCDataChannel,
+  MockRTCPeerConnection,
+  resetMocks,
+} from "./__tests__/mocks"
 import {
   PeerConnection,
   type PeerConnectionCallbacks,
@@ -15,12 +20,36 @@ function createTransport(): PeerConnectionTransport & { sent: ClientMessage[] } 
   return { send: (msg) => sent.push(msg), sent }
 }
 
-function createCallbacks(): PeerConnectionCallbacks {
+function makeCallbacks(): PeerConnectionCallbacks {
   return {
     onRemoteStream: vi.fn(),
     onIceConnected: vi.fn(),
     onIceFailed: vi.fn(),
+    onChannelOpen: vi.fn(),
+    onChannelClose: vi.fn(),
+    onChannelMessage: vi.fn(),
   }
+}
+
+/** Returns the mock channel for the given label from the last MockRTCPeerConnection instance. */
+function getCreatedChannel(label: string): MockRTCDataChannel {
+  const created = (MockRTCPeerConnection.lastInstance as any)._createdChannels as Array<{
+    label: string
+    init: RTCDataChannelInit | undefined
+  }>
+  const entry = created.find((c) => c.label === label)
+  if (!entry) throw new Error(`No channel created with label "${label}"`)
+  // Find matching channel instance via createDataChannel mock calls
+  const calls = (MockRTCPeerConnection.lastInstance as any).createDataChannel.mock.results
+  const idx = created.indexOf(entry)
+  return calls[idx].value as MockRTCDataChannel
+}
+
+/** Opens a caller channel and returns the mock. */
+function openChannel(_pc: PeerConnection, label: string): MockRTCDataChannel {
+  const ch = getCreatedChannel(label)
+  ch._fireOpen()
+  return ch
 }
 
 beforeEach(() => {
@@ -31,13 +60,13 @@ beforeEach(() => {
 
 describe("setup()", () => {
   it("creates an RTCPeerConnection", () => {
-    const pc = new PeerConnection(createTransport(), createCallbacks())
+    const pc = new PeerConnection(createTransport(), makeCallbacks())
     pc.setup("caller")
     expect(MockRTCPeerConnection.lastInstance).not.toBeNull()
   })
 
   it("closes previous PC when called again", () => {
-    const pc = new PeerConnection(createTransport(), createCallbacks())
+    const pc = new PeerConnection(createTransport(), makeCallbacks())
     pc.setup("caller")
     const first = MockRTCPeerConnection.lastInstance!
     pc.setup("callee")
@@ -45,9 +74,151 @@ describe("setup()", () => {
   })
 
   it("exposes raw PC via getter", () => {
-    const pc = new PeerConnection(createTransport(), createCallbacks())
+    const pc = new PeerConnection(createTransport(), makeCallbacks())
     pc.setup("caller")
     expect(pc.raw).toBe(MockRTCPeerConnection.lastInstance)
+  })
+})
+
+// ── DataChannelSpec ──────────────────────────────────────────────────────────
+
+describe("DataChannelSpec", () => {
+  it("creates one data channel per DataChannelSpec passed to the constructor", () => {
+    const specs = [
+      { label: "alpha", init: { ordered: true } },
+      { label: "beta", init: { ordered: true, maxRetransmits: 0 } },
+    ]
+    const pc = new PeerConnection(createTransport(), makeCallbacks(), specs)
+    pc.setup("caller")
+
+    const created = (pc.raw as any)._createdChannels as Array<{
+      label: string
+      init: RTCDataChannelInit
+    }>
+    expect(created).toHaveLength(2)
+    expect(created.find((c) => c.label === "alpha")?.init.ordered).toBe(true)
+    expect(created.find((c) => c.label === "beta")?.init.maxRetransmits).toBe(0)
+  })
+
+  it("creates no data channels when no specs are provided", () => {
+    const pc = new PeerConnection(createTransport(), makeCallbacks())
+    pc.setup("caller")
+    expect((pc.raw as any)._createdChannels).toEqual([])
+  })
+
+  it("throws when DataChannelSpecs contain duplicate labels", () => {
+    const specs = [
+      { label: "alpha", init: { ordered: true } },
+      { label: "alpha", init: { ordered: true, maxRetransmits: 0 } },
+    ]
+    expect(() => new PeerConnection(createTransport(), makeCallbacks(), specs)).toThrow(
+      /duplicate/i
+    )
+  })
+})
+
+// ── sendOnChannel ────────────────────────────────────────────────────────────
+
+describe("sendOnChannel", () => {
+  it("returns false and writes nothing when channel is not open", () => {
+    const pc = new PeerConnection(createTransport(), makeCallbacks(), [
+      { label: "alpha", init: { ordered: true } },
+    ])
+    pc.setup("caller")
+    expect(pc.sendOnChannel("alpha", "x")).toBe(false)
+  })
+
+  it("writes the raw string and returns true when open", () => {
+    const pc = new PeerConnection(createTransport(), makeCallbacks(), [
+      { label: "alpha", init: { ordered: true } },
+    ])
+    pc.setup("caller")
+    const ch = openChannel(pc, "alpha")
+    expect(pc.sendOnChannel("alpha", "payload")).toBe(true)
+    expect(ch._sent).toEqual(["payload"])
+  })
+
+  it("returns false for unknown labels", () => {
+    const pc = new PeerConnection(createTransport(), makeCallbacks())
+    pc.setup("caller")
+    expect(pc.sendOnChannel("does-not-exist", "x")).toBe(false)
+  })
+})
+
+// ── channel receive path ─────────────────────────────────────────────────────
+
+describe("channel receive path", () => {
+  it("forwards raw onmessage data with the channel label", () => {
+    const cbs = makeCallbacks()
+    const pc = new PeerConnection(createTransport(), cbs, [{ label: "alpha" }])
+    pc.setup("caller")
+    const ch = openChannel(pc, "alpha")
+    ch._fireMessage("hello")
+    expect(cbs.onChannelMessage).toHaveBeenCalledWith("alpha", "hello")
+  })
+
+  it("does not parse or validate payloads", () => {
+    const cbs = makeCallbacks()
+    const pc = new PeerConnection(createTransport(), cbs, [{ label: "alpha" }])
+    pc.setup("caller")
+    const ch = openChannel(pc, "alpha")
+    ch._fireMessage("not json")
+    expect(cbs.onChannelMessage).toHaveBeenCalledWith("alpha", "not json")
+  })
+
+  it("callee binds incoming channels from ondatachannel", () => {
+    const cbs = makeCallbacks()
+    const pc = new PeerConnection(createTransport(), cbs, [{ label: "alpha" }, { label: "beta" }])
+    pc.setup("callee")
+    const a = new MockRTCDataChannel("alpha")
+    const b = new MockRTCDataChannel("beta")
+    ;(pc.raw as any).ondatachannel({ channel: a })
+    ;(pc.raw as any).ondatachannel({ channel: b })
+    a._fireOpen()
+    b._fireOpen()
+    expect(cbs.onChannelOpen).toHaveBeenCalledWith("alpha")
+    expect(cbs.onChannelOpen).toHaveBeenCalledWith("beta")
+  })
+
+  it("clears the channel reference and notifies on close", () => {
+    const cbs = makeCallbacks()
+    const pc = new PeerConnection(createTransport(), cbs, [{ label: "alpha" }])
+    pc.setup("caller")
+    const ch = openChannel(pc, "alpha")
+    ch._fireClose()
+    expect(cbs.onChannelClose).toHaveBeenCalledWith("alpha")
+    expect(pc.sendOnChannel("alpha", "x")).toBe(false)
+  })
+
+  it("close() clears all channel references", () => {
+    const pc = new PeerConnection(createTransport(), makeCallbacks(), [
+      { label: "alpha" },
+      { label: "beta" },
+    ])
+    pc.setup("caller")
+    openChannel(pc, "alpha")
+    openChannel(pc, "beta")
+    pc.close()
+    expect(pc.sendOnChannel("alpha", "x")).toBe(false)
+    expect(pc.sendOnChannel("beta", "x")).toBe(false)
+  })
+
+  it("ignores a stale onclose from a previous-generation channel", () => {
+    const cbs = makeCallbacks()
+    const pc = new PeerConnection(createTransport(), cbs, [{ label: "alpha" }])
+    pc.setup("caller")
+    const oldCh = openChannel(pc, "alpha")
+    pc.setup("caller") // reconnect: new generation, new channel
+    const newCh = openChannel(pc, "alpha")
+
+    oldCh._fireClose() // late event from previous generation
+
+    expect(pc.sendOnChannel("alpha", "still works")).toBe(true)
+    expect(newCh._sent).toContain("still works")
+    const closesForAlpha = (cbs.onChannelClose as any).mock.calls.filter(
+      (args: unknown[]) => args[0] === "alpha"
+    )
+    expect(closesForAlpha).toHaveLength(0)
   })
 })
 
@@ -56,7 +227,7 @@ describe("setup()", () => {
 describe("setup() → onicecandidate", () => {
   it("sends ice-candidate through transport when candidate fires", () => {
     const transport = createTransport()
-    const pc = new PeerConnection(transport, createCallbacks())
+    const pc = new PeerConnection(transport, makeCallbacks())
     pc.setup("caller")
     const candidate = { toJSON: () => ({ candidate: "c", sdpMid: "0", sdpMLineIndex: 0 }) }
     MockRTCPeerConnection.lastInstance?.onicecandidate?.({
@@ -67,7 +238,7 @@ describe("setup() → onicecandidate", () => {
 
   it("does not send when candidate is null", () => {
     const transport = createTransport()
-    const pc = new PeerConnection(transport, createCallbacks())
+    const pc = new PeerConnection(transport, makeCallbacks())
     pc.setup("caller")
     MockRTCPeerConnection.lastInstance?.onicecandidate?.({
       candidate: null,
@@ -78,7 +249,7 @@ describe("setup() → onicecandidate", () => {
 
 describe("setup() → ontrack", () => {
   it("fires onRemoteStream callback", () => {
-    const callbacks = createCallbacks()
+    const callbacks = makeCallbacks()
     const pc = new PeerConnection(createTransport(), callbacks)
     pc.setup("caller")
     const fakeStream = { id: "remote" }
@@ -92,7 +263,7 @@ describe("setup() → ontrack", () => {
 describe("setup() → onnegotiationneeded", () => {
   it("sends offer through transport when caller", async () => {
     const transport = createTransport()
-    const pc = new PeerConnection(transport, createCallbacks())
+    const pc = new PeerConnection(transport, makeCallbacks())
     pc.setup("caller")
     await MockRTCPeerConnection.lastInstance?.onnegotiationneeded?.()
     expect(transport.sent.some((m) => m.type === "offer")).toBe(true)
@@ -100,7 +271,7 @@ describe("setup() → onnegotiationneeded", () => {
 
   it("does not send offer when callee", async () => {
     const transport = createTransport()
-    const pc = new PeerConnection(transport, createCallbacks())
+    const pc = new PeerConnection(transport, makeCallbacks())
     pc.setup("callee")
     await MockRTCPeerConnection.lastInstance?.onnegotiationneeded?.()
     expect(transport.sent).toHaveLength(0)
@@ -109,7 +280,7 @@ describe("setup() → onnegotiationneeded", () => {
 
 describe("setup() → oniceconnectionstatechange", () => {
   it("fires onIceConnected when ICE is connected", () => {
-    const callbacks = createCallbacks()
+    const callbacks = makeCallbacks()
     const pc = new PeerConnection(createTransport(), callbacks)
     pc.setup("caller")
     const mockPC = MockRTCPeerConnection.lastInstance!
@@ -119,7 +290,7 @@ describe("setup() → oniceconnectionstatechange", () => {
   })
 
   it("fires onIceFailed when ICE fails", () => {
-    const callbacks = createCallbacks()
+    const callbacks = makeCallbacks()
     const pc = new PeerConnection(createTransport(), callbacks)
     pc.setup("caller")
     const mockPC = MockRTCPeerConnection.lastInstance!
@@ -133,7 +304,7 @@ describe("setup() → oniceconnectionstatechange", () => {
 
 describe("close()", () => {
   it("calls pc.close()", () => {
-    const pc = new PeerConnection(createTransport(), createCallbacks())
+    const pc = new PeerConnection(createTransport(), makeCallbacks())
     pc.setup("caller")
     pc.close()
     expect(MockRTCPeerConnection.lastInstance?.close).toHaveBeenCalled()
@@ -145,7 +316,7 @@ describe("close()", () => {
 describe("handleOffer()", () => {
   it("sets remote description and sends answer via transport", async () => {
     const transport = createTransport()
-    const pc = new PeerConnection(transport, createCallbacks())
+    const pc = new PeerConnection(transport, makeCallbacks())
     pc.setup("callee")
     await pc.handleOffer({ type: "offer", sdp: "remote-sdp" })
     const mockPC = MockRTCPeerConnection.lastInstance!
@@ -155,7 +326,7 @@ describe("handleOffer()", () => {
 
   it("ignores offer when not callee and collision detected", async () => {
     const transport = createTransport()
-    const pc = new PeerConnection(transport, createCallbacks())
+    const pc = new PeerConnection(transport, makeCallbacks())
     pc.setup("caller")
     const mockPC = MockRTCPeerConnection.lastInstance!
     mockPC.signalingState = "have-local-offer"
@@ -166,7 +337,7 @@ describe("handleOffer()", () => {
 
   it("accepts offer in collision when callee (polite peer)", async () => {
     const transport = createTransport()
-    const pc = new PeerConnection(transport, createCallbacks())
+    const pc = new PeerConnection(transport, makeCallbacks())
     pc.setup("callee")
     const mockPC = MockRTCPeerConnection.lastInstance!
     mockPC.signalingState = "have-local-offer"
@@ -176,7 +347,7 @@ describe("handleOffer()", () => {
 
   it("rolls back before applying offer if not in stable state", async () => {
     const transport = createTransport()
-    const pc = new PeerConnection(transport, createCallbacks())
+    const pc = new PeerConnection(transport, makeCallbacks())
     pc.setup("callee")
     const mockPC = MockRTCPeerConnection.lastInstance!
     mockPC.signalingState = "have-local-offer"
@@ -185,7 +356,7 @@ describe("handleOffer()", () => {
   })
 
   it("does nothing when PC is null", async () => {
-    const pc = new PeerConnection(createTransport(), createCallbacks())
+    const pc = new PeerConnection(createTransport(), makeCallbacks())
     // Don't call setup() — pc is null
     await pc.handleOffer({ type: "offer", sdp: "sdp" })
     // Should not throw
@@ -196,7 +367,7 @@ describe("handleOffer()", () => {
 
 describe("handleAnswer()", () => {
   it("sets remote description", async () => {
-    const pc = new PeerConnection(createTransport(), createCallbacks())
+    const pc = new PeerConnection(createTransport(), makeCallbacks())
     pc.setup("caller")
     await pc.handleAnswer({ type: "answer", sdp: "answer-sdp" })
     expect(MockRTCPeerConnection.lastInstance?.setRemoteDescription).toHaveBeenCalledWith({
@@ -206,7 +377,7 @@ describe("handleAnswer()", () => {
   })
 
   it("drains queued ICE candidates after setting remote description", async () => {
-    const pc = new PeerConnection(createTransport(), createCallbacks())
+    const pc = new PeerConnection(createTransport(), makeCallbacks())
     pc.setup("caller")
     // Queue a candidate before remote description
     await pc.handleIceCandidate({ candidate: "c1", sdpMid: "0", sdpMLineIndex: 0 })
@@ -220,7 +391,7 @@ describe("handleAnswer()", () => {
   })
 
   it("does nothing when PC is null", async () => {
-    const pc = new PeerConnection(createTransport(), createCallbacks())
+    const pc = new PeerConnection(createTransport(), makeCallbacks())
     await pc.handleAnswer({ type: "answer", sdp: "sdp" })
     // Should not throw
   })
@@ -230,14 +401,14 @@ describe("handleAnswer()", () => {
 
 describe("handleIceCandidate()", () => {
   it("queues candidates before remote description is set", async () => {
-    const pc = new PeerConnection(createTransport(), createCallbacks())
+    const pc = new PeerConnection(createTransport(), makeCallbacks())
     pc.setup("callee")
     await pc.handleIceCandidate({ candidate: "c1", sdpMid: "0", sdpMLineIndex: 0 })
     expect(MockRTCPeerConnection.lastInstance?.addIceCandidate).not.toHaveBeenCalled()
   })
 
   it("adds candidates directly after remote description", async () => {
-    const pc = new PeerConnection(createTransport(), createCallbacks())
+    const pc = new PeerConnection(createTransport(), makeCallbacks())
     pc.setup("callee")
     // Set remote description via handleOffer
     await pc.handleOffer({ type: "offer", sdp: "remote" })
@@ -251,13 +422,11 @@ describe("handleIceCandidate()", () => {
   })
 })
 
-// ── restartIce() ────────────────────────────────────────────────────────────
-
 // ── rollbackAndRestartIce() ─────────────────────────────────────────────────
 
 describe("rollbackAndRestartIce()", () => {
   it("rolls back local description then restarts ICE", async () => {
-    const pc = new PeerConnection(createTransport(), createCallbacks())
+    const pc = new PeerConnection(createTransport(), makeCallbacks())
     pc.setup("caller")
     const mockPC = MockRTCPeerConnection.lastInstance!
     mockPC.signalingState = "have-local-offer"
@@ -267,7 +436,7 @@ describe("rollbackAndRestartIce()", () => {
   })
 
   it("does nothing when PC is null", async () => {
-    const pc = new PeerConnection(createTransport(), createCallbacks())
+    const pc = new PeerConnection(createTransport(), makeCallbacks())
     await pc.rollbackAndRestartIce()
     // Should not throw
   })

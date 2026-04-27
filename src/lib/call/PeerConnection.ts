@@ -4,6 +4,11 @@ import type { ClientMessage } from "@/types/signaling"
 
 const ICE_SERVERS: RTCConfiguration["iceServers"] = [{ urls: "stun:stun.l.google.com:19302" }]
 
+export type DataChannelSpec = {
+  label: string
+  init?: RTCDataChannelInit
+}
+
 export interface PeerConnectionTransport {
   send(msg: ClientMessage): void
 }
@@ -12,6 +17,9 @@ export interface PeerConnectionCallbacks {
   onRemoteStream(stream: MediaStream | null): void
   onIceConnected(): void
   onIceFailed(): void
+  onChannelOpen(label: string): void
+  onChannelClose(label: string): void
+  onChannelMessage(label: string, data: string): void
 }
 
 export class PeerConnection {
@@ -21,12 +29,25 @@ export class PeerConnection {
   private _makingOffer = false
   private role: "caller" | "callee" | null = null
 
+  private channels: Record<string, RTCDataChannel> = {}
+  private generation = 0
+  private readonly dataChannelSpecs: DataChannelSpec[]
+
   private readonly transport: PeerConnectionTransport
   private readonly callbacks: PeerConnectionCallbacks
 
-  constructor(transport: PeerConnectionTransport, callbacks: PeerConnectionCallbacks) {
+  constructor(
+    transport: PeerConnectionTransport,
+    callbacks: PeerConnectionCallbacks,
+    dataChannels: DataChannelSpec[] = []
+  ) {
     this.transport = transport
     this.callbacks = callbacks
+    const labels = dataChannels.map((s) => s.label)
+    if (new Set(labels).size !== labels.length) {
+      throw new Error(`PeerConnection: duplicate DataChannelSpec labels: ${labels.join(", ")}`)
+    }
+    this.dataChannelSpecs = dataChannels
   }
 
   get raw(): RTCPeerConnection | null {
@@ -34,13 +55,17 @@ export class PeerConnection {
   }
 
   setup(role: "caller" | "callee"): void {
+    this.generation += 1
+    const gen = this.generation
+    this.channels = {}
+
     this.pc?.close()
     this.role = role
     this.remoteDescriptionSet = false
     this.pendingCandidates = []
     this._makingOffer = false
 
-    const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS })
+    const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS, bundlePolicy: "max-bundle" })
     this.pc = pc
 
     pc.onicecandidate = (e) => {
@@ -73,6 +98,63 @@ export class PeerConnection {
         this._makingOffer = false
       }
     }
+
+    pc.onconnectionstatechange = () => {
+      console.debug(
+        `[PC:state] connection=${pc.connectionState} ice=${pc.iceConnectionState} signaling=${pc.signalingState}`
+      )
+    }
+
+    console.debug(
+      `[PC:setup] role=${role} gen=${gen} specs=${this.dataChannelSpecs.map((s) => s.label).join(",")}`
+    )
+    if (role === "caller") {
+      for (const spec of this.dataChannelSpecs) {
+        const ch = pc.createDataChannel(spec.label, spec.init)
+        this.bindDataChannel(spec.label, ch, gen)
+      }
+    } else {
+      pc.ondatachannel = (e) => {
+        console.debug(
+          `[PC:setup] ondatachannel fired label=${e.channel.label} readyState=${e.channel.readyState}`
+        )
+        this.bindDataChannel(e.channel.label, e.channel, gen)
+      }
+    }
+  }
+
+  private bindDataChannel(label: string, ch: RTCDataChannel, gen: number): void {
+    this.channels[label] = ch
+    ch.onopen = () => {
+      if (gen !== this.generation) return
+      this.callbacks.onChannelOpen(label)
+    }
+    ch.onmessage = (e) => {
+      if (gen !== this.generation) return
+      this.callbacks.onChannelMessage(label, e.data as string)
+    }
+    const handleClose = () => {
+      if (gen !== this.generation) return
+      if (this.channels[label] !== ch) return
+      delete this.channels[label]
+      this.callbacks.onChannelClose(label)
+    }
+    ch.onclose = handleClose
+    ch.onerror = handleClose
+  }
+
+  sendOnChannel(label: string, data: string): boolean {
+    const ch = this.channels[label]
+    if (!ch) {
+      console.debug(`[PC:channel] ${label} does not exist in channels map`)
+      return false
+    }
+    if (ch.readyState !== "open") {
+      console.debug(`[PC:channel] ${label} is "${ch.readyState}", dropping`)
+      return false
+    }
+    ch.send(data)
+    return true
   }
 
   async handleOffer(offer: RTCSessionDescriptionInit): Promise<void> {
@@ -134,5 +216,6 @@ export class PeerConnection {
 
   close(): void {
     this.pc?.close()
+    this.channels = {}
   }
 }

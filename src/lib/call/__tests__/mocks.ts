@@ -44,6 +44,39 @@ export class MockWebSocket {
 
 // ── RTCPeerConnection mock ────────────────────────────────────────────────────
 
+export class MockRTCDataChannel {
+  label: string
+  readyState: RTCDataChannelState = "connecting"
+  _sent: string[] = []
+
+  onopen: (() => void) | null = null
+  onclose: (() => void) | null = null
+  onerror: (() => void) | null = null
+  onmessage: ((e: MessageEvent) => void) | null = null
+
+  send = vi.fn((data: string) => {
+    this._sent.push(data)
+  })
+
+  constructor(label: string) {
+    this.label = label
+  }
+
+  _fireOpen() {
+    this.readyState = "open"
+    this.onopen?.()
+  }
+
+  _fireMessage(data: string) {
+    this.onmessage?.(new MessageEvent("message", { data }))
+  }
+
+  _fireClose() {
+    this.readyState = "closed"
+    this.onclose?.()
+  }
+}
+
 export class MockRTCPeerConnection {
   static instances: MockRTCPeerConnection[] = []
   static get lastInstance(): MockRTCPeerConnection | null {
@@ -57,6 +90,9 @@ export class MockRTCPeerConnection {
   ontrack: ((e: RTCTrackEvent) => void) | null = null
   oniceconnectionstatechange: (() => void) | null = null
   onnegotiationneeded: (() => Promise<void>) | null = null
+  ondatachannel: ((e: { channel: MockRTCDataChannel }) => void) | null = null
+
+  _createdChannels: Array<{ label: string; init: RTCDataChannelInit | undefined }> = []
 
   addTrack = vi.fn()
   getSenders = vi.fn().mockReturnValue([])
@@ -81,6 +117,12 @@ export class MockRTCPeerConnection {
   addIceCandidate = vi.fn().mockResolvedValue(undefined)
   restartIce = vi.fn()
   close = vi.fn()
+
+  createDataChannel = vi.fn((label: string, init?: RTCDataChannelInit) => {
+    const ch = new MockRTCDataChannel(label)
+    this._createdChannels.push({ label, init })
+    return ch
+  })
 
   constructor() {
     MockRTCPeerConnection.instances.push(this)
@@ -131,6 +173,7 @@ export const mockScreenStream = {
 export function resetMocks() {
   MockWebSocket.instances = []
   MockRTCPeerConnection.instances = []
+  // _createdChannels is per-instance; instances array reset above clears them
 
   mockAudioTrack.enabled = true
   mockAudioTrack.stop.mockClear()
