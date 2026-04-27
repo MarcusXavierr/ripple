@@ -94,8 +94,28 @@ export class MockRTCPeerConnection {
 
   _createdChannels: Array<{ label: string; init: RTCDataChannelInit | undefined }> = []
 
-  addTrack = vi.fn()
-  getSenders = vi.fn().mockReturnValue([])
+  senders: Array<{
+    track: MediaStreamTrack | null
+    kind: "audio" | "video"
+    getParameters: ReturnType<typeof vi.fn>
+    setParameters: ReturnType<typeof vi.fn>
+    replaceTrack: ReturnType<typeof vi.fn>
+  }> = []
+
+  addTrack = vi.fn((track: MediaStreamTrack) => {
+    const sender = {
+      track,
+      kind: track.kind as "audio" | "video",
+      getParameters: vi.fn(() => ({ encodings: [{}] })),
+      setParameters: vi.fn().mockResolvedValue(undefined),
+      replaceTrack: vi.fn().mockImplementation(async (t: MediaStreamTrack | null) => {
+        sender.track = t
+      }),
+    }
+    this.senders.push(sender)
+    return sender
+  })
+  getSenders = vi.fn(() => this.senders)
   addTransceiver = vi.fn().mockImplementation((_kind: string, _init?: RTCRtpTransceiverInit) => {
     const sender = {
       track: null as MediaStreamTrack | null,
@@ -140,6 +160,7 @@ export const mockAudioTrack = {
 export const mockVideoTrack = {
   kind: "video" as const,
   enabled: true,
+  contentHint: "" as MediaStreamTrack["contentHint"],
   stop: vi.fn(),
   onended: null as (() => void) | null,
 }
@@ -152,6 +173,7 @@ export const mockStream = {
 
 export const mockScreenTrack = {
   kind: "video" as const,
+  contentHint: "" as MediaStreamTrack["contentHint"],
   stop: vi.fn(),
   onended: null as (() => void) | null,
   getSettings: vi.fn().mockReturnValue({ displaySurface: "browser" }),
@@ -178,8 +200,10 @@ export function resetMocks() {
   mockAudioTrack.enabled = true
   mockAudioTrack.stop.mockClear()
   mockVideoTrack.enabled = true
+  mockVideoTrack.contentHint = ""
   mockVideoTrack.stop.mockClear()
   mockVideoTrack.onended = null
+  mockScreenTrack.contentHint = ""
   mockScreenTrack.stop.mockClear()
   mockScreenTrack.onended = null
   mockScreenTrack.getSettings.mockReset()
