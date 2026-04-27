@@ -42,7 +42,10 @@ export class MediaController {
   async startScreenShare() {
     if (!this.pc) return
     try {
-      const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true })
+      const screenStream = await navigator.mediaDevices.getDisplayMedia({
+        video: true,
+        audio: true,
+      })
       const screenTrack = screenStream.getVideoTracks()[0]
       const screenShareSurface = toScreenShareSurface(screenTrack.getSettings().displaySurface)
       const sender = this.pc.getSenders().find((s) => s.track?.kind === "video")
