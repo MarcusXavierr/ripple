@@ -5,6 +5,7 @@ import { Mic, MicOff, Monitor, PhoneOff, Video, VideoOff } from "lucide-react"
 import { useEffect, useRef } from "react"
 import { useTranslation } from "react-i18next"
 import { useNavigate, useParams } from "react-router-dom"
+import { CallSettingsButton } from "@/components/CallSettingsButton"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -47,6 +48,7 @@ export default function Room() {
     isCameraOff,
     startScreenShare,
     stopScreenShare,
+    applyScreenSharePreset,
     sendPeerVideoClick,
     sendPeerVideoScroll,
     sendPeerKeyboardInput,
@@ -157,6 +159,7 @@ export default function Room() {
         >
           <Monitor />
         </Button>
+        <CallSettingsButton onApplyScreenSharePreset={applyScreenSharePreset} />
         <Button
           variant="destructive"
           size="icon"
