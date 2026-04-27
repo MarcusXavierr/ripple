@@ -212,10 +212,12 @@ export function resetMocks() {
   mockScreenStream.getAudioTracks.mockReset()
   mockScreenStream.getAudioTracks.mockReturnValue([mockScreenAudioTrack])
 
-  // Re-apply mock implementations after vi.clearAllMocks may have wiped them
+  // Reset call history and re-apply mock implementations
+  ;(navigator.mediaDevices.getUserMedia as ReturnType<typeof vi.fn>).mockClear()
   ;(navigator.mediaDevices.getUserMedia as ReturnType<typeof vi.fn>).mockResolvedValue(
     mockStream as unknown as MediaStream
   )
+  ;(navigator.mediaDevices.getDisplayMedia as ReturnType<typeof vi.fn>).mockClear()
   ;(navigator.mediaDevices.getDisplayMedia as ReturnType<typeof vi.fn>).mockResolvedValue(
     mockScreenStream as unknown as MediaStream
   )

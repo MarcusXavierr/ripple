@@ -25,14 +25,6 @@ describe("MediaController", () => {
   })
 
   describe("init()", () => {
-    it("calls getUserMedia with video and audio", async () => {
-      await media.init()
-      expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledWith({
-        video: true,
-        audio: true,
-      })
-    })
-
     it("returns the acquired stream", async () => {
       const result = await media.init()
       expect(result).toBe(mockStream)
@@ -281,6 +273,47 @@ describe("MediaController", () => {
     it("stops the screen audio track on stop", async () => {
       await media.stopScreenShare()
       expect(mockScreenAudioTrack.stop).toHaveBeenCalled()
+    })
+  })
+
+  describe("camera profile", () => {
+    it("calls getUserMedia with 1080p constraints, not { video: true }", async () => {
+      await media.init()
+      expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledWith({
+        video: {
+          width: { ideal: 1920, min: 1280 },
+          height: { ideal: 1080, min: 720 },
+          frameRate: { ideal: 30, max: 30, min: 15 },
+        },
+        audio: true,
+      })
+    })
+
+    it("falls back to { video: true, audio: true } on OverconstrainedError", async () => {
+      const gum = navigator.mediaDevices.getUserMedia as ReturnType<typeof vi.fn>
+      const overconstrained = new DOMException("constraint", "OverconstrainedError")
+      gum.mockRejectedValueOnce(overconstrained)
+      // second call (the fallback) returns the normal mock stream
+      await media.init()
+      expect(gum).toHaveBeenCalledTimes(2)
+      expect(gum).toHaveBeenLastCalledWith({ video: true, audio: true })
+    })
+
+    it("sets motion contentHint and 4 Mbps balanced on the video sender after attach", async () => {
+      await media.init()
+      const pc = new MockRTCPeerConnection() as unknown as RTCPeerConnection
+      await media.attachPC(pc)
+
+      expect(mockVideoTrack.contentHint).toBe("motion")
+
+      const videoSender = (pc as unknown as MockRTCPeerConnection).senders.find(
+        (s) => s.kind === "video"
+      )
+      expect(videoSender).toBeDefined()
+      expect(videoSender!.setParameters).toHaveBeenCalledTimes(1)
+      const params = videoSender!.setParameters.mock.calls[0][0] as RTCRtpSendParameters
+      expect(params.encodings?.[0].maxBitrate).toBe(4_000_000)
+      expect(params.degradationPreference).toBe("balanced")
     })
   })
 })
