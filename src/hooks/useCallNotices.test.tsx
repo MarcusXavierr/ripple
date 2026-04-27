@@ -1,6 +1,6 @@
 import { act, renderHook } from "@testing-library/react"
-import { afterEach, describe, expect, it, vi } from "vitest"
 import { toast } from "sonner"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import { useCallStore } from "@/store/call"
 import { useCallNotices } from "./useCallNotices"
 
@@ -21,7 +21,9 @@ describe("useCallNotices", () => {
   it("fires a toast and clears the notice when one is set", () => {
     renderHook(() => useCallNotices())
     act(() => {
-      useCallStore.setState({ notice: { kind: "info", messageKey: "room.toast.computerAudioUnavailable" } })
+      useCallStore.setState({
+        notice: { kind: "info", messageKey: "room.toast.computerAudioUnavailable" },
+      })
     })
     expect(toast.info).toHaveBeenCalledWith("t:room.toast.computerAudioUnavailable")
     expect(useCallStore.getState().notice).toBeNull()
