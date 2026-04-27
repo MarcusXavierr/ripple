@@ -1,11 +1,5 @@
 // SYNC: keep identical to backend types.ts
 
-import type {
-  PeerKeyboardInput,
-  PeerVideoClick,
-  PeerVideoScroll,
-} from "@shared/remoteInputProtocol"
-
 // Server → Client
 export type ServerMessage =
   | { type: "onopen"; role: "caller" | "callee"; reconnect: boolean }
@@ -19,9 +13,6 @@ export type ClientMessage =
   | { type: "offer"; offer: RTCSessionDescriptionInit }
   | { type: "answer"; answer: RTCSessionDescriptionInit }
   | { type: "ice-candidate"; candidate: RTCIceCandidateInit }
-  | { type: "peer-video-click"; click: PeerVideoClick }
-  | { type: "peer-video-scroll"; scroll: PeerVideoScroll }
-  | { type: "peer-keyboard-input"; keyboard: PeerKeyboardInput }
   | { type: "pong" }
 
 export const CLOSE_CODES = {
@@ -41,9 +32,6 @@ export const MESSAGE_TYPES = {
   OFFER: "offer",
   ANSWER: "answer",
   ICE_CANDIDATE: "ice-candidate",
-  PEER_VIDEO_CLICK: "peer-video-click",
-  PEER_VIDEO_SCROLL: "peer-video-scroll",
-  PEER_KEYBOARD_INPUT: "peer-keyboard-input",
   PONG: "pong",
 } as const
 
@@ -53,6 +41,3 @@ export type ReceivedMessage =
   | { type: "offer"; offer: RTCSessionDescriptionInit }
   | { type: "answer"; answer: RTCSessionDescriptionInit }
   | { type: "ice-candidate"; candidate: RTCIceCandidateInit }
-  | { type: "peer-video-click"; click: PeerVideoClick }
-  | { type: "peer-video-scroll"; scroll: PeerVideoScroll }
-  | { type: "peer-keyboard-input"; keyboard: PeerKeyboardInput }

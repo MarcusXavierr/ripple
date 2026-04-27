@@ -46,7 +46,7 @@ function getCreatedChannel(label: string): MockRTCDataChannel {
 }
 
 /** Opens a caller channel and returns the mock. */
-function openChannel(pc: PeerConnection, label: string): MockRTCDataChannel {
+function openChannel(_pc: PeerConnection, label: string): MockRTCDataChannel {
   const ch = getCreatedChannel(label)
   ch._fireOpen()
   return ch

@@ -162,8 +162,8 @@ export class CallSession {
     }
   }
 
-  private handleMessage(msg: ReceivedMessage): Promise<void> | void {
-    return this.machine.handleProtocolMessage(msg)
+  private handleMessage(msg: ReceivedMessage): Promise<void> {
+    return this.machine.handleProtocolMessage(msg) ?? Promise.resolve()
   }
 
   private handleTerminalClose(code: number): void {

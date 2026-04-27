@@ -19,9 +19,12 @@ export class RemoteInputTransport {
     { label: "scroll", init: { ordered: true, maxRetransmits: 0 } },
   ]
 
+  private readonly pc: DataChannelSender
   private handler: (msg: RemoteInputMessage) => void = () => {}
 
-  constructor(private readonly pc: DataChannelSender) {}
+  constructor(pc: DataChannelSender) {
+    this.pc = pc
+  }
 
   send(msg: RemoteInputMessage): boolean {
     const label = CHANNEL_FOR_TYPE[msg.type]
