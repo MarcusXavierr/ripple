@@ -1,4 +1,5 @@
 import { create } from "zustand"
+import type { ScreenSharePreset } from "@/lib/call/mediaProfile"
 
 export type CallStatus =
   | "idle"
@@ -31,7 +32,18 @@ type CallStore = {
   error: string | null
   showReconnectModal: boolean
   notice: CallNotice | null
+  screenSharePreset: ScreenSharePreset
+  setScreenSharePreset: (preset: ScreenSharePreset) => void
   reset: () => void
+}
+
+const PRESET_STORAGE_KEY = "ripple.screenSharePreset"
+
+function readStoredPreset(): ScreenSharePreset {
+  if (typeof window === "undefined") return "auto"
+  const raw = window.localStorage.getItem(PRESET_STORAGE_KEY)
+  if (raw === "auto" || raw === "text" || raw === "video") return raw
+  return "auto"
 }
 
 const INITIAL_STATE = {
@@ -48,9 +60,16 @@ const INITIAL_STATE = {
   error: null,
   showReconnectModal: false,
   notice: null,
+  screenSharePreset: readStoredPreset(),
 }
 
 export const useCallStore = create<CallStore>()((set) => ({
   ...INITIAL_STATE,
-  reset: () => set(INITIAL_STATE),
+  setScreenSharePreset: (preset) => {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(PRESET_STORAGE_KEY, preset)
+    }
+    set({ screenSharePreset: preset })
+  },
+  reset: () => set((s) => ({ ...INITIAL_STATE, screenSharePreset: s.screenSharePreset })),
 }))
