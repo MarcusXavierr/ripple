@@ -104,7 +104,7 @@ export class MockRTCPeerConnection {
 
   addTrack = vi.fn((track: MediaStreamTrack) => {
     const sender = {
-      track,
+      track: track as MediaStreamTrack | null,
       kind: track.kind as "audio" | "video",
       getParameters: vi.fn(() => ({ encodings: [{}] })),
       setParameters: vi.fn().mockResolvedValue(undefined),

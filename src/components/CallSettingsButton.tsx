@@ -1,6 +1,5 @@
 import { Check, Settings } from "lucide-react"
 import { useTranslation } from "react-i18next"
-import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import type { ScreenSharePreset } from "@/lib/call/mediaProfile"
@@ -27,16 +26,12 @@ export function CallSettingsButton({ onApplyScreenSharePreset }: Props) {
 
   return (
     <Popover>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          size="icon"
-          aria-label={t("room.controls.settings")}
-          title={t("room.controls.settings")}
-          className="h-11 w-11"
-        >
-          <Settings />
-        </Button>
+      <PopoverTrigger
+        aria-label={t("room.controls.settings")}
+        title={t("room.controls.settings")}
+        className="inline-flex h-11 w-11 items-center justify-center rounded-md border border-input bg-background text-sm font-medium shadow-sm hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+      >
+        <Settings className="size-4" />
       </PopoverTrigger>
       <PopoverContent side="top" align="end" sideOffset={8} className="w-72">
         <div className="space-y-3">
