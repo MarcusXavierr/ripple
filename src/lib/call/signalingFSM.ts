@@ -68,7 +68,7 @@ function handleEnter(full: FullMachineState): { next: FullMachineState; effects:
   if (full.state === "CALLER_WAITING") {
     return {
       next: { ...full, state: "NEGOTIATING" },
-      effects: [{ type: "ROLLBACK_AND_RESTART_ICE" }],
+      effects: [{ type: "SETUP_PC", role: "caller" }],
     }
   }
   return {

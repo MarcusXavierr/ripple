@@ -204,13 +204,19 @@ describe("Signaling Machine Invariants", () => {
         if (setup && setup.type === "SETUP_PC") {
           const validTrigger =
             event.type === "onopen" ||
+            (event.type === "enter" && state.state === "CALLER_WAITING") ||
             (event.type === "peer-reconnected" &&
               (state.state === "CALLER_ORPHANED" ||
                 state.state === "CALLEE_ORPHANED" ||
                 state.state === "NEGOTIATING" ||
                 state.state === "CONNECTED"))
           expect(validTrigger).toBe(true)
-          const expected = setup.role === "caller" ? "CALLER_WAITING" : "CALLEE_WAITING"
+          const expected =
+            event.type === "enter"
+              ? "NEGOTIATING"
+              : setup.role === "caller"
+                ? "CALLER_WAITING"
+                : "CALLEE_WAITING"
           expect(next.state).toBe(expected)
         }
         if (event.type === "onopen") {
