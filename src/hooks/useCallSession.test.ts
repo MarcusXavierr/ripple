@@ -82,6 +82,13 @@ it("keeps remote input actions stable across store-driven rerenders", () => {
   expect(result.current.sendPeerVideoScroll).toBe(firstSendPeerVideoScroll)
 })
 
+it("exposes the mediaController from the session", () => {
+  const { result } = renderHook(() => useCallSession("test-room"))
+  const session = vi.mocked(CallSession).mock.results[0]?.value
+
+  expect(result.current.mediaController).toBe(session.media)
+})
+
 describe("dismissError", () => {
   it("clears the error", () => {
     useCallStore.setState({ error: "Some error" })

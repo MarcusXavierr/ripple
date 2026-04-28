@@ -42,20 +42,21 @@
       "connected": "Connected",
       "reconnecting": "Reconnecting...",
       "disconnected": "Disconnected",
-      "ended": "Call ended"
+      "ended": "Call ended",
+      "copyLinkAria": "Status: {{status}}, room {{roomId}}, click to copy room link"
     },
     "waiting": {
       "message": "Waiting for someone to join..."
     },
     "controls": {
       "copyLink": "Copy link",
-      "unmute": "Unmute",
-      "mute": "Mute",
-      "enableCamera": "Enable camera",
-      "disableCamera": "Disable camera",
+      "unmute": "Unmute microphone",
+      "mute": "Mute microphone",
+      "enableCamera": "Turn on camera",
+      "disableCamera": "Turn off camera",
       "stopSharing": "Stop sharing",
       "shareScreen": "Share screen",
-      "hangUp": "Hang up"
+      "hangUp": "Leave call"
     },
     "error": {
       "title": "Error",
@@ -68,7 +69,26 @@
       "goHome": "Go home"
     },
     "toast": {
+      "linkCopied": "Link copied",
+      "micChanged": "Microphone changed",
+      "cameraChanged": "Camera changed",
+      "cameraChangedDeferred": "Camera changed. It will apply when screen sharing stops",
+      "deviceUnplugged": "A device was disconnected; switched to default",
+      "deviceUnpluggedFatal": "A device was disconnected and no fallback device is available",
       "computerAudioUnavailable": "Computer audio wasn't included in this share."
+    },
+    "devices": {
+      "micSection": "Microphone",
+      "speakerSection": "Speaker",
+      "cameraSection": "Camera",
+      "allowAccess": "Allow microphone/camera access",
+      "openMicMenu": "Choose microphone or speaker",
+      "openCameraMenu": "Choose camera"
+    },
+    "settings": {
+      "open": "Open settings",
+      "section": "Settings",
+      "empty": "No settings yet"
     }
   },
   "callEnded": {

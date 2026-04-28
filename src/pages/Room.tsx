@@ -1,10 +1,11 @@
 // src/pages/Room.tsx
 
-import type { TFunction } from "i18next"
-import { Mic, MicOff, Monitor, PhoneOff, Video, VideoOff } from "lucide-react"
 import { useEffect, useRef } from "react"
 import { useTranslation } from "react-i18next"
 import { useNavigate, useParams } from "react-router-dom"
+import { Controls } from "@/components/room/Controls"
+import { SelfTile } from "@/components/room/SelfTile"
+import { StatusPill } from "@/components/room/StatusPill"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -16,21 +17,8 @@ import {
 } from "@/components/ui/dialog"
 import { useCallNotices } from "@/hooks/useCallNotices"
 import { useCallSession } from "@/hooks/useCallSession"
+import { useDevices } from "@/hooks/useDevices"
 import { usePeerVideoRemoteInput } from "@/hooks/usePeerVideoRemoteInput"
-import type { CallStatus } from "@/store/call"
-
-function getStatusLabel(status: CallStatus, t: TFunction): string {
-  return {
-    idle: t("room.status.idle"),
-    connecting: t("room.status.connecting"),
-    waiting: t("room.status.waiting"),
-    negotiating: t("room.status.negotiating"),
-    connected: t("room.status.connected"),
-    reconnecting: t("room.status.reconnecting"),
-    disconnected: t("room.status.disconnected"),
-    ended: t("room.status.ended"),
-  }[status]
-}
 
 export default function Room() {
   const { id: roomId } = useParams<{ id: string }>()
@@ -42,6 +30,7 @@ export default function Room() {
     status,
     error,
     showReconnectModal,
+    mediaController,
     isScreenSharing,
     isMicMuted,
     isCameraOff,
@@ -59,8 +48,15 @@ export default function Room() {
 
   useCallNotices()
 
-  const localVideoRef = useRef<HTMLVideoElement>(null)
   const remoteVideoRef = useRef<HTMLVideoElement>(null)
+  const {
+    devices,
+    selected,
+    selectDevice,
+    requestPermission,
+    speakerSupported,
+    permissionGranted,
+  } = useDevices({ mediaController, localStream })
   const { handleRemoteVideoClick } = usePeerVideoRemoteInput({
     remoteVideoRef,
     sendPeerVideoClick,
@@ -69,12 +65,17 @@ export default function Room() {
   })
 
   useEffect(() => {
-    if (localVideoRef.current) localVideoRef.current.srcObject = localStream
-  }, [localStream])
-
-  useEffect(() => {
     if (remoteVideoRef.current) remoteVideoRef.current.srcObject = remoteStream
   }, [remoteStream])
+
+  useEffect(() => {
+    const video = remoteVideoRef.current
+    if (!speakerSupported || !selected.speaker || !video || !("setSinkId" in video)) return
+
+    void (video as HTMLVideoElement & { setSinkId: (id: string) => Promise<void> }).setSinkId(
+      selected.speaker
+    )
+  }, [selected.speaker, speakerSupported])
 
   function handleCopyLink() {
     void navigator.clipboard.writeText(`${window.location.origin}/room/${roomId}`)
@@ -105,67 +106,24 @@ export default function Room() {
         </div>
       )}
 
-      {/* Local video — PiP */}
-      <video
-        ref={localVideoRef}
-        autoPlay
-        playsInline
-        muted
-        data-testid="local-video"
-        className="absolute bottom-20 right-4 h-36 w-48 rounded-lg object-cover shadow-lg"
+      <StatusPill roomId={roomId!} status={status} />
+      <SelfTile stream={localStream} />
+      <Controls
+        isMicMuted={isMicMuted}
+        isCameraOff={isCameraOff}
+        isScreenSharing={isScreenSharing}
+        toggleMic={toggleMic}
+        toggleCamera={toggleCamera}
+        startScreenShare={startScreenShare}
+        stopScreenShare={stopScreenShare}
+        hangup={hangup}
+        devices={devices}
+        selected={selected}
+        onSelectDevice={selectDevice}
+        speakerSupported={speakerSupported}
+        permissionGranted={permissionGranted}
+        onRequestPermission={requestPermission}
       />
-
-      {/* Status bar */}
-      <div className="absolute left-1/2 top-3 flex -translate-x-1/2 items-center gap-2 rounded-full bg-black/60 px-3 py-1 text-xs text-white">
-        <span>{getStatusLabel(status, t)}</span>
-        <button
-          type="button"
-          onClick={handleCopyLink}
-          className="font-mono text-white/60 hover:text-white"
-        >
-          {roomId}
-        </button>
-      </div>
-
-      {/* Control bar */}
-      <div className="absolute bottom-6 left-1/2 flex -translate-x-1/2 items-center gap-3">
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={toggleMic}
-          aria-label={isMicMuted ? t("room.controls.unmute") : t("room.controls.mute")}
-        >
-          {isMicMuted ? <MicOff /> : <Mic />}
-        </Button>
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={toggleCamera}
-          aria-label={
-            isCameraOff ? t("room.controls.enableCamera") : t("room.controls.disableCamera")
-          }
-        >
-          {isCameraOff ? <VideoOff /> : <Video />}
-        </Button>
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={isScreenSharing ? stopScreenShare : startScreenShare}
-          aria-label={
-            isScreenSharing ? t("room.controls.stopSharing") : t("room.controls.shareScreen")
-          }
-        >
-          <Monitor />
-        </Button>
-        <Button
-          variant="destructive"
-          size="icon"
-          onClick={hangup}
-          aria-label={t("room.controls.hangUp")}
-        >
-          <PhoneOff />
-        </Button>
-      </div>
 
       {/* Error modal */}
       <Dialog

@@ -42,7 +42,8 @@
       "connected": "Conectado",
       "reconnecting": "Reconectando...",
       "disconnected": "Desconectado",
-      "ended": "Chamada encerrada"
+      "ended": "Chamada encerrada",
+      "copyLinkAria": "Status: {{status}}, sala {{roomId}}, clique para copiar o link da sala"
     },
     "waiting": {
       "message": "Aguardando alguém entrar..."
@@ -51,11 +52,11 @@
       "copyLink": "Copiar link",
       "unmute": "Ativar microfone",
       "mute": "Silenciar",
-      "enableCamera": "Ativar câmera",
-      "disableCamera": "Desativar câmera",
+      "enableCamera": "Ligar câmera",
+      "disableCamera": "Desligar câmera",
       "stopSharing": "Parar compartilhamento",
       "shareScreen": "Compartilhar tela",
-      "hangUp": "Encerrar chamada"
+      "hangUp": "Sair da chamada"
     },
     "error": {
       "title": "Erro",
@@ -68,7 +69,26 @@
       "goHome": "Voltar ao início"
     },
     "toast": {
+      "linkCopied": "Link copiado",
+      "micChanged": "Microfone alterado",
+      "cameraChanged": "Câmera alterada",
+      "cameraChangedDeferred": "Câmera alterada. Ela será aplicada quando o compartilhamento terminar",
+      "deviceUnplugged": "Um dispositivo foi desconectado; alternado para o padrão",
+      "deviceUnpluggedFatal": "Um dispositivo foi desconectado e não há fallback disponível",
       "computerAudioUnavailable": "O áudio do computador não foi incluído neste compartilhamento."
+    },
+    "devices": {
+      "micSection": "Microfone",
+      "speakerSection": "Saída de áudio",
+      "cameraSection": "Câmera",
+      "allowAccess": "Permitir acesso ao microfone/câmera",
+      "openMicMenu": "Escolher microfone ou saída de áudio",
+      "openCameraMenu": "Escolher câmera"
+    },
+    "settings": {
+      "open": "Abrir configurações",
+      "section": "Configurações",
+      "empty": "Nenhuma configuração ainda"
     }
   },
   "callEnded": {
