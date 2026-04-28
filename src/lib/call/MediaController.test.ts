@@ -315,7 +315,7 @@ describe("MediaController", () => {
       expect(lastParams.degradationPreference).toBe("balanced")
     })
 
-    it("calls getDisplayMedia with 1080p capture constraints", async () => {
+    it("calls getDisplayMedia with 1080p constraints (no min — getDisplayMedia rejects min)", async () => {
       useCallStore.setState({ screenSharePreset: "auto" })
       await media.init()
       const pc = new MockRTCPeerConnection() as unknown as RTCPeerConnection
@@ -324,9 +324,9 @@ describe("MediaController", () => {
 
       expect(navigator.mediaDevices.getDisplayMedia).toHaveBeenCalledWith({
         video: {
-          width: { ideal: 1920, min: 1280 },
-          height: { ideal: 1080, min: 720 },
-          frameRate: { ideal: 30, max: 30, min: 15 },
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+          frameRate: { ideal: 30, max: 30 },
         },
         audio: true,
       })

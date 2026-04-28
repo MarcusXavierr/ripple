@@ -51,10 +51,10 @@ describe("getScreenProfile", () => {
     }
   })
 
-  it("uses 1080p / 720p / 30fps (15 fps min) capture constraints for all screen profiles", () => {
+  it("uses 1080p / 30fps capture constraints for all screen profiles (no min — getDisplayMedia rejects min)", () => {
     const p = getScreenProfile({ preset: "auto", displaySurface: "browser" })
-    expect(p.captureConstraints.width).toEqual({ ideal: 1920, min: 1280 })
-    expect(p.captureConstraints.height).toEqual({ ideal: 1080, min: 720 })
-    expect(p.captureConstraints.frameRate).toEqual({ ideal: 30, max: 30, min: 15 })
+    expect(p.captureConstraints.width).toEqual({ ideal: 1920 })
+    expect(p.captureConstraints.height).toEqual({ ideal: 1080 })
+    expect(p.captureConstraints.frameRate).toEqual({ ideal: 30, max: 30 })
   })
 })
