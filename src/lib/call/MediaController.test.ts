@@ -15,21 +15,60 @@ import { MediaController } from "./MediaController"
 
 installGlobalMocks()
 
+function createTrack(kind: "audio" | "video", overrides?: Partial<MediaStreamTrack>) {
+  return {
+    kind,
+    enabled: true,
+    stop: vi.fn(),
+    getSettings: vi.fn().mockReturnValue({
+      deviceId: kind === "audio" ? "mic-fresh" : "cam-fresh",
+    }),
+    ...overrides,
+  } as unknown as MediaStreamTrack
+}
+
+function createSingleTrackStream(track: MediaStreamTrack): MediaStream {
+  return {
+    getTracks: vi.fn(() => [track]),
+    getAudioTracks: vi.fn(() => (track.kind === "audio" ? [track] : [])),
+    getVideoTracks: vi.fn(() => (track.kind === "video" ? [track] : [])),
+  } as unknown as MediaStream
+}
+
 describe("MediaController", () => {
   let media: MediaController
 
   beforeEach(() => {
     media = new MediaController()
+    localStorage.clear()
     useCallStore.getState().reset()
     resetMocks()
   })
 
   describe("init()", () => {
-    it("calls getUserMedia with video and audio", async () => {
+    it("init() passes ideal deviceId for mic when localStorage has a pref", async () => {
+      localStorage.setItem("ripple.devices.mic", "mic-2")
       await media.init()
       expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledWith({
+        audio: { deviceId: { ideal: "mic-2" } },
         video: true,
+      })
+    })
+
+    it("init() falls back to default constraint when no pref is stored", async () => {
+      await media.init()
+      expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledWith({
         audio: true,
+        video: true,
+      })
+    })
+
+    it("init() does not throw when persisted device is gone (ideal not exact)", async () => {
+      localStorage.setItem("ripple.devices.cam", "cam-missing")
+      await expect(media.init()).resolves.toBe(mockStream)
+      expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledWith({
+        audio: true,
+        video: { deviceId: { ideal: "cam-missing" } },
       })
     })
 
@@ -281,6 +320,181 @@ describe("MediaController", () => {
     it("stops the screen audio track on stop", async () => {
       await media.stopScreenShare()
       expect(mockScreenAudioTrack.stop).toHaveBeenCalled()
+    })
+  })
+
+  describe("replaceTrack()", () => {
+    beforeEach(async () => {
+      await media.init()
+    })
+
+    it("replaceTrack(mic) swaps the audio sender to a new track", async () => {
+      const newTrack = createTrack("audio")
+      vi.mocked(navigator.mediaDevices.getUserMedia).mockResolvedValueOnce(
+        createSingleTrackStream(newTrack)
+      )
+      const sender = {
+        track: mockAudioTrack,
+        replaceTrack: vi.fn().mockResolvedValue(undefined),
+      }
+      const pc = new MockRTCPeerConnection() as unknown as RTCPeerConnection
+      vi.mocked(pc.getSenders).mockReturnValue([sender as unknown as RTCRtpSender])
+      media.attachPC(pc)
+
+      await media.replaceTrack("mic", "mic-2")
+
+      expect(sender.replaceTrack).toHaveBeenCalledWith(newTrack)
+    })
+
+    it("replaceTrack(cam) swaps the video sender", async () => {
+      const newTrack = createTrack("video")
+      vi.mocked(navigator.mediaDevices.getUserMedia).mockResolvedValueOnce(
+        createSingleTrackStream(newTrack)
+      )
+      const sender = {
+        track: mockVideoTrack,
+        replaceTrack: vi.fn().mockResolvedValue(undefined),
+      }
+      const pc = new MockRTCPeerConnection() as unknown as RTCPeerConnection
+      vi.mocked(pc.getSenders).mockReturnValue([sender as unknown as RTCRtpSender])
+      media.attachPC(pc)
+
+      await media.replaceTrack("cam", "cam-2")
+
+      expect(sender.replaceTrack).toHaveBeenCalledWith(newTrack)
+    })
+
+    it("old track is stopped only after replaceTrack resolves", async () => {
+      const newTrack = createTrack("audio")
+      vi.mocked(navigator.mediaDevices.getUserMedia).mockResolvedValueOnce(
+        createSingleTrackStream(newTrack)
+      )
+      let resolveReplace!: () => void
+      const sender = {
+        track: mockAudioTrack,
+        replaceTrack: vi.fn().mockImplementation(
+          () =>
+            new Promise<void>((resolve) => {
+              resolveReplace = resolve
+            })
+        ),
+      }
+      const pc = new MockRTCPeerConnection() as unknown as RTCPeerConnection
+      vi.mocked(pc.getSenders).mockReturnValue([sender as unknown as RTCRtpSender])
+      media.attachPC(pc)
+
+      const pending = media.replaceTrack("mic", "mic-2")
+      await Promise.resolve()
+      expect(mockAudioTrack.stop).not.toHaveBeenCalled()
+
+      resolveReplace()
+      await pending
+
+      expect(mockAudioTrack.stop).toHaveBeenCalledOnce()
+    })
+
+    it("new track inherits enabled state from old track", async () => {
+      mockAudioTrack.enabled = false
+      const newTrack = createTrack("audio")
+      vi.mocked(navigator.mediaDevices.getUserMedia).mockResolvedValueOnce(
+        createSingleTrackStream(newTrack)
+      )
+      const sender = {
+        track: mockAudioTrack,
+        replaceTrack: vi.fn().mockResolvedValue(undefined),
+      }
+      const pc = new MockRTCPeerConnection() as unknown as RTCPeerConnection
+      vi.mocked(pc.getSenders).mockReturnValue([sender as unknown as RTCRtpSender])
+      media.attachPC(pc)
+
+      await media.replaceTrack("mic", "mic-2")
+
+      expect(newTrack.enabled).toBe(false)
+    })
+
+    it("no-op when pc or stream are not initialized", async () => {
+      await expect(new MediaController().replaceTrack("mic", "mic-2")).resolves.toBeUndefined()
+    })
+
+    it("replaceTrack(cam) while isScreenSharing does NOT touch the video sender", async () => {
+      const newTrack = createTrack("video", {
+        getSettings: vi.fn().mockReturnValue({ deviceId: "cam-2" }),
+      })
+      vi.mocked(navigator.mediaDevices.getUserMedia).mockResolvedValueOnce(
+        createSingleTrackStream(newTrack)
+      )
+      const sender = {
+        track: mockScreenTrack,
+        replaceTrack: vi.fn().mockResolvedValue(undefined),
+      }
+      const pc = new MockRTCPeerConnection() as unknown as RTCPeerConnection
+      vi.mocked(pc.getSenders).mockReturnValue([sender as unknown as RTCRtpSender])
+      media.attachPC(pc)
+      useCallStore.setState({ isScreenSharing: true })
+
+      await media.replaceTrack("cam", "cam-2")
+
+      expect(sender.replaceTrack).not.toHaveBeenCalled()
+      expect(sender.track).toBe(mockScreenTrack)
+    })
+
+    it("replaceTrack(cam) while isScreenSharing still updates this.stream so stopScreenShare restores the new camera", async () => {
+      const newTrack = createTrack("video", {
+        getSettings: vi.fn().mockReturnValue({ deviceId: "cam-2" }),
+      })
+      vi.mocked(navigator.mediaDevices.getUserMedia).mockResolvedValueOnce(
+        createSingleTrackStream(newTrack)
+      )
+      const sender = {
+        track: mockScreenTrack,
+        replaceTrack: vi.fn().mockImplementation(async (track: MediaStreamTrack | null) => {
+          sender.track = track
+        }),
+      }
+      const screenAudioSender = {
+        track: mockScreenAudioTrack,
+        replaceTrack: vi.fn().mockResolvedValue(undefined),
+      }
+      const pc = new MockRTCPeerConnection() as unknown as RTCPeerConnection
+      vi.mocked(pc.getSenders).mockReturnValue([sender as unknown as RTCRtpSender])
+      vi.mocked(pc.addTransceiver).mockReturnValueOnce({
+        sender: screenAudioSender,
+        direction: "sendrecv",
+      } as unknown as RTCRtpTransceiver)
+      media.attachPC(pc)
+      useCallStore.setState({ isScreenSharing: true })
+
+      await media.replaceTrack("cam", "cam-2")
+      await media.stopScreenShare()
+
+      expect(sender.replaceTrack).toHaveBeenLastCalledWith(newTrack)
+    })
+
+    it("replaceTrack(mic) while isScreenSharing still swaps the audio sender", async () => {
+      const newTrack = createTrack("audio")
+      vi.mocked(navigator.mediaDevices.getUserMedia).mockResolvedValueOnce(
+        createSingleTrackStream(newTrack)
+      )
+      const micSender = {
+        track: mockAudioTrack,
+        replaceTrack: vi.fn().mockResolvedValue(undefined),
+      }
+      const videoSender = {
+        track: mockScreenTrack,
+        replaceTrack: vi.fn().mockResolvedValue(undefined),
+      }
+      const pc = new MockRTCPeerConnection() as unknown as RTCPeerConnection
+      vi.mocked(pc.getSenders).mockReturnValue([
+        micSender as unknown as RTCRtpSender,
+        videoSender as unknown as RTCRtpSender,
+      ])
+      media.attachPC(pc)
+      useCallStore.setState({ isScreenSharing: true })
+
+      await media.replaceTrack("mic", "mic-2")
+
+      expect(micSender.replaceTrack).toHaveBeenCalledWith(newTrack)
+      expect(videoSender.replaceTrack).not.toHaveBeenCalled()
     })
   })
 })

@@ -135,6 +135,7 @@ export const mockAudioTrack = {
   kind: "audio" as const,
   enabled: true,
   stop: vi.fn(),
+  getSettings: vi.fn().mockReturnValue({ deviceId: "mic-default" }),
 }
 
 export const mockVideoTrack = {
@@ -142,12 +143,29 @@ export const mockVideoTrack = {
   enabled: true,
   stop: vi.fn(),
   onended: null as (() => void) | null,
+  getSettings: vi.fn().mockReturnValue({ deviceId: "cam-default" }),
 }
 
 export const mockStream = {
-  getTracks: vi.fn().mockReturnValue([mockAudioTrack, mockVideoTrack]),
-  getAudioTracks: vi.fn().mockReturnValue([mockAudioTrack]),
-  getVideoTracks: vi.fn().mockReturnValue([mockVideoTrack]),
+  _audioTracks: [mockAudioTrack] as Array<typeof mockAudioTrack>,
+  _videoTracks: [mockVideoTrack] as Array<typeof mockVideoTrack>,
+  getTracks: vi.fn(() => [...mockStream._audioTracks, ...mockStream._videoTracks]),
+  getAudioTracks: vi.fn(() => [...mockStream._audioTracks]),
+  getVideoTracks: vi.fn(() => [...mockStream._videoTracks]),
+  addTrack: vi.fn((track: typeof mockAudioTrack | typeof mockVideoTrack) => {
+    if (track.kind === "audio") {
+      mockStream._audioTracks = [track as typeof mockAudioTrack]
+      return
+    }
+    mockStream._videoTracks = [track as typeof mockVideoTrack]
+  }),
+  removeTrack: vi.fn((track: typeof mockAudioTrack | typeof mockVideoTrack) => {
+    if (track.kind === "audio") {
+      mockStream._audioTracks = mockStream._audioTracks.filter((candidate) => candidate !== track)
+      return
+    }
+    mockStream._videoTracks = mockStream._videoTracks.filter((candidate) => candidate !== track)
+  }),
 }
 
 export const mockScreenTrack = {
@@ -177,9 +195,20 @@ export function resetMocks() {
 
   mockAudioTrack.enabled = true
   mockAudioTrack.stop.mockClear()
+  mockAudioTrack.getSettings.mockReset()
+  mockAudioTrack.getSettings.mockReturnValue({ deviceId: "mic-default" })
   mockVideoTrack.enabled = true
   mockVideoTrack.stop.mockClear()
   mockVideoTrack.onended = null
+  mockVideoTrack.getSettings.mockReset()
+  mockVideoTrack.getSettings.mockReturnValue({ deviceId: "cam-default" })
+  mockStream._audioTracks = [mockAudioTrack]
+  mockStream._videoTracks = [mockVideoTrack]
+  mockStream.getTracks.mockClear()
+  mockStream.getAudioTracks.mockClear()
+  mockStream.getVideoTracks.mockClear()
+  mockStream.addTrack.mockClear()
+  mockStream.removeTrack.mockClear()
   mockScreenTrack.stop.mockClear()
   mockScreenTrack.onended = null
   mockScreenTrack.getSettings.mockReset()
@@ -206,6 +235,9 @@ export function installGlobalMocks() {
     value: {
       getUserMedia: vi.fn().mockResolvedValue(mockStream as unknown as MediaStream),
       getDisplayMedia: vi.fn().mockResolvedValue(mockScreenStream as unknown as MediaStream),
+      enumerateDevices: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
     },
     writable: true,
   })
