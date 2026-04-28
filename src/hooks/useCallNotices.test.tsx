@@ -1,11 +1,11 @@
 import { act, renderHook } from "@testing-library/react"
-import { toast } from "sonner"
 import { afterEach, describe, expect, it, vi } from "vitest"
+import { toast } from "@/components/ui/toast"
 import { useCallStore } from "@/store/call"
 import { useCallNotices } from "./useCallNotices"
 
-vi.mock("sonner", () => ({
-  toast: { info: vi.fn(), warning: vi.fn() },
+vi.mock("@/components/ui/toast", () => ({
+  toast: vi.fn(),
 }))
 
 vi.mock("react-i18next", () => ({
@@ -18,19 +18,30 @@ describe("useCallNotices", () => {
     vi.clearAllMocks()
   })
 
-  it("fires a toast and clears the notice when one is set", () => {
+  it("dispatches toast with localized message and variant when notice set", () => {
     renderHook(() => useCallNotices())
     act(() => {
       useCallStore.setState({
         notice: { kind: "info", messageKey: "room.toast.computerAudioUnavailable" },
       })
     })
-    expect(toast.info).toHaveBeenCalledWith("t:room.toast.computerAudioUnavailable")
+    expect(toast).toHaveBeenCalledWith("t:room.toast.computerAudioUnavailable", "info")
+    expect(useCallStore.getState().notice).toBeNull()
+  })
+
+  it("clears notice from store after toasting", () => {
+    renderHook(() => useCallNotices())
+    act(() => {
+      useCallStore.setState({
+        notice: { kind: "warning", messageKey: "room.toast.computerAudioUnavailable" },
+      })
+    })
+
     expect(useCallStore.getState().notice).toBeNull()
   })
 
   it("does nothing when notice is null", () => {
     renderHook(() => useCallNotices())
-    expect(toast.info).not.toHaveBeenCalled()
+    expect(toast).not.toHaveBeenCalled()
   })
 })

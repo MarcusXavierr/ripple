@@ -44,6 +44,8 @@
       "**",
       "!node_modules",
       "!dist",
+      "!extension/.output",
+      "!extension/output",
       "!src/components/ui",
       "!reference",
       "!src/index.css",
