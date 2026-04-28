@@ -25,14 +25,6 @@ describe("MediaController", () => {
   })
 
   describe("init()", () => {
-    it("calls getUserMedia with video and audio", async () => {
-      await media.init()
-      expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledWith({
-        video: true,
-        audio: true,
-      })
-    })
-
     it("returns the acquired stream", async () => {
       const result = await media.init()
       expect(result).toBe(mockStream)
@@ -281,6 +273,165 @@ describe("MediaController", () => {
     it("stops the screen audio track on stop", async () => {
       await media.stopScreenShare()
       expect(mockScreenAudioTrack.stop).toHaveBeenCalled()
+    })
+  })
+
+  describe("screen share profile", () => {
+    it("applies screen-text profile when displaySurface is 'browser' and preset is auto", async () => {
+      useCallStore.setState({ screenSharePreset: "auto" })
+      mockScreenTrack.getSettings.mockReturnValue({ displaySurface: "browser" })
+
+      await media.init()
+      const pc = new MockRTCPeerConnection() as unknown as RTCPeerConnection
+      await media.attachPC(pc)
+      await media.startScreenShare()
+
+      const videoSender = (pc as unknown as MockRTCPeerConnection).senders.find(
+        (s) => s.kind === "video"
+      )!
+      expect(mockScreenTrack.contentHint).toBe("detail")
+      // Calls: 1 from attachPC (camera), 1 from startScreenShare (screen-text)
+      expect(videoSender.setParameters).toHaveBeenCalledTimes(2)
+      const lastParams = videoSender.setParameters.mock.calls[1][0] as RTCRtpSendParameters
+      expect(lastParams.encodings?.[0].maxBitrate).toBe(2_000_000)
+      expect(lastParams.degradationPreference).toBe("maintain-resolution")
+    })
+
+    it("applies screen-motion profile when preset is 'video' regardless of surface", async () => {
+      useCallStore.setState({ screenSharePreset: "video" })
+      mockScreenTrack.getSettings.mockReturnValue({ displaySurface: "browser" })
+
+      await media.init()
+      const pc = new MockRTCPeerConnection() as unknown as RTCPeerConnection
+      await media.attachPC(pc)
+      await media.startScreenShare()
+
+      const videoSender = (pc as unknown as MockRTCPeerConnection).senders.find(
+        (s) => s.kind === "video"
+      )!
+      expect(mockScreenTrack.contentHint).toBe("motion")
+      const lastParams = videoSender.setParameters.mock.calls[1][0] as RTCRtpSendParameters
+      expect(lastParams.encodings?.[0].maxBitrate).toBe(5_000_000)
+      expect(lastParams.degradationPreference).toBe("balanced")
+    })
+
+    it("calls getDisplayMedia with 1080p constraints (no min — getDisplayMedia rejects min)", async () => {
+      useCallStore.setState({ screenSharePreset: "auto" })
+      await media.init()
+      const pc = new MockRTCPeerConnection() as unknown as RTCPeerConnection
+      await media.attachPC(pc)
+      await media.startScreenShare()
+
+      expect(navigator.mediaDevices.getDisplayMedia).toHaveBeenCalledWith({
+        video: {
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+          frameRate: { ideal: 30, max: 30 },
+        },
+        audio: true,
+      })
+    })
+
+    it("re-applies camera profile after stopScreenShare", async () => {
+      useCallStore.setState({ screenSharePreset: "auto" })
+      await media.init()
+      const pc = new MockRTCPeerConnection() as unknown as RTCPeerConnection
+      await media.attachPC(pc)
+      await media.startScreenShare()
+      await media.stopScreenShare()
+
+      const videoSender = (pc as unknown as MockRTCPeerConnection).senders.find(
+        (s) => s.kind === "video"
+      )!
+      // Calls: attachPC (camera) + startScreenShare (screen) + stopScreenShare (camera again) = 3
+      expect(videoSender.setParameters).toHaveBeenCalledTimes(3)
+      const lastParams = videoSender.setParameters.mock.calls[2][0] as RTCRtpSendParameters
+      expect(lastParams.encodings?.[0].maxBitrate).toBe(4_000_000)
+      expect(lastParams.degradationPreference).toBe("balanced")
+      expect(mockVideoTrack.contentHint).toBe("motion")
+    })
+  })
+
+  describe("applyScreenSharePreset (live change)", () => {
+    it("re-applies the screen profile to the existing track without calling getDisplayMedia again", async () => {
+      useCallStore.setState({ screenSharePreset: "auto" })
+      mockScreenTrack.getSettings.mockReturnValue({ displaySurface: "browser" })
+
+      await media.init()
+      const pc = new MockRTCPeerConnection() as unknown as RTCPeerConnection
+      await media.attachPC(pc)
+      await media.startScreenShare()
+
+      ;(navigator.mediaDevices.getDisplayMedia as ReturnType<typeof vi.fn>).mockClear()
+
+      await media.applyScreenSharePreset("video")
+
+      expect(navigator.mediaDevices.getDisplayMedia).not.toHaveBeenCalled()
+      expect(mockScreenTrack.contentHint).toBe("motion")
+
+      const videoSender = (pc as unknown as MockRTCPeerConnection).senders.find(
+        (s) => s.kind === "video"
+      )!
+      const lastParams = videoSender.setParameters.mock.calls.at(-1)![0] as RTCRtpSendParameters
+      expect(lastParams.encodings?.[0].maxBitrate).toBe(5_000_000)
+      expect(lastParams.degradationPreference).toBe("balanced")
+    })
+
+    it("is a no-op when not screen-sharing", async () => {
+      useCallStore.setState({ screenSharePreset: "auto" })
+      await media.init()
+      const pc = new MockRTCPeerConnection() as unknown as RTCPeerConnection
+      await media.attachPC(pc)
+
+      const videoSender = (pc as unknown as MockRTCPeerConnection).senders.find(
+        (s) => s.kind === "video"
+      )!
+      const callsBefore = videoSender.setParameters.mock.calls.length
+
+      await media.applyScreenSharePreset("text")
+
+      expect(videoSender.setParameters.mock.calls.length).toBe(callsBefore)
+    })
+  })
+
+  describe("camera profile", () => {
+    it("calls getUserMedia with 1080p constraints, not { video: true }", async () => {
+      await media.init()
+      expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledWith({
+        video: {
+          width: { ideal: 1920, min: 1280 },
+          height: { ideal: 1080, min: 720 },
+          frameRate: { ideal: 30, max: 30, min: 15 },
+        },
+        audio: true,
+      })
+    })
+
+    it("falls back to { video: true, audio: true } on OverconstrainedError", async () => {
+      const gum = navigator.mediaDevices.getUserMedia as ReturnType<typeof vi.fn>
+      const overconstrained = new DOMException("constraint", "OverconstrainedError")
+      gum.mockRejectedValueOnce(overconstrained)
+      // second call (the fallback) returns the normal mock stream
+      await media.init()
+      expect(gum).toHaveBeenCalledTimes(2)
+      expect(gum).toHaveBeenLastCalledWith({ video: true, audio: true })
+    })
+
+    it("sets motion contentHint and 4 Mbps balanced on the video sender after attach", async () => {
+      await media.init()
+      const pc = new MockRTCPeerConnection() as unknown as RTCPeerConnection
+      await media.attachPC(pc)
+
+      expect(mockVideoTrack.contentHint).toBe("motion")
+
+      const videoSender = (pc as unknown as MockRTCPeerConnection).senders.find(
+        (s) => s.kind === "video"
+      )
+      expect(videoSender).toBeDefined()
+      expect(videoSender!.setParameters).toHaveBeenCalledTimes(1)
+      const params = videoSender!.setParameters.mock.calls[0][0] as RTCRtpSendParameters
+      expect(params.encodings?.[0].maxBitrate).toBe(4_000_000)
+      expect(params.degradationPreference).toBe("balanced")
     })
   })
 })

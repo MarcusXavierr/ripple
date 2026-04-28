@@ -6,6 +6,7 @@ import type {
 import { useCallback, useEffect, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import { CallSession } from "@/lib/call/CallSession"
+import type { ScreenSharePreset } from "@/lib/call/mediaProfile"
 import { useCallStore } from "@/store/call"
 
 export function useCallSession(roomId: string) {
@@ -63,6 +64,10 @@ export function useCallSession(roomId: string) {
     sessionRef.current?.media.stopScreenShare()
   }, [])
 
+  const applyScreenSharePreset = useCallback((preset: ScreenSharePreset) => {
+    void sessionRef.current?.media.applyScreenSharePreset(preset)
+  }, [])
+
   const sendPeerVideoClick = useCallback((click: PeerVideoClick) => {
     sessionRef.current?.sendPeerVideoClick(click)
   }, [])
@@ -92,6 +97,7 @@ export function useCallSession(roomId: string) {
     toggleCamera,
     startScreenShare,
     stopScreenShare,
+    applyScreenSharePreset,
     sendPeerVideoClick,
     sendPeerVideoScroll,
     sendPeerKeyboardInput,

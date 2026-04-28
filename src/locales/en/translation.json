@@ -55,7 +55,21 @@
       "disableCamera": "Disable camera",
       "stopSharing": "Stop sharing",
       "shareScreen": "Share screen",
-      "hangUp": "Hang up"
+      "hangUp": "Hang up",
+      "settings": "Call settings — screen share quality"
+    },
+    "settings": {
+      "screenShareQuality": {
+        "title": "Screen share quality",
+        "auto": "Auto",
+        "autoDescription": "Detects what you're sharing",
+        "video": "Video",
+        "videoDescription": "Smoother for motion",
+        "text": "Text",
+        "textDescription": "Sharper for code and docs",
+        "helperLive": "Updates live.",
+        "helperPending": "Applies to your next screen share."
+      }
     },
     "error": {
       "title": "Error",

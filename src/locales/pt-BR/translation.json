@@ -55,7 +55,21 @@
       "disableCamera": "Desativar câmera",
       "stopSharing": "Parar compartilhamento",
       "shareScreen": "Compartilhar tela",
-      "hangUp": "Encerrar chamada"
+      "hangUp": "Encerrar chamada",
+      "settings": "Configurações da chamada — qualidade do compartilhamento"
+    },
+    "settings": {
+      "screenShareQuality": {
+        "title": "Qualidade do compartilhamento",
+        "auto": "Automático",
+        "autoDescription": "Detecta o que você está compartilhando",
+        "video": "Vídeo",
+        "videoDescription": "Mais fluido para movimento",
+        "text": "Texto",
+        "textDescription": "Mais nítido para código e documentos",
+        "helperLive": "Aplicado em tempo real.",
+        "helperPending": "Será usado no próximo compartilhamento."
+      }
     },
     "error": {
       "title": "Erro",

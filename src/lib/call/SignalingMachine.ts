@@ -56,7 +56,7 @@ export class SignalingMachine {
         const pc = this.deps.pc.raw
         if (!pc) return
         this.deps.store.setState({ pc, role: effect.role })
-        this.deps.media.attachPC(pc)
+        await this.deps.media.attachPC(pc)
         return
       }
       case "RESET_PC":

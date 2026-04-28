@@ -1,3 +1,9 @@
+import {
+  getCameraProfile,
+  getScreenProfile,
+  type Profile,
+  type ScreenSharePreset,
+} from "@/lib/call/mediaProfile"
 import { type ScreenShareSurface, useCallStore } from "@/store/call"
 
 export class MediaController {
@@ -6,12 +12,26 @@ export class MediaController {
   private screenAudioTransceiver: RTCRtpTransceiver | null = null
 
   async init(): Promise<MediaStream> {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+    const profile = getCameraProfile()
+    let stream: MediaStream
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: profile.captureConstraints,
+        audio: true,
+      })
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "OverconstrainedError") {
+        console.warn("[MediaController] camera constraints rejected, falling back", err)
+        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+      } else {
+        throw err
+      }
+    }
     this.stream = stream
     return stream
   }
 
-  attachPC(pc: RTCPeerConnection) {
+  async attachPC(pc: RTCPeerConnection) {
     this.pc = pc
     const stream = this.stream
     if (stream) stream.getTracks().forEach((t) => pc.addTrack(t, stream))
@@ -23,6 +43,11 @@ export class MediaController {
       // cause PeerConnection.ts:52 to null out remoteStream.
       streams: stream ? [stream] : [],
     })
+    const videoTrack = stream?.getVideoTracks()[0]
+    const videoSender = pc.getSenders().find((s) => s.track?.kind === "video")
+    if (videoTrack && videoSender) {
+      await this.applyProfile(getCameraProfile(), videoTrack, videoSender)
+    }
   }
 
   toggleMic() {
@@ -42,18 +67,33 @@ export class MediaController {
   async startScreenShare() {
     if (!this.pc) return
     try {
+      const preset = useCallStore.getState().screenSharePreset
+      const initialProfile = getScreenProfile({ preset, displaySurface: null })
       const screenStream = await navigator.mediaDevices.getDisplayMedia({
-        video: true,
+        video: initialProfile.captureConstraints,
         audio: true,
       })
       const screenTrack = screenStream.getVideoTracks()[0]
-      const screenShareSurface = toScreenShareSurface(screenTrack.getSettings().displaySurface)
+      const surfaceRaw = screenTrack.getSettings().displaySurface as
+        | "monitor"
+        | "window"
+        | "browser"
+        | "application"
+        | undefined
+      const screenShareSurface = toScreenShareSurface(surfaceRaw)
+      const profile = getScreenProfile({ preset, displaySurface: surfaceRaw ?? null })
+
       const sender = this.pc.getSenders().find((s) => s.track?.kind === "video")
       if (sender) {
         await sender.replaceTrack(screenTrack)
       } else {
         this.pc.addTrack(screenTrack, screenStream)
       }
+      const videoSender = this.pc.getSenders().find((s) => s.track?.kind === "video")
+      if (videoSender) {
+        await this.applyProfile(profile, screenTrack, videoSender)
+      }
+
       const screenAudio = screenStream.getAudioTracks()[0] ?? null
       if (screenAudio && this.screenAudioTransceiver) {
         await this.screenAudioTransceiver.sender.replaceTrack(screenAudio)
@@ -84,6 +124,9 @@ export class MediaController {
       const screenTrack = sender?.track ?? null
       if (sender) await sender.replaceTrack(cameraTrack)
       if (screenTrack && screenTrack !== cameraTrack) screenTrack.stop()
+      if (sender && cameraTrack) {
+        await this.applyProfile(getCameraProfile(), cameraTrack, sender)
+      }
       const audioSender = this.screenAudioTransceiver?.sender
       const screenAudioTrack = audioSender?.track ?? null
       if (audioSender) await audioSender.replaceTrack(null)
@@ -93,6 +136,23 @@ export class MediaController {
     } finally {
       useCallStore.setState({ isScreenSharing: false, screenShareSurface: null })
     }
+  }
+
+  async applyScreenSharePreset(preset: ScreenSharePreset): Promise<void> {
+    if (!this.pc) return
+    if (!useCallStore.getState().isScreenSharing) return
+    const sender = this.pc.getSenders().find((s) => s.track?.kind === "video")
+    const track = sender?.track
+    if (!sender || !track) return
+    const surface =
+      (track.getSettings().displaySurface as
+        | "monitor"
+        | "window"
+        | "browser"
+        | "application"
+        | undefined) ?? null
+    const profile = getScreenProfile({ preset, displaySurface: surface })
+    await this.applyProfile(profile, track, sender)
   }
 
   teardown() {
@@ -112,6 +172,25 @@ export class MediaController {
     this.pc = null
     this.screenAudioTransceiver = null
     useCallStore.setState({ screenShareSurface: null, isScreenSharing: false })
+  }
+
+  private async applyProfile(
+    profile: Profile,
+    track: MediaStreamTrack,
+    sender: RTCRtpSender
+  ): Promise<void> {
+    try {
+      track.contentHint = profile.contentHint
+      const params = sender.getParameters()
+      if (!params.encodings || params.encodings.length === 0) {
+        params.encodings = [{}]
+      }
+      params.encodings[0].maxBitrate = profile.maxBitrateBps
+      params.degradationPreference = profile.degradationPreference
+      await sender.setParameters(params)
+    } catch (err) {
+      console.warn("[MediaController] applyProfile failed", profile.name, err)
+    }
   }
 }
 
