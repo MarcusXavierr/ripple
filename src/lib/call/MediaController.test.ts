@@ -445,8 +445,8 @@ describe("MediaController", () => {
       vi.mocked(navigator.mediaDevices.getUserMedia).mockResolvedValueOnce(
         createSingleTrackStream(newTrack)
       )
-      const sender = {
-        track: mockScreenTrack,
+      const sender: { track: MediaStreamTrack | null; replaceTrack: ReturnType<typeof vi.fn> } = {
+        track: mockScreenTrack as unknown as MediaStreamTrack,
         replaceTrack: vi.fn().mockImplementation(async (track: MediaStreamTrack | null) => {
           sender.track = track
         }),

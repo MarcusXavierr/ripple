@@ -340,7 +340,7 @@ describe("useDevices", () => {
   })
 
   it("in-flight switch debounces additional selectDevice calls", async () => {
-    let resolveSwitch: (() => void) | null = null
+    let resolveSwitch!: () => void
     replaceTrack.mockImplementationOnce(
       () =>
         new Promise<void>((resolve) => {
@@ -359,7 +359,7 @@ describe("useDevices", () => {
     })
 
     expect(first).toBe(second)
-    resolveSwitch?.()
+    resolveSwitch()
     await act(async () => {
       await first
     })
