@@ -81,8 +81,10 @@ export function DeviceSplitButton({
         aria-label={label}
         onClick={onToggle}
         className={cn(
-          "flex h-11 w-11 items-center justify-center rounded-l-full border border-white/15 text-white transition hover:bg-white/45",
-          active ? "bg-white/30" : "bg-rose-500 hover:bg-rose-600"
+          "flex h-11 w-11 items-center justify-center rounded-l-2xl border border-white/50 text-ripple-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] transition",
+          active
+            ? "bg-white/40 hover:bg-white/65"
+            : "border-transparent bg-rose-500 text-white hover:bg-rose-600"
         )}
       >
         <CurrentIcon className="h-4 w-4" />
@@ -95,8 +97,10 @@ export function DeviceSplitButton({
               kind === "mic" ? t("room.devices.openMicMenu") : t("room.devices.openCameraMenu")
             }
             className={cn(
-              "flex h-11 w-7 items-center justify-center rounded-r-full border border-l-0 border-white/15 text-white transition hover:bg-white/45",
-              active ? "bg-white/30" : "bg-rose-500 hover:bg-rose-600"
+              "flex h-11 w-7 items-center justify-center rounded-r-2xl border border-l-0 border-white/50 text-ripple-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] transition",
+              active
+                ? "bg-white/40 hover:bg-white/65"
+                : "border-transparent bg-rose-500 text-white hover:bg-rose-600"
             )}
           >
             <ChevronUp className="h-4 w-4" />

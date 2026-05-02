@@ -81,7 +81,7 @@ function getVariantMeta(variant: ToastVariant) {
     case "success":
       return {
         label: "Success",
-        stripeClassName: "bg-emerald-500",
+        accent: "oklch(72% 0.15 150)",
         live: "polite" as const,
         role: "status" as const,
         Icon: CheckCircle2,
@@ -90,7 +90,7 @@ function getVariantMeta(variant: ToastVariant) {
     case "warning":
       return {
         label: "Warning",
-        stripeClassName: "bg-amber-500",
+        accent: "oklch(78% 0.14 75)",
         live: "assertive" as const,
         role: "alert" as const,
         Icon: AlertTriangle,
@@ -99,7 +99,7 @@ function getVariantMeta(variant: ToastVariant) {
     case "error":
       return {
         label: "Error",
-        stripeClassName: "bg-rose-500",
+        accent: "oklch(68% 0.18 15)",
         live: "assertive" as const,
         role: "alert" as const,
         Icon: XCircle,
@@ -109,7 +109,7 @@ function getVariantMeta(variant: ToastVariant) {
     default:
       return {
         label: "Info",
-        stripeClassName: "bg-blue-500",
+        accent: "oklch(72% 0.14 230)",
         live: "polite" as const,
         role: "status" as const,
         Icon: Info,
@@ -145,33 +145,63 @@ export function Toast({ record, onDismiss }: { record: ToastRecord; onDismiss: (
       onClick={handleDismiss}
       role={meta.role}
       aria-live={meta.live}
+      data-testid={`toast-${record.variant}`}
       className={[
-        "glass-strong relative w-full overflow-hidden rounded-2xl pl-0 text-left shadow-xl",
-        "animate-[toast-in_280ms_ease-out] text-slate-950",
+        "relative w-full overflow-hidden rounded-2xl text-left",
+        "animate-[toast-in_280ms_ease-out]",
         isLeaving ? "animate-[toast-out_280ms_ease-in_forwards]" : "",
       ].join(" ")}
+      style={{
+        background: "rgba(8, 18, 40, 0.72)",
+        backdropFilter: "blur(24px) saturate(200%)",
+        WebkitBackdropFilter: "blur(24px) saturate(200%)",
+        border: "1px solid rgba(255, 255, 255, 0.10)",
+        boxShadow: [
+          `inset 3px 0 0 ${meta.accent}`,
+          "0 12px 40px rgba(8, 18, 40, 0.22)",
+          "0 2px 10px rgba(8, 18, 40, 0.15)",
+          "inset 0 1px 0 rgba(255, 255, 255, 0.08)",
+        ].join(", "),
+      }}
     >
-      <span
-        aria-hidden="true"
-        data-testid={`toast-stripe-${record.variant}`}
-        className={`absolute inset-y-0 left-0 w-1 ${meta.stripeClassName}`}
-      />
-      <div className="flex items-start gap-3 px-4 py-3">
-        <meta.Icon
-          data-testid={meta.iconTestId}
-          className="mt-0.5 h-5 w-5 shrink-0 text-slate-700"
-        />
+      <div className="flex items-start gap-3 py-3.5 pr-4 pl-3.5">
+        <div
+          data-testid={`toast-badge-${record.variant}`}
+          className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-lg"
+          style={{
+            background: `color-mix(in oklab, ${meta.accent} 25%, transparent)`,
+            border: `1px solid color-mix(in oklab, ${meta.accent} 40%, transparent)`,
+            color: meta.accent,
+          }}
+        >
+          <meta.Icon data-testid={meta.iconTestId} className="h-4 w-4" />
+        </div>
         <div className="min-w-0 flex-1">
-          <div className="text-sm font-semibold">{meta.label}</div>
-          <div className="text-sm text-slate-700">{record.message}</div>
+          <div
+            className="text-[11.5px] font-semibold tracking-wide uppercase"
+            style={{ color: meta.accent }}
+          >
+            {meta.label}
+          </div>
+          <div
+            className="text-sm font-medium text-white"
+            style={{ textShadow: "0 1px 3px rgba(0, 0, 0, 0.3)" }}
+          >
+            {record.message}
+          </div>
         </div>
       </div>
-      <span
+      <div
         aria-hidden="true"
-        data-testid={`toast-progress-${record.id}`}
-        className="absolute inset-x-0 bottom-0 h-0.5 origin-left bg-black/12 animate-[toast-progress_linear_forwards]"
-        style={{ animationDuration: `${record.duration}ms` }}
-      />
+        className="absolute inset-x-0 bottom-0 h-0.5 overflow-hidden"
+        style={{ background: "rgba(255, 255, 255, 0.08)" }}
+      >
+        <span
+          data-testid={`toast-progress-${record.id}`}
+          className="block h-full origin-left animate-[toast-progress_linear_forwards]"
+          style={{ background: meta.accent, animationDuration: `${record.duration}ms` }}
+        />
+      </div>
     </button>
   )
 }
