@@ -106,20 +106,7 @@ export function DeviceSplitButton({
             <ChevronUp className="h-4 w-4" />
           </button>
         }
-        sections={sections.map((section) => ({
-          ...section,
-          items: section.items.map((item) =>
-            item.id === "__request__"
-              ? item
-              : {
-                  ...item,
-                  label:
-                    kind === "mic" && section.label === t("room.devices.speakerSection")
-                      ? item.label
-                      : item.label,
-                }
-          ),
-        }))}
+        sections={sections}
       />
     </div>
   )

@@ -59,6 +59,7 @@ export function useDevices(deps: {
   const [selected, setSelected] = useState<SelectedDevices>(EMPTY_SELECTED)
   const [permissionGranted, setPermissionGranted] = useState(false)
   const inFlightRef = useRef<Promise<void> | null>(null)
+  const publicInFlightRef = useRef<Promise<void> | null>(null)
   const selectedRef = useRef<SelectedDevices>(EMPTY_SELECTED)
 
   const speakerSupported = useMemo(() => "setSinkId" in HTMLMediaElement.prototype, [])
@@ -89,32 +90,32 @@ export function useDevices(deps: {
     return nextDevices
   }, [localStream])
 
-  const selectDevice = useCallback(
-    (kind: DeviceKind, id: string) => {
+  const setSelectedKind = useCallback((kind: DeviceKind, id: string) => {
+    setSelected((current) => {
+      const next = { ...current, [kind]: id }
+      selectedRef.current = next
+      return next
+    })
+  }, [])
+
+  const performDeviceSelection = useCallback(
+    (kind: DeviceKind, id: string, options?: { emitSuccessNotice?: boolean }) => {
       if (inFlightRef.current) {
         return inFlightRef.current
       }
 
       if (kind === "speaker") {
         writeDevicePref("speaker", id)
-        setSelected((current) => {
-          const next = { ...current, speaker: id }
-          selectedRef.current = next
-          return next
-        })
+        setSelectedKind("speaker", id)
         return Promise.resolve()
       }
 
       const run = (async () => {
-        try {
-          await mediaController?.replaceTrack(kind, id)
-          writeDevicePref(kind, id)
-          setSelected((current) => {
-            const next = { ...current, [kind]: id }
-            selectedRef.current = next
-            return next
-          })
+        await mediaController?.replaceTrack(kind, id)
+        writeDevicePref(kind, id)
+        setSelectedKind(kind, id)
 
+        if (options?.emitSuccessNotice !== false) {
           const isSharing = useCallStore.getState().isScreenSharing
           useCallStore.setState({
             notice: {
@@ -127,19 +128,47 @@ export function useDevices(deps: {
                     : "room.toast.cameraChanged",
             },
           })
-        } catch {
-          useCallStore.setState({
-            notice: { kind: "warning", messageKey: "room.toast.deviceUnpluggedFatal" },
-          })
-        } finally {
-          inFlightRef.current = null
         }
       })()
 
-      inFlightRef.current = run
-      return run
+      let trackedRun: Promise<void>
+      trackedRun = run.finally(() => {
+        if (inFlightRef.current === trackedRun) {
+          inFlightRef.current = null
+        }
+        if (publicInFlightRef.current === trackedRun) {
+          publicInFlightRef.current = null
+        }
+      })
+
+      inFlightRef.current = trackedRun
+      return trackedRun
     },
-    [mediaController]
+    [mediaController, setSelectedKind]
+  )
+
+  const selectDevice = useCallback(
+    (kind: DeviceKind, id: string) => {
+      if (publicInFlightRef.current) {
+        return publicInFlightRef.current
+      }
+
+      const publicRun = performDeviceSelection(kind, id).catch(() => {
+        useCallStore.setState({
+          notice: { kind: "warning", messageKey: "room.toast.deviceUnpluggedFatal" },
+        })
+      })
+
+      publicInFlightRef.current = publicRun
+      void publicRun.finally(() => {
+        if (publicInFlightRef.current === publicRun) {
+          publicInFlightRef.current = null
+        }
+      })
+
+      return publicRun
+    },
+    [performDeviceSelection]
   )
 
   const requestPermission = useCallback(async () => {
@@ -170,11 +199,7 @@ export function useDevices(deps: {
 
         const fallbackId = kindDevices[0]?.id ?? ""
         if (!fallbackId) {
-          setSelected((current) => {
-            const next = { ...current, [kind]: "" }
-            selectedRef.current = next
-            return next
-          })
+          setSelectedKind(kind, "")
           useCallStore.setState({
             notice: { kind: "warning", messageKey: "room.toast.deviceUnpluggedFatal" },
           })
@@ -182,16 +207,12 @@ export function useDevices(deps: {
         }
 
         try {
-          await selectDevice(kind, fallbackId)
+          await performDeviceSelection(kind, fallbackId, { emitSuccessNotice: false })
           useCallStore.setState({
             notice: { kind: "warning", messageKey: "room.toast.deviceUnplugged" },
           })
         } catch {
-          setSelected((current) => {
-            const next = { ...current, [kind]: "" }
-            selectedRef.current = next
-            return next
-          })
+          setSelectedKind(kind, "")
           useCallStore.setState({
             notice: { kind: "warning", messageKey: "room.toast.deviceUnpluggedFatal" },
           })
@@ -203,7 +224,7 @@ export function useDevices(deps: {
     return () => {
       navigator.mediaDevices.removeEventListener("devicechange", handleDeviceChange)
     }
-  }, [refreshDevices, selectDevice])
+  }, [performDeviceSelection, refreshDevices, setSelectedKind])
 
   return {
     devices,

@@ -1,5 +1,5 @@
 // src/pages/Room.test.tsx
-import { fireEvent, render, screen } from "@testing-library/react"
+import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { MemoryRouter, Route, Routes } from "react-router-dom"
 import { toast } from "@/components/ui/toast"
@@ -229,6 +229,29 @@ it("speaker selection effect calls setSinkId on the remote video element", () =>
   renderRoom()
 
   expect(setSinkId).toHaveBeenCalledWith("speaker-2")
+})
+
+it("speaker selection effect catches setSinkId rejection", async () => {
+  const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+  const setSinkId = vi.fn().mockRejectedValue(new Error("blocked"))
+  Object.defineProperty(HTMLMediaElement.prototype, "setSinkId", {
+    value: setSinkId,
+    configurable: true,
+  })
+  useDevicesMock.mockReturnValue({
+    devices: { mic: [], cam: [], speaker: [{ id: "speaker-2", label: "Speaker 2" }] },
+    selected: { mic: "", cam: "", speaker: "speaker-2" },
+    selectDevice: vi.fn(),
+    requestPermission: vi.fn(),
+    permissionGranted: true,
+    speakerSupported: true,
+  })
+
+  renderRoom()
+
+  await waitFor(() => {
+    expect(warnSpy).toHaveBeenCalledWith("[Room] failed to set speaker output", expect.any(Error))
+  })
 })
 
 describe("error modal", () => {

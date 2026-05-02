@@ -162,4 +162,31 @@ describe("toast", () => {
 
     expect(screen.queryByText("Persistent")).not.toBeInTheDocument()
   })
+
+  it("re-warns on a new multiple-container cycle after all containers unmount", () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+
+    const first = render(
+      <div>
+        <ToastContainer />
+        <ToastContainer />
+      </div>,
+    )
+    first.unmount()
+
+    render(
+      <div>
+        <ToastContainer />
+        <ToastContainer />
+      </div>,
+    )
+
+    const messages = warnSpy.mock.calls.map(([message]) => message)
+    expect(
+      messages.filter((message) => message === "[toast] multiple subscribers mounted")
+    ).toHaveLength(2)
+    expect(
+      messages.filter((message) => message === "[toast] multiple ToastContainer instances mounted")
+    ).toHaveLength(2)
+  })
 })

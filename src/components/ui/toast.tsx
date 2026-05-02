@@ -73,6 +73,9 @@ export function subscribeToasts(listener: (event: ToastEvent) => void): () => vo
   listeners.add(listener)
   return () => {
     listeners.delete(listener)
+    if (listeners.size === 0) {
+      warnedAboutMultipleSubscribers = false
+    }
   }
 }
 
@@ -269,6 +272,9 @@ export function ToastContainer(): JSX.Element {
     }
     return () => {
       toastContainerCount -= 1
+      if (toastContainerCount === 0) {
+        warnedAboutMultipleContainers = false
+      }
     }
   }, [])
 

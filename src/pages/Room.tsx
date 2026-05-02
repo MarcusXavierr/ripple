@@ -73,9 +73,11 @@ export default function Room() {
     const video = remoteVideoRef.current
     if (!speakerSupported || !selected.speaker || !video || !("setSinkId" in video)) return
 
-    void (video as HTMLVideoElement & { setSinkId: (id: string) => Promise<void> }).setSinkId(
-      selected.speaker
-    )
+    void (video as HTMLVideoElement & { setSinkId: (id: string) => Promise<void> })
+      .setSinkId(selected.speaker)
+      .catch((error) => {
+        console.warn("[Room] failed to set speaker output", error)
+      })
   }, [selected.speaker, speakerSupported])
 
   function handleCopyLink() {

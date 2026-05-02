@@ -339,6 +339,76 @@ describe("useDevices", () => {
     })
   })
 
+  it("devicechange fallback does not dispatch the normal mic-changed success notice", async () => {
+    enumerateDevices.mockResolvedValue([
+      createDevice("audioinput", "mic-1", "Mic 1"),
+      createDevice("audioinput", "mic-2", "Mic 2"),
+      createDevice("videoinput", "cam-1", "Cam 1"),
+      createDevice("audiooutput", "speaker-1", "Speaker 1"),
+    ])
+    const { result } = renderUseDevices({
+      mediaController: { replaceTrack },
+    })
+
+    await act(async () => {
+      await result.current.selectDevice("mic", "mic-2")
+    })
+
+    const setStateSpy = vi.spyOn(useCallStore, "setState")
+    enumerateDevices.mockResolvedValue([
+      createDevice("audioinput", "mic-1", "Mic 1"),
+      createDevice("videoinput", "cam-1", "Cam 1"),
+      createDevice("audiooutput", "speaker-1", "Speaker 1"),
+    ])
+
+    await act(async () => {
+      await deviceChangeListener?.()
+    })
+
+    expect(
+      setStateSpy.mock.calls.some(
+        ([arg]) =>
+          typeof arg === "object" &&
+          arg !== null &&
+          "notice" in arg &&
+          arg.notice?.messageKey === "room.toast.micChanged"
+      )
+    ).toBe(false)
+  })
+
+  it("devicechange fallback clears selection and dispatches fatal notice when fallback replacement fails", async () => {
+    enumerateDevices.mockResolvedValue([
+      createDevice("audioinput", "mic-1", "Mic 1"),
+      createDevice("audioinput", "mic-2", "Mic 2"),
+      createDevice("videoinput", "cam-1", "Cam 1"),
+      createDevice("audiooutput", "speaker-1", "Speaker 1"),
+    ])
+    const { result } = renderUseDevices({
+      mediaController: { replaceTrack },
+    })
+
+    await act(async () => {
+      await result.current.selectDevice("mic", "mic-2")
+    })
+
+    replaceTrack.mockRejectedValueOnce(new Error("fallback failed"))
+    enumerateDevices.mockResolvedValue([
+      createDevice("audioinput", "mic-1", "Mic 1"),
+      createDevice("videoinput", "cam-1", "Cam 1"),
+      createDevice("audiooutput", "speaker-1", "Speaker 1"),
+    ])
+
+    await act(async () => {
+      await deviceChangeListener?.()
+    })
+
+    expect(result.current.selected.mic).toBe("")
+    expect(useCallStore.getState().notice).toEqual({
+      kind: "warning",
+      messageKey: "room.toast.deviceUnpluggedFatal",
+    })
+  })
+
   it("in-flight switch debounces additional selectDevice calls", async () => {
     let resolveSwitch!: () => void
     replaceTrack.mockImplementationOnce(
