@@ -20,6 +20,15 @@ import { useCallSession } from "@/hooks/useCallSession"
 import { useDevices } from "@/hooks/useDevices"
 import { usePeerVideoRemoteInput } from "@/hooks/usePeerVideoRemoteInput"
 
+function hasHorizontalGutters(video: HTMLVideoElement | null): boolean {
+  if (!video || video.videoWidth <= 0 || video.videoHeight <= 0) return false
+  const rect = video.getBoundingClientRect()
+  if (rect.width <= 0 || rect.height <= 0) return false
+  const containScale = Math.min(rect.width / video.videoWidth, rect.height / video.videoHeight)
+  const visibleWidth = video.videoWidth * containScale
+  return rect.width - visibleWidth > 1
+}
+
 export default function Room() {
   const { id: roomId } = useParams<{ id: string }>()
   const navigate = useNavigate()
@@ -27,6 +36,7 @@ export default function Room() {
   const {
     localStream,
     remoteStream,
+    remoteMediaMode,
     status,
     error,
     showReconnectModal,
@@ -49,7 +59,10 @@ export default function Room() {
   useCallNotices()
 
   const remoteVideoRef = useRef<HTMLVideoElement>(null)
+  const backdropVideoRef = useRef<HTMLVideoElement>(null)
   const [collapsed, setCollapsed] = useState(false)
+  const [showBackdrop, setShowBackdrop] = useState(false)
+
   const {
     devices,
     selected,
@@ -67,7 +80,29 @@ export default function Room() {
 
   useEffect(() => {
     if (remoteVideoRef.current) remoteVideoRef.current.srcObject = remoteStream
+    if (backdropVideoRef.current) backdropVideoRef.current.srcObject = remoteStream
   }, [remoteStream])
+
+  useEffect(() => {
+    const updateBackdropVisibility = () => {
+      const allowed =
+        remoteStream !== null &&
+        status !== "waiting" &&
+        remoteMediaMode === "camera" &&
+        hasHorizontalGutters(remoteVideoRef.current)
+      setShowBackdrop(allowed)
+    }
+
+    updateBackdropVisibility()
+    window.addEventListener("resize", updateBackdropVisibility)
+    const video = remoteVideoRef.current
+    video?.addEventListener("loadedmetadata", updateBackdropVisibility)
+
+    return () => {
+      window.removeEventListener("resize", updateBackdropVisibility)
+      video?.removeEventListener("loadedmetadata", updateBackdropVisibility)
+    }
+  }, [remoteStream, remoteMediaMode, status])
 
   useEffect(() => {
     const video = remoteVideoRef.current
@@ -86,6 +121,18 @@ export default function Room() {
 
   return (
     <div data-testid="room-page" className="relative h-screen w-screen overflow-hidden bg-black">
+      {showBackdrop ? (
+        <video
+          ref={backdropVideoRef}
+          autoPlay
+          playsInline
+          muted
+          tabIndex={-1}
+          data-testid="remote-video-backdrop"
+          className="pointer-events-none absolute inset-0 h-full w-full scale-110 object-cover opacity-70 blur-3xl"
+        />
+      ) : null}
+
       {/* Remote video — full viewport */}
       <video
         ref={remoteVideoRef}
