@@ -1,15 +1,20 @@
 // src/pages/Room.test.tsx
-import { fireEvent, render, screen } from "@testing-library/react"
+import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { MemoryRouter, Route, Routes } from "react-router-dom"
+import { toast } from "@/components/ui/toast"
 import { useCallSession } from "@/hooks/useCallSession"
+import { useDevices } from "@/hooks/useDevices"
 import { usePeerVideoRemoteInput } from "@/hooks/usePeerVideoRemoteInput"
 import Room from "./Room"
 
 vi.mock("@/hooks/useCallSession", () => ({ useCallSession: vi.fn() }))
 vi.mock("@/hooks/usePeerVideoRemoteInput", () => ({ usePeerVideoRemoteInput: vi.fn() }))
+vi.mock("@/hooks/useDevices", () => ({ useDevices: vi.fn() }))
+vi.mock("@/components/ui/toast", () => ({ toast: vi.fn() }))
 
 const handleRemoteVideoClickMock = vi.fn()
+const writeText = vi.fn()
 
 const baseMock = {
   localStream: null as MediaStream | null,
@@ -17,6 +22,7 @@ const baseMock = {
   status: "waiting" as const,
   error: null as string | null,
   showReconnectModal: false,
+  mediaController: null,
   isScreenSharing: false,
   isMicMuted: false,
   isCameraOff: false,
@@ -44,12 +50,38 @@ function renderRoom(roomId = "coral-tiger-42") {
 
 const useCallSessionMock = useCallSession as ReturnType<typeof vi.fn>
 const usePeerVideoRemoteInputMock = usePeerVideoRemoteInput as ReturnType<typeof vi.fn>
+const useDevicesMock = useDevices as ReturnType<typeof vi.fn>
 
 beforeEach(() => {
   vi.clearAllMocks()
   useCallSessionMock.mockReturnValue({ ...baseMock })
   usePeerVideoRemoteInputMock.mockReturnValue({
     handleRemoteVideoClick: handleRemoteVideoClickMock,
+  })
+  useDevicesMock.mockReturnValue({
+    devices: { mic: [], cam: [], speaker: [] },
+    selected: { mic: "", cam: "", speaker: "" },
+    selectDevice: vi.fn(),
+    requestPermission: vi.fn(),
+    permissionGranted: true,
+    speakerSupported: false,
+  })
+  Object.defineProperty(navigator, "clipboard", {
+    value: { writeText },
+    configurable: true,
+  })
+  writeText.mockResolvedValue(undefined)
+  Object.defineProperty(HTMLMediaElement.prototype, "setSinkId", {
+    value: vi.fn().mockResolvedValue(undefined),
+    configurable: true,
+  })
+  Object.defineProperty(HTMLDivElement.prototype, "setPointerCapture", {
+    value: vi.fn(),
+    configurable: true,
+  })
+  Object.defineProperty(HTMLDivElement.prototype, "releasePointerCapture", {
+    value: vi.fn(),
+    configurable: true,
   })
 })
 
@@ -112,17 +144,17 @@ describe("control bar", () => {
   it("ignores clicks on the local self-view video", async () => {
     renderRoom()
 
-    await userEvent.click(screen.getByTestId("local-video"))
+    await userEvent.click(screen.getByTestId("self-tile-video"))
 
     expect(handleRemoteVideoClickMock).not.toHaveBeenCalled()
   })
 
-  it("renders all four control buttons", () => {
+  it("renders redesigned controls", () => {
     renderRoom()
     expect(screen.getByRole("button", { name: /mute/i })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: /disable camera/i })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /turn off camera/i })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: /share screen/i })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: /hang up/i })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /leave call/i })).toBeInTheDocument()
   })
 
   it("calls toggleMic on mic button click", async () => {
@@ -133,13 +165,13 @@ describe("control bar", () => {
 
   it("calls toggleCamera on camera button click", async () => {
     renderRoom()
-    await userEvent.click(screen.getByRole("button", { name: /disable camera/i }))
+    await userEvent.click(screen.getByRole("button", { name: /turn off camera/i }))
     expect(baseMock.toggleCamera).toHaveBeenCalled()
   })
 
   it("calls hangup on hang up button click", async () => {
     renderRoom()
-    await userEvent.click(screen.getByRole("button", { name: /hang up/i }))
+    await userEvent.click(screen.getByRole("button", { name: /leave call/i }))
     expect(baseMock.hangup).toHaveBeenCalled()
   })
 
@@ -166,7 +198,59 @@ describe("control bar", () => {
   it("shows Enable camera label when camera is off", () => {
     useCallSessionMock.mockReturnValue({ ...baseMock, isCameraOff: true })
     renderRoom()
-    expect(screen.getByRole("button", { name: /enable camera/i })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /turn on camera/i })).toBeInTheDocument()
+  })
+})
+
+it("clicking the StatusPill copies the room URL and dispatches a success toast", async () => {
+  renderRoom()
+
+  await userEvent.click(screen.getByRole("button", { name: /status:/i }))
+
+  expect(writeText).toHaveBeenCalledWith("http://localhost:3000/room/coral-tiger-42")
+  expect(toast).toHaveBeenCalledWith("Link copied", "success")
+})
+
+it("speaker selection effect calls setSinkId on the remote video element", () => {
+  const setSinkId = vi.fn().mockResolvedValue(undefined)
+  Object.defineProperty(HTMLMediaElement.prototype, "setSinkId", {
+    value: setSinkId,
+    configurable: true,
+  })
+  useDevicesMock.mockReturnValue({
+    devices: { mic: [], cam: [], speaker: [{ id: "speaker-2", label: "Speaker 2" }] },
+    selected: { mic: "", cam: "", speaker: "speaker-2" },
+    selectDevice: vi.fn(),
+    requestPermission: vi.fn(),
+    permissionGranted: true,
+    speakerSupported: true,
+  })
+
+  renderRoom()
+
+  expect(setSinkId).toHaveBeenCalledWith("speaker-2")
+})
+
+it("speaker selection effect catches setSinkId rejection", async () => {
+  const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+  const setSinkId = vi.fn().mockRejectedValue(new Error("blocked"))
+  Object.defineProperty(HTMLMediaElement.prototype, "setSinkId", {
+    value: setSinkId,
+    configurable: true,
+  })
+  useDevicesMock.mockReturnValue({
+    devices: { mic: [], cam: [], speaker: [{ id: "speaker-2", label: "Speaker 2" }] },
+    selected: { mic: "", cam: "", speaker: "speaker-2" },
+    selectDevice: vi.fn(),
+    requestPermission: vi.fn(),
+    permissionGranted: true,
+    speakerSupported: true,
+  })
+
+  renderRoom()
+
+  await waitFor(() => {
+    expect(warnSpy).toHaveBeenCalledWith("[Room] failed to set speaker output", expect.any(Error))
   })
 })
 

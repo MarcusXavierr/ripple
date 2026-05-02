@@ -1,3 +1,4 @@
+import { readDevicePref } from "@/lib/call/devicePreferences"
 import { type ScreenShareSurface, useCallStore } from "@/store/call"
 
 export class MediaController {
@@ -6,7 +7,12 @@ export class MediaController {
   private screenAudioTransceiver: RTCRtpTransceiver | null = null
 
   async init(): Promise<MediaStream> {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+    const micPref = readDevicePref("mic")
+    const camPref = readDevicePref("cam")
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: micPref ? { deviceId: { ideal: micPref } } : true,
+      video: camPref ? { deviceId: { ideal: camPref } } : true,
+    })
     this.stream = stream
     return stream
   }
@@ -37,6 +43,55 @@ export class MediaController {
     if (!track) return
     track.enabled = !track.enabled
     useCallStore.setState({ isCameraOff: !track.enabled })
+  }
+
+  async replaceTrack(kind: "mic" | "cam", deviceId: string): Promise<void> {
+    if (!this.pc || !this.stream) return
+
+    const freshStream = await navigator.mediaDevices.getUserMedia(
+      kind === "mic"
+        ? {
+            audio: { deviceId: { exact: deviceId } },
+            video: false,
+          }
+        : {
+            audio: false,
+            video: { deviceId: { exact: deviceId } },
+          }
+    )
+    const newTrack =
+      kind === "mic"
+        ? (freshStream.getAudioTracks()[0] ?? null)
+        : (freshStream.getVideoTracks()[0] ?? null)
+
+    if (!newTrack) {
+      freshStream.getTracks().forEach((track) => track.stop())
+      return
+    }
+
+    const trackKind = kind === "mic" ? "audio" : "video"
+    const oldTrack =
+      kind === "mic"
+        ? (this.stream.getAudioTracks()[0] ?? null)
+        : (this.stream.getVideoTracks()[0] ?? null)
+
+    if (oldTrack) {
+      newTrack.enabled = oldTrack.enabled
+    }
+
+    const isSharing = useCallStore.getState().isScreenSharing
+    const skipSenderSwap = kind === "cam" && isSharing
+    const sender = this.pc.getSenders().find((candidate) => candidate.track?.kind === trackKind)
+
+    if (!skipSenderSwap && sender) {
+      await sender.replaceTrack(newTrack)
+    }
+
+    if (oldTrack) {
+      this.stream.removeTrack(oldTrack)
+      oldTrack.stop()
+    }
+    this.stream.addTrack(newTrack)
   }
 
   async startScreenShare() {

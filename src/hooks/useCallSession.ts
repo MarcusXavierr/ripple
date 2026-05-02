@@ -3,21 +3,25 @@ import type {
   PeerVideoClick,
   PeerVideoScroll,
 } from "@shared/remoteInputProtocol"
-import { useCallback, useEffect, useRef } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { CallSession } from "@/lib/call/CallSession"
+import type { MediaController } from "@/lib/call/MediaController"
 import { useCallStore } from "@/store/call"
 
 export function useCallSession(roomId: string) {
   const navigate = useNavigate()
   const sessionRef = useRef<CallSession | null>(null)
+  const [mediaController, setMediaController] = useState<MediaController | null>(null)
 
   useEffect(() => {
     const session = new CallSession(roomId, navigate)
     sessionRef.current = session
+    setMediaController(session.media)
     session.start()
     return () => {
       session.teardown()
+      setMediaController(null)
     }
   }, [roomId, navigate])
 
@@ -85,6 +89,7 @@ export function useCallSession(roomId: string) {
     status,
     error,
     showReconnectModal,
+    mediaController,
     isMicMuted,
     isCameraOff,
     isScreenSharing,

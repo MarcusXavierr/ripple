@@ -13,7 +13,7 @@ export type CallStatus =
 export type ScreenShareSurface = "browser" | "window" | "monitor" | null
 
 export type CallNotice = {
-  kind: "info" | "warning"
+  kind: "info" | "success" | "warning" | "error"
   messageKey: string
 }
 
