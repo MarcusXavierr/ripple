@@ -43,6 +43,7 @@ export type MachineEvent =
 
 export type Effect =
   | { type: "SETUP_PC"; role: "caller" | "callee" }
+  | { type: "STOP_SCREEN_SHARE" }
   | { type: "RESET_PC" }
   | { type: "ROLLBACK_AND_RESTART_ICE" }
   | { type: "HANDLE_OFFER"; offer: RTCSessionDescriptionInit }
@@ -120,20 +121,34 @@ function handleOnclose(full: FullMachineState): { next: FullMachineState; effect
     if (full.role === "caller") {
       return {
         next: { ...full, state: "CALLER_ORPHANED" },
-        effects: [{ type: "RESET_PC" }, { type: "SHOW_RECONNECT_MODAL" }],
+        effects: [
+          { type: "STOP_SCREEN_SHARE" },
+          { type: "RESET_PC" },
+          { type: "SHOW_RECONNECT_MODAL" },
+        ],
       }
     } else if (full.role === "callee") {
       return {
         next: { ...full, state: "CALLEE_ORPHANED" },
-        effects: [{ type: "RESET_PC" }, { type: "SHOW_RECONNECT_MODAL" }],
+        effects: [
+          { type: "STOP_SCREEN_SHARE" },
+          { type: "RESET_PC" },
+          { type: "SHOW_RECONNECT_MODAL" },
+        ],
       }
     }
   }
   if (full.state === "NEGOTIATING") {
     if (full.role === "caller") {
-      return { next: { ...full, state: "CALLER_ORPHANED" }, effects: [{ type: "RESET_PC" }] }
+      return {
+        next: { ...full, state: "CALLER_ORPHANED" },
+        effects: [{ type: "STOP_SCREEN_SHARE" }, { type: "RESET_PC" }],
+      }
     } else if (full.role === "callee") {
-      return { next: { ...full, state: "CALLEE_ORPHANED" }, effects: [{ type: "RESET_PC" }] }
+      return {
+        next: { ...full, state: "CALLEE_ORPHANED" },
+        effects: [{ type: "STOP_SCREEN_SHARE" }, { type: "RESET_PC" }],
+      }
     }
   }
   return {

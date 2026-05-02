@@ -59,6 +59,11 @@ export class SignalingMachine {
         this.deps.media.attachPC(pc)
         return
       }
+      case "STOP_SCREEN_SHARE":
+        if (this.deps.store.getState().isScreenSharing) {
+          await this.deps.media.stopScreenShare()
+        }
+        return
       case "RESET_PC":
         this.deps.pc.close()
         this.deps.store.setState({ remoteStream: null, pc: null })
