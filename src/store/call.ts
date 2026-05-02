@@ -11,6 +11,7 @@ export type CallStatus =
   | "ended"
 
 export type ScreenShareSurface = "browser" | "window" | "monitor" | null
+export type RemoteMediaMode = "unknown" | "camera" | "screen"
 
 export type CallNotice = {
   kind: "info" | "success" | "warning" | "error"
@@ -25,6 +26,7 @@ type CallStore = {
   remoteStream: MediaStream | null
   isScreenSharing: boolean
   screenShareSurface: ScreenShareSurface
+  remoteMediaMode: RemoteMediaMode
   isMicMuted: boolean
   isCameraOff: boolean
   status: CallStatus
@@ -42,6 +44,7 @@ const INITIAL_STATE = {
   remoteStream: null,
   isScreenSharing: false,
   screenShareSurface: null,
+  remoteMediaMode: "unknown" as RemoteMediaMode,
   isMicMuted: false,
   isCameraOff: false,
   status: "idle" as CallStatus,

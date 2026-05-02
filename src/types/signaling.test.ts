@@ -16,18 +16,21 @@ describe("MESSAGE_TYPES", () => {
     expect(MESSAGE_TYPES.ANSWER).toBe("answer")
     expect(MESSAGE_TYPES.ICE_CANDIDATE).toBe("ice-candidate")
     expect(MESSAGE_TYPES.PONG).toBe("pong")
+    expect(MESSAGE_TYPES.PEER_MEDIA_MODE).toBe("peer-media-mode")
   })
 
-  it("accepts offer as both client and relay message", () => {
+  it("accepts peer-media-mode as both client and relay message", () => {
     const outbound: ClientMessage = {
-      type: "offer",
-      offer: { type: "offer", sdp: "sdp" },
+      type: "peer-media-mode",
+      mode: "screen",
     }
     const inbound: ReceivedMessage = {
-      type: "offer",
-      offer: { type: "offer", sdp: "sdp" },
+      type: "peer-media-mode",
+      mode: "camera",
     }
-    expect(outbound.type).toBe("offer")
-    expect(inbound.type).toBe("offer")
+    expect(outbound.type).toBe("peer-media-mode")
+    expect(outbound.mode).toBe("screen")
+    expect(inbound.type).toBe("peer-media-mode")
+    expect(inbound.mode).toBe("camera")
   })
 })

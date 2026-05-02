@@ -89,6 +89,12 @@ it("exposes the mediaController from the session", () => {
   expect(result.current.mediaController).toBe(session.media)
 })
 
+it("exposes remoteMediaMode from the store", () => {
+  useCallStore.setState({ remoteMediaMode: "screen" })
+  const { result } = renderHook(() => useCallSession("test-room"))
+  expect(result.current.remoteMediaMode).toBe("screen")
+})
+
 describe("dismissError", () => {
   it("clears the error", () => {
     useCallStore.setState({ error: "Some error" })

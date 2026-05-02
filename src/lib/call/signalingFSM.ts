@@ -1,7 +1,7 @@
 import type { CallStatus } from "@/store/call"
 import type { ClientMessage, ReceivedMessage } from "@/types/signaling"
 
-export type MachineReceivedMessage = ReceivedMessage
+export type MachineReceivedMessage = Exclude<ReceivedMessage, { type: "peer-media-mode" }>
 
 export type MachineState =
   | "IDLE"
