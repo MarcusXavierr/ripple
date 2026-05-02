@@ -1,6 +1,6 @@
 // src/pages/Room.tsx
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useNavigate, useParams } from "react-router-dom"
 import { Controls } from "@/components/room/Controls"
@@ -49,6 +49,7 @@ export default function Room() {
   useCallNotices()
 
   const remoteVideoRef = useRef<HTMLVideoElement>(null)
+  const [collapsed, setCollapsed] = useState(false)
   const {
     devices,
     selected,
@@ -106,7 +107,7 @@ export default function Room() {
         </div>
       )}
 
-      <StatusPill roomId={roomId!} status={status} />
+      <StatusPill roomId={roomId!} status={status} hidden={collapsed} />
       <SelfTile stream={localStream} />
       <Controls
         isMicMuted={isMicMuted}
@@ -123,6 +124,8 @@ export default function Room() {
         speakerSupported={speakerSupported}
         permissionGranted={permissionGranted}
         onRequestPermission={requestPermission}
+        collapsed={collapsed}
+        onToggleCollapsed={() => setCollapsed((c) => !c)}
       />
 
       {/* Error modal */}

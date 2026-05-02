@@ -56,7 +56,9 @@
       "disableCamera": "Turn off camera",
       "stopSharing": "Stop sharing",
       "shareScreen": "Share screen",
-      "hangUp": "Leave call"
+      "hangUp": "Leave call",
+      "hideControls": "Zen mode",
+      "showControls": "Show controls"
     },
     "error": {
       "title": "Error",

@@ -56,7 +56,9 @@
       "disableCamera": "Desligar câmera",
       "stopSharing": "Parar compartilhamento",
       "shareScreen": "Compartilhar tela",
-      "hangUp": "Sair da chamada"
+      "hangUp": "Sair da chamada",
+      "hideControls": "Modo zen",
+      "showControls": "Mostrar controles"
     },
     "error": {
       "title": "Erro",

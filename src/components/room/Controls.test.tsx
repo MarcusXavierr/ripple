@@ -16,6 +16,8 @@ vi.mock("react-i18next", () => ({
           "room.controls.stopSharing": "Stop sharing",
           "room.controls.shareScreen": "Share screen",
           "room.controls.hangUp": "Leave call",
+          "room.controls.hideControls": "Zen mode",
+          "room.controls.showControls": "Show controls",
           "room.settings.open": "Open settings",
           "room.settings.section": "Settings",
           "room.settings.empty": "No settings yet",
@@ -50,6 +52,8 @@ function renderControls(props?: Partial<ComponentProps<typeof Controls>>) {
     speakerSupported: true,
     permissionGranted: true,
     onRequestPermission: vi.fn(),
+    collapsed: false,
+    onToggleCollapsed: vi.fn(),
   }
 
   render(<Controls {...baseProps} {...props} />)
@@ -115,17 +119,31 @@ describe("Controls", () => {
     expect(bar.className).not.toContain("glass-dark")
   })
 
-  it("resolved backdrop-filter on the bar contains 'blur(16px)'", () => {
+  it("bar uses .glass-bar utility (16px backdrop blur token)", () => {
     renderControls()
 
-    expect(getComputedStyle(screen.getByTestId("controls-bar")).backdropFilter).toContain(
-      "blur(16px)"
-    )
+    expect(screen.getByTestId("controls-bar").className).toContain("glass-bar")
   })
 
-  it("child buttons use bg-white/30", () => {
+  it("child buttons use bg-white/40 (light glass on docked bar)", () => {
     renderControls()
 
-    expect(screen.getByRole("button", { name: "Share screen" }).className).toContain("bg-white/30")
+    expect(screen.getByRole("button", { name: "Share screen" }).className).toContain("bg-white/40")
+  })
+
+  it("collapse tab calls onToggleCollapsed", async () => {
+    const user = userEvent.setup()
+    const props = renderControls()
+
+    await user.click(screen.getByTestId("controls-collapse-tab"))
+
+    expect(props.onToggleCollapsed).toHaveBeenCalled()
+  })
+
+  it("collapsing the bar shrinks max-height to 0", () => {
+    renderControls({ collapsed: true })
+    const bar = screen.getByTestId("controls-bar")
+
+    expect(bar.style.maxHeight).toBe("0px")
   })
 })

@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next"
 import { toast } from "@/components/ui/toast"
 import type { CallStatus } from "@/store/call"
 
-export type StatusPillProps = { roomId: string; status: CallStatus }
+export type StatusPillProps = { roomId: string; status: CallStatus; hidden?: boolean }
 
 function getStatusLabel(
   status: CallStatus,
@@ -41,7 +41,7 @@ function formatMmSs(ms: number): string {
   return `${minutes}:${seconds}`
 }
 
-export function StatusPill({ roomId, status }: StatusPillProps) {
+export function StatusPill({ roomId, status, hidden = false }: StatusPillProps) {
   const { t } = useTranslation()
   const connectedAtRef = useRef<number | null>(null)
   const accumulatedMsRef = useRef(0)
@@ -89,8 +89,13 @@ export function StatusPill({ roomId, status }: StatusPillProps) {
         void handleCopyLink()
       }}
       aria-label={t("room.status.copyLinkAria", { status: getStatusLabel(status, t), roomId })}
-      className="glass-dark absolute top-3 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full px-4 py-1.5 text-sm text-white"
+      className={`glass absolute top-3 left-1/2 flex items-center gap-2 rounded-full px-4 py-1.5 text-sm text-ripple-ink transition-all duration-300 ${
+        hidden
+          ? "pointer-events-none -translate-x-1/2 -translate-y-3 opacity-0"
+          : "-translate-x-1/2 translate-y-0 opacity-100"
+      }`}
       data-testid="status-pill"
+      data-hidden={hidden ? "true" : "false"}
       data-tick={tick}
     >
       <span
@@ -101,7 +106,7 @@ export function StatusPill({ roomId, status }: StatusPillProps) {
       <span aria-hidden="true">·</span>
       <span className="font-mono">{roomId}</span>
       {hasEverConnected ? (
-        <span className="ml-2 rounded-full bg-white/10 px-2 py-0.5 font-mono tabular-nums">
+        <span className="ml-2 rounded-full bg-black/5 px-2 py-0.5 font-mono tabular-nums">
           {formatMmSs(elapsedMs)}
         </span>
       ) : null}
