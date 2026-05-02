@@ -53,18 +53,18 @@ export function Controls({
         data-testid="controls-collapse-tab"
         onClick={onToggleCollapsed}
         aria-label={collapsed ? t("room.controls.showControls") : t("room.controls.hideControls")}
-        className="flex h-[22px] w-12 items-center justify-center text-ripple-ink-soft transition-opacity"
+        className="flex h-[22px] w-12 items-center justify-center text-ripple-ink transition-opacity"
         style={{
-          background: "rgba(255, 255, 255, 0.22)",
+          background: "rgba(255, 255, 255, 0.4)",
           backdropFilter: "blur(16px) saturate(180%)",
           WebkitBackdropFilter: "blur(16px) saturate(180%)",
-          borderTop: "1px solid rgba(255, 255, 255, 0.3)",
-          borderLeft: "1px solid rgba(255, 255, 255, 0.3)",
-          borderRight: "1px solid rgba(255, 255, 255, 0.3)",
+          borderTop: "1px solid rgba(255, 255, 255, 0.5)",
+          borderLeft: "1px solid rgba(255, 255, 255, 0.5)",
+          borderRight: "1px solid rgba(255, 255, 255, 0.5)",
           borderBottom: "none",
           borderTopLeftRadius: 8,
           borderTopRightRadius: 8,
-          boxShadow: "0 -2px 8px rgba(0, 0, 0, 0.10)",
+          boxShadow: "inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 -2px 8px rgba(0, 0, 0, 0.10)",
           opacity: collapsed ? 0.7 : 1,
         }}
       >

@@ -12,7 +12,7 @@ export type GlassMenuSection = {
 }
 
 export type GlassMenuProps = {
-  trigger: React.ReactNode
+  trigger: React.ReactElement
   sections: GlassMenuSection[]
   align?: "start" | "center" | "end"
   side?: "top" | "bottom"
@@ -117,7 +117,7 @@ export function GlassMenu({
 
   return (
     <Popover open={isOpen} onOpenChange={setOpenState}>
-      <PopoverTrigger>{trigger}</PopoverTrigger>
+      <PopoverTrigger render={trigger} />
       <PopoverContent
         side={side}
         align={align}
