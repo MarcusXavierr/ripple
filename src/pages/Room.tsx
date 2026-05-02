@@ -80,8 +80,11 @@ export default function Room() {
 
   useEffect(() => {
     if (remoteVideoRef.current) remoteVideoRef.current.srcObject = remoteStream
-    if (backdropVideoRef.current) backdropVideoRef.current.srcObject = remoteStream
   }, [remoteStream])
+
+  useEffect(() => {
+    if (backdropVideoRef.current) backdropVideoRef.current.srcObject = remoteStream
+  }, [showBackdrop, remoteStream])
 
   useEffect(() => {
     const updateBackdropVisibility = () => {
