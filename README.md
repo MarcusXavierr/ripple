@@ -48,7 +48,7 @@ For any of this to work, you install the Chrome extension once. After that, shar
 
 ---
 
-## Stack (for devs)
+## Stack
 
 - React 19 + Vite + TypeScript on the front
 - WebRTC for video, audio, and the data channel
