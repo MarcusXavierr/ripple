@@ -95,18 +95,18 @@ export function useDevices(deps: {
         return inFlightRef.current
       }
 
+      if (kind === "speaker") {
+        writeDevicePref("speaker", id)
+        setSelected((current) => {
+          const next = { ...current, speaker: id }
+          selectedRef.current = next
+          return next
+        })
+        return Promise.resolve()
+      }
+
       const run = (async () => {
         try {
-          if (kind === "speaker") {
-            writeDevicePref("speaker", id)
-            setSelected((current) => {
-              const next = { ...current, speaker: id }
-              selectedRef.current = next
-              return next
-            })
-            return
-          }
-
           await mediaController?.replaceTrack(kind, id)
           writeDevicePref(kind, id)
           setSelected((current) => {

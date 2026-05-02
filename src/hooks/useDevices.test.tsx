@@ -365,4 +365,33 @@ describe("useDevices", () => {
     })
     expect(replaceTrack).toHaveBeenCalledTimes(1)
   })
+
+  it("speaker selection does not leave selectDevice stuck in-flight for the next mic change", async () => {
+    enumerateDevices.mockResolvedValue([
+      createDevice("audioinput", "mic-1", "Mic 1"),
+      createDevice("audioinput", "mic-2", "Mic 2"),
+      createDevice("videoinput", "cam-1", "Cam 1"),
+      createDevice("audiooutput", "speaker-1", "Speaker 1"),
+      createDevice("audiooutput", "speaker-2", "Speaker 2"),
+    ])
+    const { result } = renderUseDevices({
+      mediaController: { replaceTrack },
+      localStream: createStream("mic-1", "cam-1"),
+    })
+
+    await waitFor(() => {
+      expect(result.current.selected.speaker).toBe("speaker-1")
+    })
+
+    await act(async () => {
+      await result.current.selectDevice("speaker", "speaker-2")
+    })
+
+    await act(async () => {
+      await result.current.selectDevice("mic", "mic-2")
+    })
+
+    expect(replaceTrack).toHaveBeenCalledWith("mic", "mic-2")
+    expect(result.current.selected.mic).toBe("mic-2")
+  })
 })
