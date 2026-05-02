@@ -27,6 +27,7 @@ export function useCallSession(roomId: string) {
 
   const localStream = useCallStore((s) => s.localStream)
   const remoteStream = useCallStore((s) => s.remoteStream)
+  const remoteMediaMode = useCallStore((s) => s.remoteMediaMode)
   const status = useCallStore((s) => s.status)
   const error = useCallStore((s) => s.error)
   const showReconnectModal = useCallStore((s) => s.showReconnectModal)
@@ -86,6 +87,7 @@ export function useCallSession(roomId: string) {
   return {
     localStream,
     remoteStream,
+    remoteMediaMode,
     status,
     error,
     showReconnectModal,

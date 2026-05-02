@@ -9,7 +9,7 @@ import type {
 import { getPeerId } from "@/lib/peerId"
 import { extensionBridge } from "@/platform/extensionBridge"
 import { useCallStore } from "@/store/call"
-import type { ReceivedMessage } from "@/types/signaling"
+import type { PeerMediaMode, ReceivedMessage } from "@/types/signaling"
 import { CLOSE_CODES } from "@/types/signaling"
 import { MediaController } from "./MediaController"
 import { PeerConnection } from "./PeerConnection"
@@ -20,6 +20,10 @@ import { SignalingMachine } from "./SignalingMachine"
 type NavigateFn = (path: string) => void
 
 const WS_URL = import.meta.env.VITE_WS_URL as string
+
+function getLocalPeerMediaMode(): PeerMediaMode {
+  return useCallStore.getState().isScreenSharing ? "screen" : "camera"
+}
 
 // ── CallSession ───────────────────────────────────────────────────────────────
 
@@ -90,6 +94,7 @@ export class CallSession {
       }
       useCallStore.setState({ localStream: stream as MediaStream })
       this.signalingChannel.connect()
+      this.announcePeerMediaMode()
     } catch (e) {
       if (!this.signalingChannel.isAlive) return
       console.error("[Media Devices] We can't get the stream", e)
@@ -162,8 +167,21 @@ export class CallSession {
     }
   }
 
-  private handleMessage(msg: ReceivedMessage): Promise<void> {
-    return this.machine.handleProtocolMessage(msg) ?? Promise.resolve()
+  private announcePeerMediaMode(): void {
+    this.signalingChannel.send({ type: "peer-media-mode", mode: getLocalPeerMediaMode() })
+  }
+
+  private async handleMessage(msg: ReceivedMessage): Promise<void> {
+    if (msg.type === "peer-media-mode") {
+      useCallStore.setState({ remoteMediaMode: msg.mode })
+      return
+    }
+
+    await (this.machine.handleProtocolMessage(msg) ?? Promise.resolve())
+
+    if (msg.type === "peer-reconnected" || msg.type === "enter" || msg.type === "onopen") {
+      this.announcePeerMediaMode()
+    }
   }
 
   private handleTerminalClose(code: number): void {

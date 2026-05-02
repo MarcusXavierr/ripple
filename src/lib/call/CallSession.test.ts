@@ -183,3 +183,60 @@ describe("PeerConnection constructor args", () => {
     )
   })
 })
+
+describe("peer media mode signaling", () => {
+  beforeEach(() => {
+    useCallStore.getState().reset()
+  })
+
+  it("announces camera mode when the session starts without local screen share", async () => {
+    const session = new CallSession("room-1", vi.fn())
+    await session.start()
+    expect(signalingSend).toHaveBeenCalledWith({ type: "peer-media-mode", mode: "camera" })
+  })
+
+  it("announces screen mode when local screen share is already active", async () => {
+    useCallStore.setState({ isScreenSharing: true })
+    const session = new CallSession("room-1", vi.fn())
+    await session.start()
+    expect(signalingSend).toHaveBeenCalledWith({ type: "peer-media-mode", mode: "screen" })
+  })
+
+  it("stores inbound peer-media-mode messages without forwarding them into the machine", async () => {
+    machineHandleProtocolMessage.mockResolvedValue(undefined)
+    const session = new CallSession("room-1", vi.fn())
+
+    await (session as unknown as { handleMessage(msg: unknown): Promise<void> }).handleMessage({
+      type: "peer-media-mode",
+      mode: "screen",
+    })
+
+    expect(useCallStore.getState().remoteMediaMode).toBe("screen")
+    expect(machineHandleProtocolMessage).not.toHaveBeenCalledWith({
+      type: "peer-media-mode",
+      mode: "screen",
+    })
+  })
+
+  it("clears remoteMediaMode on teardown", () => {
+    useCallStore.setState({ remoteMediaMode: "screen" })
+    const session = new CallSession("room-1", vi.fn())
+
+    session.teardown()
+
+    expect(useCallStore.getState().remoteMediaMode).toBe("unknown")
+  })
+
+  it("re-announces the current media mode after a peer-reconnected path", async () => {
+    useCallStore.setState({ isScreenSharing: true })
+    machineHandleProtocolMessage.mockImplementation(async () => undefined)
+
+    const session = new CallSession("room-1", vi.fn())
+
+    await (session as unknown as { handleMessage(msg: unknown): Promise<void> }).handleMessage({
+      type: "peer-reconnected",
+    })
+
+    expect(signalingSend).toHaveBeenCalledWith({ type: "peer-media-mode", mode: "screen" })
+  })
+})

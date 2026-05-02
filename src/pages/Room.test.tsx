@@ -19,6 +19,7 @@ const writeText = vi.fn()
 const baseMock = {
   localStream: null as MediaStream | null,
   remoteStream: null as MediaStream | null,
+  remoteMediaMode: "unknown" as const,
   status: "waiting" as const,
   error: null as string | null,
   showReconnectModal: false,
@@ -272,5 +273,77 @@ describe("error modal", () => {
     renderRoom()
     await userEvent.click(screen.getByRole("button", { name: /ok/i }))
     expect(baseMock.dismissError).toHaveBeenCalled()
+  })
+})
+
+describe("decorative backdrop", () => {
+  it("shows the decorative backdrop for remote camera video with horizontal gutters", () => {
+    useCallSessionMock.mockReturnValue({
+      ...baseMock,
+      remoteStream: {} as MediaStream,
+      remoteMediaMode: "camera",
+      status: "connected",
+    })
+
+    renderRoom()
+
+    const remoteVideo = screen.getByTestId("remote-video") as HTMLVideoElement
+    Object.defineProperty(remoteVideo, "videoWidth", { value: 640, configurable: true })
+    Object.defineProperty(remoteVideo, "videoHeight", { value: 480, configurable: true })
+    vi.spyOn(remoteVideo, "getBoundingClientRect").mockReturnValue({
+      x: 0,
+      y: 0,
+      top: 0,
+      left: 0,
+      right: 1280,
+      bottom: 720,
+      width: 1280,
+      height: 720,
+      toJSON: () => ({}),
+    })
+
+    fireEvent.loadedMetadata(remoteVideo)
+    fireEvent(screen.getByTestId("room-page"), new Event("resize"))
+
+    expect(screen.getByTestId("remote-video-backdrop")).toBeInTheDocument()
+  })
+
+  it("hides the decorative backdrop for remote screen share", () => {
+    useCallSessionMock.mockReturnValue({
+      ...baseMock,
+      remoteStream: {} as MediaStream,
+      remoteMediaMode: "screen",
+      status: "connected",
+    })
+
+    renderRoom()
+
+    expect(screen.queryByTestId("remote-video-backdrop")).not.toBeInTheDocument()
+  })
+
+  it("hides the decorative backdrop while remote media mode is unknown", () => {
+    useCallSessionMock.mockReturnValue({
+      ...baseMock,
+      remoteStream: {} as MediaStream,
+      remoteMediaMode: "unknown",
+      status: "connected",
+    })
+
+    renderRoom()
+
+    expect(screen.queryByTestId("remote-video-backdrop")).not.toBeInTheDocument()
+  })
+
+  it("hides the decorative backdrop when there is no remote stream", () => {
+    useCallSessionMock.mockReturnValue({
+      ...baseMock,
+      remoteStream: null,
+      remoteMediaMode: "camera",
+      status: "connected",
+    })
+
+    renderRoom()
+
+    expect(screen.queryByTestId("remote-video-backdrop")).not.toBeInTheDocument()
   })
 })

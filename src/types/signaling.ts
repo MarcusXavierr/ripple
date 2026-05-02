@@ -1,5 +1,7 @@
 // SYNC: keep identical to backend types.ts
 
+export type PeerMediaMode = "camera" | "screen"
+
 // Server → Client
 export type ServerMessage =
   | { type: "onopen"; role: "caller" | "callee"; reconnect: boolean }
@@ -8,12 +10,18 @@ export type ServerMessage =
   | { type: "peer-reconnected" }
   | { type: "ping" }
 
+export type PeerMediaModeMessage = {
+  type: "peer-media-mode"
+  mode: PeerMediaMode
+}
+
 // Client → Server (blind relay to other peers)
 export type ClientMessage =
   | { type: "offer"; offer: RTCSessionDescriptionInit }
   | { type: "answer"; answer: RTCSessionDescriptionInit }
   | { type: "ice-candidate"; candidate: RTCIceCandidateInit }
   | { type: "pong" }
+  | PeerMediaModeMessage
 
 export const CLOSE_CODES = {
   ROOM_FULL: 4001,
@@ -33,6 +41,7 @@ export const MESSAGE_TYPES = {
   ANSWER: "answer",
   ICE_CANDIDATE: "ice-candidate",
   PONG: "pong",
+  PEER_MEDIA_MODE: "peer-media-mode",
 } as const
 
 // Messages received from the server (server-emitted + relayed from other peer)
@@ -41,3 +50,4 @@ export type ReceivedMessage =
   | { type: "offer"; offer: RTCSessionDescriptionInit }
   | { type: "answer"; answer: RTCSessionDescriptionInit }
   | { type: "ice-candidate"; candidate: RTCIceCandidateInit }
+  | PeerMediaModeMessage

@@ -82,6 +82,19 @@ describe("Signaling Machine Invariants", () => {
     )
   })
 
+  it("onclose stops screen sharing before resetting the peer connection", () => {
+    for (const role of ["caller", "callee"] as const) {
+      for (const state of ["CONNECTED", "NEGOTIATING"] as MachineState[]) {
+        const { effects } = transition({ state, role }, { type: "onclose", message: "bye" })
+        const effectTypes = effects.map((effect) => effect.type)
+        expect(effectTypes).toContain("STOP_SCREEN_SHARE")
+        expect(effectTypes.indexOf("STOP_SCREEN_SHARE")).toBeLessThan(
+          effectTypes.indexOf("RESET_PC")
+        )
+      }
+    }
+  })
+
   it("callee never emits ROLLBACK_AND_RESTART_ICE", () => {
     fc.assert(
       fc.property(arbEventSequence, (events) => {
@@ -238,6 +251,18 @@ describe("Signaling Machine Invariants", () => {
             "CALLER_WAITING",
             "CALLEE_WAITING",
           ]).toContain(next.state)
+        }
+      })
+    )
+  })
+
+  it("STOP_SCREEN_SHARE coupling: only from onclose that resets the peer connection", () => {
+    fc.assert(
+      fc.property(arbState, arbEvent, (state, event) => {
+        const { effects } = transition(state, event)
+        if (effects.some((e) => e.type === "STOP_SCREEN_SHARE")) {
+          expect(event.type).toBe("onclose")
+          expect(effects.some((e) => e.type === "RESET_PC")).toBe(true)
         }
       })
     )
