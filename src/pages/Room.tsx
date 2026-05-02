@@ -1,6 +1,6 @@
 // src/pages/Room.tsx
 
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useNavigate, useParams } from "react-router-dom"
 import { Controls } from "@/components/room/Controls"
@@ -59,9 +59,15 @@ export default function Room() {
   useCallNotices()
 
   const remoteVideoRef = useRef<HTMLVideoElement>(null)
-  const backdropVideoRef = useRef<HTMLVideoElement>(null)
   const [collapsed, setCollapsed] = useState(false)
   const [showBackdrop, setShowBackdrop] = useState(false)
+
+  const backdropCallbackRef = useCallback(
+    (el: HTMLVideoElement | null) => {
+      if (el) el.srcObject = remoteStream
+    },
+    [remoteStream]
+  )
 
   const {
     devices,
@@ -81,10 +87,6 @@ export default function Room() {
   useEffect(() => {
     if (remoteVideoRef.current) remoteVideoRef.current.srcObject = remoteStream
   }, [remoteStream])
-
-  useEffect(() => {
-    if (backdropVideoRef.current) backdropVideoRef.current.srcObject = remoteStream
-  }, [showBackdrop, remoteStream])
 
   useEffect(() => {
     const updateBackdropVisibility = () => {
@@ -126,7 +128,7 @@ export default function Room() {
     <div data-testid="room-page" className="relative h-screen w-screen overflow-hidden bg-black">
       {showBackdrop ? (
         <video
-          ref={backdropVideoRef}
+          ref={backdropCallbackRef}
           autoPlay
           playsInline
           muted
