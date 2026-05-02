@@ -206,7 +206,10 @@ describe("peer media mode signaling", () => {
     machineHandleProtocolMessage.mockResolvedValue(undefined)
     const session = new CallSession("room-1", vi.fn())
 
-    await (session as never).handleMessage({ type: "peer-media-mode", mode: "screen" })
+    await (session as unknown as { handleMessage(msg: unknown): Promise<void> }).handleMessage({
+      type: "peer-media-mode",
+      mode: "screen",
+    })
 
     expect(useCallStore.getState().remoteMediaMode).toBe("screen")
     expect(machineHandleProtocolMessage).not.toHaveBeenCalledWith({
@@ -222,5 +225,18 @@ describe("peer media mode signaling", () => {
     session.teardown()
 
     expect(useCallStore.getState().remoteMediaMode).toBe("unknown")
+  })
+
+  it("re-announces the current media mode after a peer-reconnected path", async () => {
+    useCallStore.setState({ isScreenSharing: true })
+    machineHandleProtocolMessage.mockImplementation(async () => undefined)
+
+    const session = new CallSession("room-1", vi.fn())
+
+    await (session as unknown as { handleMessage(msg: unknown): Promise<void> }).handleMessage({
+      type: "peer-reconnected",
+    })
+
+    expect(signalingSend).toHaveBeenCalledWith({ type: "peer-media-mode", mode: "screen" })
   })
 })

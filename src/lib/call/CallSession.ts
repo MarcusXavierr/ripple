@@ -171,12 +171,17 @@ export class CallSession {
     this.signalingChannel.send({ type: "peer-media-mode", mode: getLocalPeerMediaMode() })
   }
 
-  private handleMessage(msg: ReceivedMessage): Promise<void> {
+  private async handleMessage(msg: ReceivedMessage): Promise<void> {
     if (msg.type === "peer-media-mode") {
       useCallStore.setState({ remoteMediaMode: msg.mode })
-      return Promise.resolve()
+      return
     }
-    return this.machine.handleProtocolMessage(msg) ?? Promise.resolve()
+
+    await (this.machine.handleProtocolMessage(msg) ?? Promise.resolve())
+
+    if (msg.type === "peer-reconnected" || msg.type === "enter" || msg.type === "onopen") {
+      this.announcePeerMediaMode()
+    }
   }
 
   private handleTerminalClose(code: number): void {
