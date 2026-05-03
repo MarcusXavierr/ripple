@@ -8,7 +8,7 @@ export default defineConfig({
     name: "__MSG_ext_name__",
     description: "__MSG_ext_description__",
     permissions: ["activeTab", "scripting", "storage", "tabs"],
-    host_permissions: ["<all_urls>"],
+    optional_host_permissions: ["https://*/*", "http://*/*"],
     externally_connectable: {
       matches: ["http://localhost:5173/*", "https://marcus-ripple.netlify.app/*"],
     },
