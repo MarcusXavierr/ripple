@@ -1,65 +1,132 @@
-import { render, screen } from "@testing-library/react"
-import userEvent from "@testing-library/user-event"
+import { fireEvent, render, screen } from "@testing-library/react"
+import { describe, expect, it, vi } from "vitest"
 import { PopupView } from "./PopupView"
 
+const baseProps = {
+  onUseCurrentTab: vi.fn(),
+  onClearSelectedTab: vi.fn(),
+}
+
 describe("PopupView", () => {
-  it("shows no selected tab state", () => {
+  it("state 1: empty selection, current compatible — shows empty card and enabled CTA", () => {
     render(
       <PopupView
-        selectedTab={null}
-        currentTab={{ compatible: true, title: "YouTube", url: "https://youtube.com/watch?v=1" }}
-        onUseCurrentTab={vi.fn()}
+        {...baseProps}
+        card={{ kind: "empty" }}
+        cta={{ kind: "use-current", enabled: true }}
+        canClear={false}
       />
     )
 
-    expect(screen.getByText("No tab selected")).toBeInTheDocument()
+    expect(screen.getByText(/no tab selected yet/i)).toBeInTheDocument()
     expect(screen.getByRole("button", { name: /use current tab/i })).toBeEnabled()
+    expect(screen.queryByRole("button", { name: /clear/i })).not.toBeInTheDocument()
   })
 
-  it("shows selected tab state", () => {
+  it("state 2: empty selection, current incompatible — disabled CTA + warning", () => {
     render(
       <PopupView
-        selectedTab={{ title: "Example", origin: "https://example.com" }}
-        currentTab={{ compatible: true, title: "YouTube", url: "https://youtube.com/watch?v=1" }}
-        onUseCurrentTab={vi.fn()}
-      />
-    )
-
-    expect(screen.getByText("Example")).toBeInTheDocument()
-    expect(screen.getByText("https://example.com")).toBeInTheDocument()
-  })
-
-  it("disables current-tab selection when current tab is incompatible", () => {
-    render(
-      <PopupView
-        selectedTab={null}
-        currentTab={{
-          compatible: false,
-          title: "Extensions",
-          url: "chrome://extensions",
-          reason: "Chrome internal pages cannot be controlled.",
-        }}
-        onUseCurrentTab={vi.fn()}
+        {...baseProps}
+        card={{ kind: "empty" }}
+        cta={{ kind: "use-current", enabled: false, reason: "Cannot control chrome:// pages." }}
+        canClear={false}
       />
     )
 
     expect(screen.getByRole("button", { name: /use current tab/i })).toBeDisabled()
-    expect(screen.getByText("Chrome internal pages cannot be controlled.")).toBeInTheDocument()
+    expect(screen.getByText(/chrome:\/\//i)).toBeInTheDocument()
   })
 
-  it("calls onUseCurrentTab when the user selects the current tab", async () => {
-    const onUseCurrentTab = vi.fn()
-    const user = userEvent.setup()
-
+  it("state 3: selection differs from current, current compatible — shows selected tab + Clear", () => {
     render(
       <PopupView
-        selectedTab={null}
-        currentTab={{ compatible: true, title: "YouTube", url: "https://youtube.com/watch?v=1" }}
-        onUseCurrentTab={onUseCurrentTab}
+        {...baseProps}
+        card={{ kind: "selected", title: "ADRs", origin: "https://adr.github.io" }}
+        cta={{ kind: "use-current", enabled: true }}
+        canClear
       />
     )
 
-    await user.click(screen.getByRole("button", { name: /use current tab/i }))
-    expect(onUseCurrentTab).toHaveBeenCalledTimes(1)
+    expect(screen.getByText("ADRs")).toBeInTheDocument()
+    expect(screen.getByText("https://adr.github.io")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /use current tab/i })).toBeEnabled()
+    expect(screen.getByRole("button", { name: /clear/i })).toBeInTheDocument()
+  })
+
+  it("state 5: selection equals current — success-styled disabled CTA", () => {
+    render(
+      <PopupView
+        {...baseProps}
+        card={{ kind: "selected-is-current", title: "ADRs", origin: "https://adr.github.io" }}
+        cta={{ kind: "already-selected" }}
+        canClear
+      />
+    )
+
+    expect(screen.getByText(/this tab is selected/i)).toBeInTheDocument()
+    expect(screen.getByText(/^selected$/i)).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /this tab is selected/i })).toBeDisabled()
+  })
+
+  it("state 6a: selected tab closed — shows stale state + warning", () => {
+    render(
+      <PopupView
+        {...baseProps}
+        card={{ kind: "stale-closed", title: "Old tab", origin: "https://example.com" }}
+        cta={{ kind: "use-current", enabled: true }}
+        canClear
+      />
+    )
+
+    expect(screen.getByText(/tab closed/i)).toBeInTheDocument()
+    expect(screen.getByText(/no longer available/i)).toBeInTheDocument()
+  })
+
+  it("state 6b: selected tab navigated to incompatible page", () => {
+    render(
+      <PopupView
+        {...baseProps}
+        card={{ kind: "stale-incompatible", title: "Settings", origin: "chrome://settings" }}
+        cta={{ kind: "use-current", enabled: true }}
+        canClear
+      />
+    )
+
+    expect(screen.getByText(/unavailable/i)).toBeInTheDocument()
+    expect(screen.getByText(/can't control/i)).toBeInTheDocument()
+  })
+
+  it("calls onUseCurrentTab when primary CTA clicked", () => {
+    const onUseCurrentTab = vi.fn()
+
+    render(
+      <PopupView
+        {...baseProps}
+        onUseCurrentTab={onUseCurrentTab}
+        card={{ kind: "empty" }}
+        cta={{ kind: "use-current", enabled: true }}
+        canClear={false}
+      />
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: /use current tab/i }))
+    expect(onUseCurrentTab).toHaveBeenCalledOnce()
+  })
+
+  it("calls onClearSelectedTab when Clear clicked", () => {
+    const onClearSelectedTab = vi.fn()
+
+    render(
+      <PopupView
+        {...baseProps}
+        onClearSelectedTab={onClearSelectedTab}
+        card={{ kind: "selected", title: "X", origin: "https://x.com" }}
+        cta={{ kind: "use-current", enabled: true }}
+        canClear
+      />
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: /clear/i }))
+    expect(onClearSelectedTab).toHaveBeenCalledOnce()
   })
 })

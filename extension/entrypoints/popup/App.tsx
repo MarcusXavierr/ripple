@@ -1,68 +1,83 @@
-import { useEffect, useState } from "react"
-import { type Browser, browser } from "wxt/browser"
+import { useCallback, useEffect, useState } from "react"
+import { browser } from "wxt/browser"
+import { derivePopupState, type PopupState } from "../../src/popup/derivePopupState"
 import { PopupView } from "../../src/popup/PopupView"
 import {
-  getIncompatibleTabReason,
-  isControllableTabUrl,
-} from "../../src/selectedTab/isControllableTab"
-import {
+  clearSelectedTab,
   createSelectedTabFromTab,
   readSelectedTab,
-  type SelectedTab,
   saveSelectedTab,
 } from "../../src/selectedTab/selectedTabStore"
 import "./App.css"
 
-type CurrentTabState =
-  | { compatible: true; title?: string; url: string; tab: Browser.tabs.Tab }
-  | { compatible: false; title?: string; url?: string; reason: string; tab?: Browser.tabs.Tab }
+const INITIAL_STATE: PopupState = {
+  card: { kind: "empty" },
+  cta: { kind: "use-current", enabled: false, reason: "Loading current tab." },
+  canClear: false,
+}
 
 export function App() {
-  const [selectedTab, setSelectedTab] = useState<SelectedTab | null>(null)
-  const [currentTab, setCurrentTab] = useState<CurrentTabState>({
-    compatible: false,
-    reason: "Loading current tab.",
-  })
+  const [state, setState] = useState<PopupState>(INITIAL_STATE)
 
-  useEffect(() => {
-    void refresh()
-  }, [])
-
-  async function refresh() {
+  const refresh = useCallback(async () => {
     const [stored, tabs] = await Promise.all([
       readSelectedTab(browser.storage.local),
       browser.tabs.query({ active: true, currentWindow: true }),
     ])
-    const tab = tabs[0]
-    setSelectedTab(stored)
+    const currentTab = tabs[0] ?? {}
+    const liveLookup = stored ? await lookupLiveTab(stored.tabId) : null
 
-    if (tab?.url && isControllableTabUrl(tab.url)) {
-      setCurrentTab({ compatible: true, title: tab.title, url: tab.url, tab })
-      return
-    }
+    setState(
+      derivePopupState({
+        stored,
+        currentTab: {
+          id: currentTab.id,
+          title: currentTab.title,
+          url: currentTab.url,
+        },
+        liveLookup,
+      })
+    )
+  }, [])
 
-    setCurrentTab({
-      compatible: false,
-      title: tab?.title,
-      url: tab?.url,
-      reason: getIncompatibleTabReason(tab?.url),
-      tab,
-    })
-  }
+  useEffect(() => {
+    void refresh()
+  }, [refresh])
 
   async function useCurrentTab() {
-    if (!currentTab.compatible) return
-    const selected = createSelectedTabFromTab(currentTab.tab)
+    const tabs = await browser.tabs.query({ active: true, currentWindow: true })
+    const tab = tabs[0]
+    if (!tab) return
+
+    const selected = createSelectedTabFromTab(tab)
     if (!selected) return
+
     await saveSelectedTab(browser.storage.local, selected)
-    setSelectedTab(selected)
+    await refresh()
+  }
+
+  async function onClearSelectedTab() {
+    await clearSelectedTab(browser.storage.local)
+    await refresh()
   }
 
   return (
     <PopupView
-      selectedTab={selectedTab && { title: selectedTab.title, origin: selectedTab.origin }}
-      currentTab={currentTab}
+      card={state.card}
+      cta={state.cta}
+      canClear={state.canClear}
       onUseCurrentTab={useCurrentTab}
+      onClearSelectedTab={onClearSelectedTab}
     />
   )
+}
+
+async function lookupLiveTab(tabId: number) {
+  try {
+    const tab = await browser.tabs.get(tabId)
+    if (!tab.url) return { ok: false as const, reason: "closed" as const }
+    return { ok: true as const, title: tab.title, url: tab.url }
+  } catch {
+    return { ok: false as const, reason: "closed" as const }
+  }
 }
