@@ -1,6 +1,12 @@
 import { browser } from "wxt/browser"
 import { handleExternalMessage } from "../src/background/handleExternalMessage"
+import { createPermissionsGate } from "../src/permissions/permissionsGate"
 import { readSelectedTab } from "../src/selectedTab/selectedTabStore"
+
+const permissionsGate = createPermissionsGate({
+  contains: (perm) => browser.permissions.contains(perm),
+  logger: console,
+})
 
 export default defineBackground(() => {
   browser.runtime.onInstalled.addListener(injectIntoExistingTabs)
@@ -10,6 +16,7 @@ export default defineBackground(() => {
     handleExternalMessage(message, {
       readSelectedTab: () => readSelectedTab(browser.storage.local),
       getTab: (tabId) => browser.tabs.get(tabId),
+      hasAccess: (pattern) => permissionsGate.hasAccess(pattern),
       sendMessageToTab: (tabId, payload) => browser.tabs.sendMessage(tabId, payload),
       logger: console,
     })
