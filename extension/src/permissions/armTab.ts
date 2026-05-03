@@ -1,4 +1,5 @@
 import type { Browser } from "wxt/browser"
+import { browser } from "wxt/browser"
 import {
   createSelectedTabFromTab,
   saveSelectedTab as defaultSaveSelectedTab,
@@ -18,10 +19,7 @@ export type ArmTabResult =
 export type ArmTabDeps = {
   request: (perm: { origins: string[] }) => Promise<boolean>
   remove: (perm: { origins: string[] }) => Promise<boolean>
-  executeScript: (args: {
-    target: { tabId: number; allFrames?: boolean }
-    files: string[]
-  }) => Promise<unknown>
+  executeScript: (args: unknown) => Promise<unknown>
   saveSelectedTab: (selected: SelectedTab) => Promise<void>
   logger: Pick<Console, "warn" | "debug">
 }
@@ -55,9 +53,9 @@ export function makeArmTabDeps(
   logger: Pick<Console, "warn" | "debug">
 ): ArmTabDeps {
   return {
-    request: (perm) => chrome.permissions.request(perm),
-    remove: (perm) => chrome.permissions.remove(perm),
-    executeScript: (args) => chrome.scripting.executeScript(args),
+    request: (perm) => browser.permissions.request(perm),
+    remove: (perm) => browser.permissions.remove(perm),
+    executeScript: (args) => browser.scripting.executeScript(args as never),
     saveSelectedTab: (selected) => defaultSaveSelectedTab(storage, selected),
     logger,
   }
