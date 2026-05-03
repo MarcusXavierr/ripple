@@ -42,14 +42,15 @@ export async function handleExternalMessage(
   if (!tab) {
     return rejected(message, "reason_selected_tab_missing", "selected-tab")
   }
-  if (!isControllableTabUrl(tab.url)) {
+  if (typeof tab.url !== "string" || !isControllableTabUrl(tab.url)) {
     return rejected(message, "reason_selected_tab_not_controllable", "selected-tab")
   }
-  if (getTabOrigin(tab.url) !== selectedTab.origin) {
+  const tabUrl = tab.url
+  if (getTabOrigin(tabUrl) !== selectedTab.origin) {
     return rejected(message, "reason_origin_changed", "permission")
   }
 
-  const originPattern = urlToOriginPattern(tab.url)
+  const originPattern = urlToOriginPattern(tabUrl)
   if (!originPattern) {
     return rejected(message, "reason_selected_tab_not_controllable", "selected-tab")
   }

@@ -1,17 +1,45 @@
 import { browser } from "wxt/browser"
 import { handleExternalMessage } from "../src/background/handleExternalMessage"
+import { armedTabNavigationAction } from "../src/permissions/armedTabNavigationHandler"
 import { createPermissionsGate } from "../src/permissions/permissionsGate"
-import { readSelectedTab } from "../src/selectedTab/selectedTabStore"
+import { clearSelectedTab, readSelectedTab } from "../src/selectedTab/selectedTabStore"
 
 const permissionsGate = createPermissionsGate({
   contains: (perm) => browser.permissions.contains(perm),
   logger: console,
 })
 
-export default defineBackground(() => {
-  browser.runtime.onInstalled.addListener(injectIntoExistingTabs)
-  browser.runtime.onStartup.addListener(injectIntoExistingTabs)
+browser.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
+  const armed = await readSelectedTab(browser.storage.local)
+  const action = armedTabNavigationAction({
+    armed,
+    eventTabId: tabId,
+    changeUrl: changeInfo.url,
+    status: changeInfo.status,
+  })
 
+  if (action.kind === "noop") return
+  if (action.kind === "reinject") {
+    await browser.scripting
+      .executeScript({
+        target: { tabId: action.tabId },
+        files: ["/content-scripts/content.js"],
+      })
+      .catch(() => {})
+    return
+  }
+
+  await browser.runtime.sendMessage({ type: "ripple/permission-lost" }).catch(() => {})
+})
+
+browser.tabs.onRemoved.addListener(async (tabId) => {
+  const armed = await readSelectedTab(browser.storage.local)
+  if (!armed || armed.tabId !== tabId) return
+
+  await clearSelectedTab(browser.storage.local)
+})
+
+export default defineBackground(() => {
   browser.runtime.onMessageExternal.addListener((message, _sender, sendResponse) => {
     handleExternalMessage(message, {
       readSelectedTab: () => readSelectedTab(browser.storage.local),
@@ -32,17 +60,3 @@ export default defineBackground(() => {
     return true
   })
 })
-
-async function injectIntoExistingTabs() {
-  const tabs = await browser.tabs.query({ url: ["http://*/*", "https://*/*"] })
-  await Promise.allSettled(
-    tabs
-      .filter((tab) => tab.id != null)
-      .map((tab) =>
-        browser.scripting.executeScript({
-          target: { tabId: tab.id!, allFrames: true },
-          files: ["/content-scripts/content.js"],
-        })
-      )
-  )
-}
