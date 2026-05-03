@@ -11,5 +11,18 @@ export default defineConfig({
     externally_connectable: {
       matches: ["http://localhost:5173/*", "https://marcus-ripple.netlify.app/*"],
     },
+    icons: {
+      16: "icon/16.png",
+      32: "icon/32.png",
+      48: "icon/48.png",
+      128: "icon/128.png",
+    },
+    action: {
+      default_icon: {
+        16: "icon/16.png",
+        32: "icon/32.png",
+      },
+      default_title: "Ripple Remote Control",
+    },
   },
 })
