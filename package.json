@@ -19,6 +19,7 @@
     "test:ui": "vitest --ui",
     "extension:dev": "bun run --cwd extension dev",
     "extension:build": "bun run --cwd extension build",
+    "extension:build:local": "bun run --cwd extension build:local",
     "extension:test": "bun run --cwd extension test",
     "extension:typecheck": "bun run --cwd extension typecheck"
   },
