@@ -2,6 +2,7 @@ import {
   clearSelectedTab,
   createSelectedTabFromTab,
   readSelectedTab,
+  SelectedTabSchema,
   type SelectedTabStorage,
   saveSelectedTab,
 } from "./selectedTabStore"
@@ -79,5 +80,10 @@ describe("selectedTabStore", () => {
     })
 
     await expect(readSelectedTab(storage)).resolves.toBeNull()
+  })
+
+  it("SelectedTabSchema does not include approvalStatus field", () => {
+    const keys = Object.keys(SelectedTabSchema.entries)
+    expect(keys).not.toContain("approvalStatus")
   })
 })

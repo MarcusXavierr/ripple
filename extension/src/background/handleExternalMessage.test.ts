@@ -42,6 +42,7 @@ function createDeps(overrides: Partial<BackgroundDeps> = {}): BackgroundDeps {
   return {
     readSelectedTab: vi.fn().mockResolvedValue(selectedTab),
     getTab: vi.fn().mockResolvedValue({ id: 7, url: "https://example.com/page" }),
+    hasAccess: vi.fn().mockResolvedValue(true),
     sendMessageToTab: vi.fn().mockResolvedValue({ ok: true, stage: "dispatched" }),
     logger: { debug: vi.fn(), warn: vi.fn() },
     ...overrides,
@@ -123,6 +124,58 @@ describe("handleExternalMessage", () => {
         tabId: 7,
       }
     )
+  })
+
+  it("drops with permission_missing when gate returns false", async () => {
+    await expect(
+      handleExternalMessage(message, createDeps({ hasAccess: vi.fn().mockResolvedValue(false) }))
+    ).resolves.toEqual({
+      ok: false,
+      type: "remote-click-rejected",
+      reason: "reason_permission_missing",
+      stage: "permission",
+    })
+  })
+
+  it("drops with origin_changed when current tab origin differs from armed origin", async () => {
+    await expect(
+      handleExternalMessage(
+        message,
+        createDeps({ getTab: vi.fn().mockResolvedValue({ id: 7, url: "https://other.test/" }) })
+      )
+    ).resolves.toEqual({
+      ok: false,
+      type: "remote-click-rejected",
+      reason: "reason_origin_changed",
+      stage: "permission",
+    })
+  })
+
+  it("forwards normally when origin matches and gate grants access", async () => {
+    const deps = createDeps()
+
+    await expect(handleExternalMessage(message, deps)).resolves.toEqual({
+      ok: true,
+      type: "remote-click-applied",
+      targetTabId: 7,
+    })
+
+    expect(deps.hasAccess).toHaveBeenCalledWith("https://example.com/*")
+  })
+
+  it("returns rejected when sendMessageToTab rejects", async () => {
+    const deps = createDeps({
+      sendMessageToTab: vi.fn().mockRejectedValue(new Error("send boom")),
+    })
+
+    await expect(handleExternalMessage(message, deps)).resolves.toEqual({
+      ok: false,
+      type: "remote-click-rejected",
+      reason: "reason_unexpected_error",
+      stage: "send",
+    })
+
+    expect(deps.logger.warn).toHaveBeenCalled()
   })
 
   it("forwards a remote scroll to the selected tab", async () => {

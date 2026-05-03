@@ -3,13 +3,15 @@ import {
   isRemoteInputMessage,
   type RemoteInputMessage,
 } from "@shared/remoteInputProtocol"
+import { urlToOriginPattern } from "../permissions/urlToOriginPattern"
 import type { ContentMessage, ContentMessageResult } from "../remoteInput/contentMessages"
-import { isControllableTabUrl } from "../selectedTab/isControllableTab"
+import { getTabOrigin, isControllableTabUrl } from "../selectedTab/isControllableTab"
 import type { SelectedTab } from "../selectedTab/selectedTabStore"
 
 export type BackgroundDeps = {
   readSelectedTab: () => Promise<SelectedTab | null>
   getTab: (tabId: number) => Promise<{ id?: number; url?: string }>
+  hasAccess: (originPattern: string) => Promise<boolean>
   sendMessageToTab: (tabId: number, message: ContentMessage) => Promise<ContentMessageResult>
   logger: Pick<Console, "debug" | "warn">
 }
@@ -40,13 +42,35 @@ export async function handleExternalMessage(
   if (!tab) {
     return rejected(message, "reason_selected_tab_missing", "selected-tab")
   }
-  if (!isControllableTabUrl(tab.url)) {
+  if (typeof tab.url !== "string" || !isControllableTabUrl(tab.url)) {
+    return rejected(message, "reason_selected_tab_not_controllable", "selected-tab")
+  }
+  const tabUrl = tab.url
+  if (getTabOrigin(tabUrl) !== selectedTab.origin) {
+    return rejected(message, "reason_origin_changed", "permission")
+  }
+
+  const originPattern = urlToOriginPattern(tabUrl)
+  if (!originPattern) {
     return rejected(message, "reason_selected_tab_not_controllable", "selected-tab")
   }
 
-  const contentMessage: ContentMessage = toContentMessage(message)
+  const hasAccess = await deps.hasAccess(originPattern)
+  if (!hasAccess) {
+    return rejected(message, "reason_permission_missing", "permission")
+  }
 
-  const result = await deps.sendMessageToTab(selectedTab.tabId, contentMessage)
+  const contentMessage: ContentMessage = toContentMessage(message)
+  const result = await deps.sendMessageToTab(selectedTab.tabId, contentMessage).catch((error) => {
+    deps.logger.warn("[Ripple Extension] failed to forward to selected tab", {
+      reason: error instanceof Error ? error.message : String(error),
+      tabId: selectedTab.tabId,
+    })
+    return null
+  })
+  if (!result) {
+    return rejected(message, "reason_unexpected_error", "send")
+  }
 
   if (!result.ok) {
     return rejected(message, result.reason, result.stage)
@@ -81,6 +105,8 @@ type RejectReasonKey =
   | "reason_no_selected_tab"
   | "reason_selected_tab_missing"
   | "reason_selected_tab_not_controllable"
+  | "reason_permission_missing"
+  | "reason_origin_changed"
   | "reason_unexpected_error"
 
 function rejected(

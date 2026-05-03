@@ -11,6 +11,8 @@
   "popup_no_tab_selected": { "message": "Nenhuma aba selecionada ainda" },
   "popup_choose_tab": { "message": "Escolha uma aba para receber cliques remotos." },
   "popup_use_current_tab": { "message": "Usar aba atual" },
+  "popup_grant_access": { "message": "Conceder acesso" },
+  "popup_stop_controlling": { "message": "Parar de controlar" },
   "popup_tab_selected": { "message": "Esta aba está selecionada ✓" },
   "popup_status_selected": { "message": "Selecionada" },
   "popup_status_tab_closed": { "message": "Aba fechada" },
@@ -20,6 +22,12 @@
   },
   "popup_reason_selected_tab_incompatible": {
     "message": "A aba selecionada está em uma página que o Ripple não consegue controlar."
+  },
+  "popup_reason_permission_lost": {
+    "message": "Esta aba mudou para outro site: $SITE$. Conceda acesso novamente para continuar.",
+    "placeholders": {
+      "site": { "content": "$1" }
+    }
   },
   "popup_loading_current_tab": { "message": "Carregando aba atual." },
   "reason_tab_no_controllable_url": {
