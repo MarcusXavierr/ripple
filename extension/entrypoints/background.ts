@@ -2,6 +2,7 @@ import { browser } from "wxt/browser"
 import { handleExternalMessage } from "../src/background/handleExternalMessage"
 import { armedTabNavigationAction } from "../src/permissions/armedTabNavigationHandler"
 import { createPermissionsGate } from "../src/permissions/permissionsGate"
+import { urlToOriginPattern } from "../src/permissions/urlToOriginPattern"
 import { clearSelectedTab, readSelectedTab } from "../src/selectedTab/selectedTabStore"
 
 const permissionsGate = createPermissionsGate({
@@ -9,35 +10,52 @@ const permissionsGate = createPermissionsGate({
   logger: console,
 })
 
-browser.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
-  const armed = await readSelectedTab(browser.storage.local)
-  const action = armedTabNavigationAction({
-    armed,
-    eventTabId: tabId,
-    changeUrl: changeInfo.url,
-    status: changeInfo.status,
+safeRegisterListener(() =>
+  browser.permissions.onAdded.addListener(async (permissions) => {
+    const armed = await readSelectedTab(browser.storage.local)
+    if (!armed) return
+
+    const armedPattern = urlToOriginPattern(armed.url)
+    if (!armedPattern) return
+    if (!permissions.origins?.includes(armedPattern)) return
+
+    await activateSelectedTab(armed.tabId)
   })
+)
 
-  if (action.kind === "noop") return
-  if (action.kind === "reinject") {
-    await browser.scripting
-      .executeScript({
-        target: { tabId: action.tabId },
-        files: ["/content-scripts/content.js"],
-      })
-      .catch(() => {})
-    return
-  }
+safeRegisterListener(() =>
+  browser.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
+    const armed = await readSelectedTab(browser.storage.local)
+    const action = armedTabNavigationAction({
+      armed,
+      eventTabId: tabId,
+      changeUrl: changeInfo.url,
+      status: changeInfo.status,
+    })
 
-  await browser.runtime.sendMessage({ type: "ripple/permission-lost" }).catch(() => {})
-})
+    if (action.kind === "noop") return
+    if (action.kind === "reinject") {
+      await browser.scripting
+        .executeScript({
+          target: { tabId: action.tabId },
+          files: ["/content-scripts/content.js"],
+        })
+        .catch(() => {})
+      return
+    }
 
-browser.tabs.onRemoved.addListener(async (tabId) => {
-  const armed = await readSelectedTab(browser.storage.local)
-  if (!armed || armed.tabId !== tabId) return
+    await browser.runtime.sendMessage({ type: "ripple/permission-lost" }).catch(() => {})
+  })
+)
 
-  await clearSelectedTab(browser.storage.local)
-})
+safeRegisterListener(() =>
+  browser.tabs.onRemoved.addListener(async (tabId) => {
+    const armed = await readSelectedTab(browser.storage.local)
+    if (!armed || armed.tabId !== tabId) return
+
+    await clearSelectedTab(browser.storage.local)
+  })
+)
 
 export default defineBackground(() => {
   browser.runtime.onMessageExternal.addListener((message, _sender, sendResponse) => {
@@ -60,3 +78,20 @@ export default defineBackground(() => {
     return true
   })
 })
+
+async function activateSelectedTab(tabId: number) {
+  await browser.scripting
+    .executeScript({
+      target: { tabId },
+      files: ["/content-scripts/content.js"],
+    })
+    .catch(() => {})
+}
+
+function safeRegisterListener(register: () => void) {
+  try {
+    register()
+  } catch {
+    // WXT's fake browser used during build doesn't implement every event target.
+  }
+}

@@ -7,8 +7,10 @@ import { derivePopupState, type LiveTab, type PopupState } from "../../src/popup
 import { PopupView } from "../../src/popup/PopupView"
 import {
   clearSelectedTab,
+  createSelectedTabFromTab,
   readSelectedTab,
   type SelectedTab,
+  saveSelectedTab,
 } from "../../src/selectedTab/selectedTabStore"
 import "./App.css"
 
@@ -70,6 +72,21 @@ export function App() {
     const targetTab = await getArmTarget(state)
     if (!targetTab) return
 
+    const targetPattern = urlToOriginPattern(targetTab.url)
+    const selectedTab = createSelectedTabFromTab(targetTab)
+    if (!targetPattern || !selectedTab) return
+
+    const hasPermission = await browser.permissions.contains({ origins: [targetPattern] })
+    if (!hasPermission) {
+      await saveSelectedTab(browser.storage.local, selectedTab)
+      const granted = await browser.permissions.request({ origins: [targetPattern] })
+      if (!granted) {
+        await clearSelectedTab(browser.storage.local)
+      }
+      await refresh()
+      return
+    }
+
     await armTab(targetTab, makeArmTabDeps(browser.storage.local, console))
     await refresh()
   }, [refresh, state])
@@ -77,11 +94,7 @@ export function App() {
   const onDisarm = useCallback(async () => {
     if (state.kind === "idle") return
 
-    await disarmTab(state.armed, {
-      remove: (perm) => browser.permissions.remove(perm),
-      clearSelectedTab: () => clearSelectedTab(browser.storage.local),
-      logger: console,
-    })
+    await disarmTab({ clearSelectedTab: () => clearSelectedTab(browser.storage.local) })
     await refresh()
   }, [refresh, state])
 
