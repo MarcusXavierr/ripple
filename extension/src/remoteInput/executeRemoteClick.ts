@@ -5,7 +5,11 @@ type ViewportPoint = {
 
 export type ClickExecutionResult =
   | { ok: true; stage: "dispatched" }
-  | { ok: false; reason: string; stage: "target" | "dispatch" }
+  | {
+      ok: false
+      reason: "reason_click_target_not_found" | "reason_click_execution_failed"
+      stage: "target" | "dispatch"
+    }
 
 /**
  * Dispatches the click sequence at a viewport point in the current document.
@@ -18,7 +22,7 @@ export function executeRemoteClick(
 ): ClickExecutionResult {
   const target = doc.elementFromPoint(point.x, point.y)
   if (!target) {
-    return { ok: false, reason: "click target cannot be found", stage: "target" }
+    return { ok: false, reason: "reason_click_target_not_found", stage: "target" }
   }
 
   try {
@@ -31,10 +35,10 @@ export function executeRemoteClick(
       target.focus()
     }
     return { ok: true, stage: "dispatched" }
-  } catch (error) {
+  } catch {
     return {
       ok: false,
-      reason: error instanceof Error ? error.message : "click execution failed",
+      reason: "reason_click_execution_failed",
       stage: "dispatch",
     }
   }

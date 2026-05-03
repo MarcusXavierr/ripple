@@ -150,7 +150,7 @@ describe("executeRemoteScroll", () => {
 
     expect(executeRemoteScroll({ x: 10, y: 20 }, scroll, document)).toEqual({
       ok: false,
-      reason: "scroll target cannot be found",
+      reason: "reason_scroll_target_not_found",
       stage: "target",
     })
   })

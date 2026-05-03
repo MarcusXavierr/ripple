@@ -1,0 +1,70 @@
+{
+  "ext_name": { "message": "Ripple Remote Control" },
+  "ext_description": {
+    "message": "Apply Ripple remote click events to the selected Chrome tab."
+  },
+  "action_title": { "message": "Ripple Remote Control" },
+  "popup_title": { "message": "Ripple Control" },
+  "popup_tagline": { "message": "Remote click target" },
+  "popup_selected_tab_label": { "message": "Selected tab" },
+  "popup_clear_selected_tab": { "message": "Clear selected tab" },
+  "popup_no_tab_selected": { "message": "No tab selected yet" },
+  "popup_choose_tab": { "message": "Choose a tab to receive remote clicks." },
+  "popup_use_current_tab": { "message": "Use current tab" },
+  "popup_tab_selected": { "message": "This tab is selected ✓" },
+  "popup_status_selected": { "message": "Selected" },
+  "popup_status_tab_closed": { "message": "Tab closed" },
+  "popup_status_unavailable": { "message": "Unavailable" },
+  "popup_reason_selected_tab_closed": {
+    "message": "Selected tab is no longer available."
+  },
+  "popup_reason_selected_tab_incompatible": {
+    "message": "Selected tab is on a page Ripple can't control."
+  },
+  "popup_loading_current_tab": { "message": "Loading current tab." },
+  "reason_tab_no_controllable_url": {
+    "message": "This tab has no controllable URL."
+  },
+  "reason_tab_chrome_internal": {
+    "message": "Chrome internal pages cannot be controlled."
+  },
+  "reason_tab_extension_page": {
+    "message": "Extension pages cannot be controlled."
+  },
+  "reason_tab_file_unsupported": {
+    "message": "Local files are not supported in V1."
+  },
+  "reason_tab_not_controllable": {
+    "message": "This tab cannot be controlled."
+  },
+  "reason_invalid_remote_input_message": {
+    "message": "invalid remote input message"
+  },
+  "reason_no_selected_tab": { "message": "no selected tab" },
+  "reason_selected_tab_missing": {
+    "message": "selected tab no longer exists"
+  },
+  "reason_selected_tab_not_controllable": {
+    "message": "selected tab URL is not controllable"
+  },
+  "reason_unexpected_error": { "message": "unexpected error" },
+  "reason_unknown_content_message": { "message": "unknown content message" },
+  "reason_click_target_not_found": { "message": "click target cannot be found" },
+  "reason_click_execution_failed": { "message": "click execution failed" },
+  "reason_scroll_target_not_found": {
+    "message": "scroll target cannot be found"
+  },
+  "reason_scroll_execution_failed": { "message": "scroll execution failed" },
+  "reason_keyboard_contenteditable_out_of_scope": {
+    "message": "contenteditable is out of scope in V1"
+  },
+  "reason_keyboard_execution_failed": {
+    "message": "keyboard execution failed"
+  },
+  "reason_keyboard_selection_unavailable": {
+    "message": "text selection is unavailable"
+  },
+  "reason_keyboard_native_value_setter_unavailable": {
+    "message": "native value setter is unavailable"
+  }
+}

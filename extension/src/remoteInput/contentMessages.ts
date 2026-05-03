@@ -46,7 +46,7 @@ export type ContentMessageResult =
   | ClickExecutionResult
   | ScrollExecutionResult
   | KeyboardExecutionResult
-  | { ok: false; reason: string; stage: "message" }
+  | { ok: false; reason: "reason_unknown_content_message"; stage: "message" }
 
 type ContentHandlerDeps = {
   viewport: { width: number; height: number }
@@ -61,7 +61,7 @@ export function handleContentMessage(
 ): ContentMessageResult {
   const parsed = v.safeParse(ContentMessageSchema, message)
   if (!parsed.success) {
-    return { ok: false, reason: "unknown content message", stage: "message" }
+    return { ok: false, reason: "reason_unknown_content_message", stage: "message" }
   }
 
   if (parsed.output.type === "execute-remote-click") {

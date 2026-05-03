@@ -1,5 +1,28 @@
 import { fireEvent, render, screen } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
+
+vi.mock("../i18n/t", () => ({
+  t: (key: string) =>
+    ({
+      popup_title: "Ripple",
+      popup_tagline: "Cliques remotos",
+      popup_selected_tab_label: "Aba selecionada",
+      popup_clear_selected_tab: "Limpar aba selecionada",
+      popup_no_tab_selected: "Nenhuma aba selecionada ainda",
+      popup_choose_tab: "Escolha uma aba para receber cliques remotos.",
+      popup_use_current_tab: "Usar aba atual",
+      popup_tab_selected: "Esta aba está selecionada ✓",
+      popup_status_selected: "Selecionada",
+      popup_status_tab_closed: "Aba fechada",
+      popup_status_unavailable: "Indisponível",
+      popup_reason_selected_tab_closed: "A aba selecionada não está mais disponível.",
+      popup_reason_selected_tab_incompatible:
+        "A aba selecionada está em uma página que o Ripple não consegue controlar.",
+      reason_tab_chrome_internal: "Páginas internas do Chrome não podem ser controladas.",
+      popup_loading_current_tab: "Carregando aba atual.",
+    })[key],
+}))
+
 import { PopupView } from "./PopupView"
 
 const baseProps = {
@@ -18,9 +41,9 @@ describe("PopupView", () => {
       />
     )
 
-    expect(screen.getByText(/no tab selected yet/i)).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: /use current tab/i })).toBeEnabled()
-    expect(screen.queryByRole("button", { name: /clear/i })).not.toBeInTheDocument()
+    expect(screen.getByText(/nenhuma aba selecionada ainda/i)).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /usar aba atual/i })).toBeEnabled()
+    expect(screen.queryByRole("button", { name: /limpar/i })).not.toBeInTheDocument()
   })
 
   it("state 2: empty selection, current incompatible — disabled CTA + warning", () => {
@@ -28,13 +51,13 @@ describe("PopupView", () => {
       <PopupView
         {...baseProps}
         card={{ kind: "empty" }}
-        cta={{ kind: "use-current", enabled: false, reason: "Cannot control chrome:// pages." }}
+        cta={{ kind: "use-current", enabled: false, reasonKey: "reason_tab_chrome_internal" }}
         canClear={false}
       />
     )
 
-    expect(screen.getByRole("button", { name: /use current tab/i })).toBeDisabled()
-    expect(screen.getByText(/chrome:\/\//i)).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /usar aba atual/i })).toBeDisabled()
+    expect(screen.getByText(/páginas internas do chrome/i)).toBeInTheDocument()
   })
 
   it("state 3: selection differs from current, current compatible — shows selected tab + Clear", () => {
@@ -49,51 +72,68 @@ describe("PopupView", () => {
 
     expect(screen.getByText("ADRs")).toBeInTheDocument()
     expect(screen.getByText("https://adr.github.io")).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: /use current tab/i })).toBeEnabled()
-    expect(screen.getByRole("button", { name: /clear/i })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /usar aba atual/i })).toBeEnabled()
+    expect(screen.getByRole("button", { name: /limpar/i })).toBeInTheDocument()
   })
 
   it("state 5: selection equals current — success-styled disabled CTA", () => {
     render(
       <PopupView
         {...baseProps}
-        card={{ kind: "selected-is-current", title: "ADRs", origin: "https://adr.github.io" }}
+        card={{
+          kind: "selected-is-current",
+          title: "ADRs",
+          origin: "https://adr.github.io",
+          statusKey: "popup_status_selected",
+        }}
         cta={{ kind: "already-selected" }}
         canClear
       />
     )
 
-    expect(screen.getByText(/this tab is selected/i)).toBeInTheDocument()
-    expect(screen.getByText(/^selected$/i)).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: /this tab is selected/i })).toBeDisabled()
+    expect(screen.getByText(/esta aba está selecionada/i)).toBeInTheDocument()
+    expect(screen.getByText(/^selecionada$/i)).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /esta aba está selecionada/i })).toBeDisabled()
   })
 
   it("state 6a: selected tab closed — shows stale state + warning", () => {
     render(
       <PopupView
         {...baseProps}
-        card={{ kind: "stale-closed", title: "Old tab", origin: "https://example.com" }}
+        card={{
+          kind: "stale-closed",
+          title: "Old tab",
+          origin: "https://example.com",
+          statusKey: "popup_status_tab_closed",
+          staleReasonKey: "popup_reason_selected_tab_closed",
+        }}
         cta={{ kind: "use-current", enabled: true }}
         canClear
       />
     )
 
-    expect(screen.getByText(/tab closed/i)).toBeInTheDocument()
-    expect(screen.getByText(/no longer available/i)).toBeInTheDocument()
+    expect(screen.getByText(/aba fechada/i)).toBeInTheDocument()
+    expect(screen.getByText(/não está mais disponível/i)).toBeInTheDocument()
   })
 
   it("state 6b: selected tab navigated to incompatible page", () => {
     render(
       <PopupView
         {...baseProps}
-        card={{ kind: "stale-incompatible", title: "Settings", origin: "chrome://settings" }}
+        card={{
+          kind: "stale-incompatible",
+          title: "Settings",
+          origin: "chrome://settings",
+          statusKey: "popup_status_unavailable",
+          staleReasonKey: "popup_reason_selected_tab_incompatible",
+        }}
         cta={{ kind: "use-current", enabled: true }}
         canClear
       />
     )
 
-    expect(screen.getByText(/unavailable/i)).toBeInTheDocument()
-    expect(screen.getByText(/can't control/i)).toBeInTheDocument()
+    expect(screen.getByText(/indisponível/i)).toBeInTheDocument()
+    expect(screen.getByText(/não consegue controlar/i)).toBeInTheDocument()
   })
 
   it("calls onUseCurrentTab when primary CTA clicked", () => {
@@ -109,7 +149,7 @@ describe("PopupView", () => {
       />
     )
 
-    fireEvent.click(screen.getByRole("button", { name: /use current tab/i }))
+    fireEvent.click(screen.getByRole("button", { name: /usar aba atual/i }))
     expect(onUseCurrentTab).toHaveBeenCalledOnce()
   })
 
@@ -126,7 +166,7 @@ describe("PopupView", () => {
       />
     )
 
-    fireEvent.click(screen.getByRole("button", { name: /clear/i }))
+    fireEvent.click(screen.getByRole("button", { name: /limpar/i }))
     expect(onClearSelectedTab).toHaveBeenCalledOnce()
   })
 })

@@ -37,7 +37,7 @@ describe("executeRemoteClick", () => {
 
     expect(executeRemoteClick({ x: 20, y: 30 }, document)).toEqual({
       ok: false,
-      reason: "click target cannot be found",
+      reason: "reason_click_target_not_found",
       stage: "target",
     })
   })

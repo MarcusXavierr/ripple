@@ -49,7 +49,11 @@ describe("handleContentMessage", () => {
       }
     )
 
-    expect(result).toEqual({ ok: false, reason: "unknown content message", stage: "message" })
+    expect(result).toEqual({
+      ok: false,
+      reason: "reason_unknown_content_message",
+      stage: "message",
+    })
   })
 
   it("exports a schema for valid content messages", () => {

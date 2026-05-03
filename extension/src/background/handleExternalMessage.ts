@@ -20,14 +20,14 @@ export async function handleExternalMessage(
 ): Promise<ExtensionAck> {
   if (!isRemoteInputMessage(message)) {
     deps.logger.warn("[Ripple Extension] rejected external message", message)
-    return rejected(null, "invalid remote input message", "message")
+    return rejected(null, "reason_invalid_remote_input_message", "message")
   }
 
   deps.logger.debug("[Ripple Extension] received remote input", message)
 
   const selectedTab = await deps.readSelectedTab()
   if (!selectedTab) {
-    return rejected(message, "no selected tab", "selected-tab")
+    return rejected(message, "reason_no_selected_tab", "selected-tab")
   }
 
   const tab = await deps.getTab(selectedTab.tabId).catch((error) => {
@@ -38,10 +38,10 @@ export async function handleExternalMessage(
     return null
   })
   if (!tab) {
-    return rejected(message, "selected tab no longer exists", "selected-tab")
+    return rejected(message, "reason_selected_tab_missing", "selected-tab")
   }
   if (!isControllableTabUrl(tab.url)) {
-    return rejected(message, "selected tab URL is not controllable", "selected-tab")
+    return rejected(message, "reason_selected_tab_not_controllable", "selected-tab")
   }
 
   const contentMessage: ContentMessage = toContentMessage(message)
@@ -76,9 +76,16 @@ function applied(message: RemoteInputMessage, targetTabId: number): ExtensionAck
   return { ok: true, type: typeByMessage[message.type], targetTabId }
 }
 
+type RejectReasonKey =
+  | "reason_invalid_remote_input_message"
+  | "reason_no_selected_tab"
+  | "reason_selected_tab_missing"
+  | "reason_selected_tab_not_controllable"
+  | "reason_unexpected_error"
+
 function rejected(
   message: RemoteInputMessage | null,
-  reason: string,
+  reason: RejectReasonKey | Extract<ContentMessageResult, { ok: false }>["reason"],
   stage?: string
 ): ExtensionAck {
   const type =

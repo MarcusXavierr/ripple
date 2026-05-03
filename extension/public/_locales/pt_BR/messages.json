@@ -1,0 +1,72 @@
+{
+  "ext_name": { "message": "Controle Remoto Ripple" },
+  "ext_description": {
+    "message": "Aplica eventos remotos do Ripple na aba selecionada do Chrome."
+  },
+  "action_title": { "message": "Controle Remoto Ripple" },
+  "popup_title": { "message": "Ripple" },
+  "popup_tagline": { "message": "Cliques remotos" },
+  "popup_selected_tab_label": { "message": "Aba selecionada" },
+  "popup_clear_selected_tab": { "message": "Limpar aba selecionada" },
+  "popup_no_tab_selected": { "message": "Nenhuma aba selecionada ainda" },
+  "popup_choose_tab": { "message": "Escolha uma aba para receber cliques remotos." },
+  "popup_use_current_tab": { "message": "Usar aba atual" },
+  "popup_tab_selected": { "message": "Esta aba está selecionada ✓" },
+  "popup_status_selected": { "message": "Selecionada" },
+  "popup_status_tab_closed": { "message": "Aba fechada" },
+  "popup_status_unavailable": { "message": "Indisponível" },
+  "popup_reason_selected_tab_closed": {
+    "message": "A aba selecionada não está mais disponível."
+  },
+  "popup_reason_selected_tab_incompatible": {
+    "message": "A aba selecionada está em uma página que o Ripple não consegue controlar."
+  },
+  "popup_loading_current_tab": { "message": "Carregando aba atual." },
+  "reason_tab_no_controllable_url": {
+    "message": "Esta aba não tem uma URL controlável."
+  },
+  "reason_tab_chrome_internal": {
+    "message": "Páginas internas do Chrome não podem ser controladas."
+  },
+  "reason_tab_extension_page": {
+    "message": "Páginas de extensão não podem ser controladas."
+  },
+  "reason_tab_file_unsupported": {
+    "message": "Arquivos locais não são suportados na V1."
+  },
+  "reason_tab_not_controllable": {
+    "message": "Esta aba não pode ser controlada."
+  },
+  "reason_invalid_remote_input_message": {
+    "message": "mensagem remota inválida"
+  },
+  "reason_no_selected_tab": { "message": "nenhuma aba selecionada" },
+  "reason_selected_tab_missing": {
+    "message": "a aba selecionada não existe mais"
+  },
+  "reason_selected_tab_not_controllable": {
+    "message": "a URL da aba selecionada não é controlável"
+  },
+  "reason_unexpected_error": { "message": "erro inesperado" },
+  "reason_unknown_content_message": { "message": "mensagem de conteúdo desconhecida" },
+  "reason_click_target_not_found": {
+    "message": "não foi possível encontrar o alvo do clique"
+  },
+  "reason_click_execution_failed": { "message": "falha ao executar o clique" },
+  "reason_scroll_target_not_found": {
+    "message": "não foi possível encontrar o alvo do scroll"
+  },
+  "reason_scroll_execution_failed": { "message": "falha ao executar o scroll" },
+  "reason_keyboard_contenteditable_out_of_scope": {
+    "message": "contenteditable está fora do escopo da V1"
+  },
+  "reason_keyboard_execution_failed": {
+    "message": "falha ao executar o teclado"
+  },
+  "reason_keyboard_selection_unavailable": {
+    "message": "a seleção de texto não está disponível"
+  },
+  "reason_keyboard_native_value_setter_unavailable": {
+    "message": "o setter nativo de value não está disponível"
+  }
+}

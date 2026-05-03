@@ -12,7 +12,7 @@ import "./App.css"
 
 const INITIAL_STATE: PopupState = {
   card: { kind: "empty" },
-  cta: { kind: "use-current", enabled: false, reason: "Loading current tab." },
+  cta: { kind: "use-current", enabled: false, reasonKey: "popup_loading_current_tab" },
   canClear: false,
 }
 
