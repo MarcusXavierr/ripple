@@ -2,7 +2,15 @@ import type { PeerKeyboardInput } from "@shared/remoteInputProtocol"
 
 export type KeyboardExecutionResult =
   | { ok: true; stage: "applied" | "dispatched" }
-  | { ok: false; reason: string; stage: "target" | "selection" | "dispatch" }
+  | {
+      ok: false
+      reason:
+        | "reason_keyboard_contenteditable_out_of_scope"
+        | "reason_keyboard_execution_failed"
+        | "reason_keyboard_selection_unavailable"
+        | "reason_keyboard_native_value_setter_unavailable"
+      stage: "target" | "selection" | "dispatch"
+    }
 
 type TextTarget = HTMLInputElement | HTMLTextAreaElement
 
@@ -29,15 +37,15 @@ export function executeRemoteKeyboard(
       // complexity and editor-specific edge cases.
       return {
         ok: false,
-        reason: "contenteditable is out of scope in V1",
+        reason: "reason_keyboard_contenteditable_out_of_scope",
         stage: "target",
       }
     }
     return dispatchFocusedKeyboardEvent(keyboard, active, doc)
-  } catch (error) {
+  } catch {
     return {
       ok: false,
-      reason: error instanceof Error ? error.message : "keyboard execution failed",
+      reason: "reason_keyboard_execution_failed",
       stage: "dispatch",
     }
   }
@@ -63,13 +71,19 @@ function applyTextEdit(
   const selectionStart = target.selectionStart
   const selectionEnd = target.selectionEnd
   if (selectionStart === null || selectionEnd === null) {
-    return { ok: false, reason: "text selection is unavailable", stage: "selection" }
+    return { ok: false, reason: "reason_keyboard_selection_unavailable", stage: "selection" }
   }
 
   const edit = computeTextEdit(target.value, selectionStart, selectionEnd, keyboard.key)
   if (!edit) return dispatchFocusedKeyboardEvent(keyboard, target, doc)
 
-  setNativeValue(target, edit.value)
+  if (!setNativeValue(target, edit.value)) {
+    return {
+      ok: false,
+      reason: "reason_keyboard_native_value_setter_unavailable",
+      stage: "dispatch",
+    }
+  }
   target.setSelectionRange(edit.caret, edit.caret)
   dispatchInputEvent(target, edit.inputType, edit.data, doc)
   return { ok: true, stage: "applied" }
@@ -125,14 +139,15 @@ function computeTextEdit(value: string, start: number, end: number, key: string)
   return null
 }
 
-function setNativeValue(target: TextTarget, value: string) {
+function setNativeValue(target: TextTarget, value: string): boolean {
   const prototype =
     target instanceof HTMLTextAreaElement
       ? HTMLTextAreaElement.prototype
       : HTMLInputElement.prototype
   const setter = Object.getOwnPropertyDescriptor(prototype, "value")?.set
-  if (!setter) throw new Error("native value setter is unavailable")
+  if (!setter) return false
   setter.call(target, value)
+  return true
 }
 
 function dispatchInputEvent(

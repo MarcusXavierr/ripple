@@ -53,7 +53,7 @@ describe("handleExternalMessage", () => {
     await expect(handleExternalMessage({ type: "bad" }, createDeps())).resolves.toEqual({
       ok: false,
       type: "remote-click-rejected",
-      reason: "invalid remote input message",
+      reason: "reason_invalid_remote_input_message",
       stage: "message",
     })
   })
@@ -67,7 +67,7 @@ describe("handleExternalMessage", () => {
     ).resolves.toEqual({
       ok: false,
       type: "remote-click-rejected",
-      reason: "no selected tab",
+      reason: "reason_no_selected_tab",
       stage: "selected-tab",
     })
   })
@@ -91,7 +91,7 @@ describe("handleExternalMessage", () => {
     const deps = createDeps({
       sendMessageToTab: vi.fn().mockResolvedValue({
         ok: false,
-        reason: "click target cannot be found",
+        reason: "reason_click_target_not_found",
         stage: "target",
       }),
     })
@@ -99,7 +99,7 @@ describe("handleExternalMessage", () => {
     await expect(handleExternalMessage(message, deps)).resolves.toEqual({
       ok: false,
       type: "remote-click-rejected",
-      reason: "click target cannot be found",
+      reason: "reason_click_target_not_found",
       stage: "target",
     })
   })
@@ -112,7 +112,7 @@ describe("handleExternalMessage", () => {
     await expect(handleExternalMessage(message, deps)).resolves.toEqual({
       ok: false,
       type: "remote-click-rejected",
-      reason: "selected tab no longer exists",
+      reason: "reason_selected_tab_missing",
       stage: "selected-tab",
     })
 
@@ -146,7 +146,7 @@ describe("handleExternalMessage", () => {
     const deps = createDeps({
       sendMessageToTab: vi.fn().mockResolvedValue({
         ok: false,
-        reason: "scroll target cannot be found",
+        reason: "reason_scroll_target_not_found",
         stage: "target",
       }),
     })
@@ -154,7 +154,7 @@ describe("handleExternalMessage", () => {
     await expect(handleExternalMessage(scrollMessage, deps)).resolves.toEqual({
       ok: false,
       type: "remote-scroll-rejected",
-      reason: "scroll target cannot be found",
+      reason: "reason_scroll_target_not_found",
       stage: "target",
     })
   })
@@ -198,7 +198,7 @@ describe("handleExternalMessage", () => {
     const deps = createDeps({
       sendMessageToTab: vi.fn().mockResolvedValue({
         ok: false,
-        reason: "invalid selection",
+        reason: "reason_keyboard_selection_unavailable",
         stage: "selection",
       }),
     })
@@ -206,7 +206,7 @@ describe("handleExternalMessage", () => {
     await expect(handleExternalMessage(keyboardMessage, deps)).resolves.toEqual({
       ok: false,
       type: "remote-keyboard-rejected",
-      reason: "invalid selection",
+      reason: "reason_keyboard_selection_unavailable",
       stage: "selection",
     })
   })

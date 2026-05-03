@@ -3,7 +3,11 @@ import type { ViewportPoint } from "./translateRemotePoint"
 
 export type ScrollExecutionResult =
   | { ok: true; stage: "scrolled" }
-  | { ok: false; reason: string; stage: "target" | "dispatch" }
+  | {
+      ok: false
+      reason: "reason_scroll_target_not_found" | "reason_scroll_execution_failed"
+      stage: "target" | "dispatch"
+    }
 
 export function executeRemoteScroll(
   point: ViewportPoint,
@@ -14,7 +18,7 @@ export function executeRemoteScroll(
   const docScroller = getDocumentScroller(doc, scroll)
   const scrollTarget = target ? (findScrollableTarget(target, scroll) ?? docScroller) : docScroller
   if (!scrollTarget) {
-    return { ok: false, reason: "scroll target cannot be found", stage: "target" }
+    return { ok: false, reason: "reason_scroll_target_not_found", stage: "target" }
   }
 
   const { left, top } = convertWheelDeltaToPixels(scroll, scrollTarget, doc)
@@ -31,10 +35,10 @@ export function executeRemoteScroll(
     }
 
     return { ok: true, stage: "scrolled" }
-  } catch (error) {
+  } catch {
     return {
       ok: false,
-      reason: error instanceof Error ? error.message : "scroll execution failed",
+      reason: "reason_scroll_execution_failed",
       stage: "dispatch",
     }
   }
