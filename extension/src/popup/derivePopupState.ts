@@ -4,7 +4,23 @@ import {
   isControllableTabUrl,
 } from "../selectedTab/isControllableTab"
 import type { SelectedTab } from "../selectedTab/selectedTabStore"
-import type { CardState, CtaState } from "./PopupView"
+
+export type CardState =
+  | { kind: "empty" }
+  | { kind: "selected"; title?: string; origin: string }
+  | { kind: "selected-is-current"; title?: string; origin: string }
+  | { kind: "stale-closed"; title?: string; origin: string }
+  | { kind: "stale-incompatible"; title?: string; origin: string }
+
+export type CtaState =
+  | { kind: "use-current"; enabled: boolean; reason?: string }
+  | { kind: "already-selected" }
+
+export type PopupState = {
+  card: CardState
+  cta: CtaState
+  canClear: boolean
+}
 
 type CurrentTabInfo = {
   id?: number
@@ -14,12 +30,6 @@ type CurrentTabInfo = {
 
 type LiveLookup = { ok: true; title?: string; url: string } | { ok: false; reason: "closed" } | null
 
-export type PopupState = {
-  card: CardState
-  cta: CtaState
-  canClear: boolean
-}
-
 export function derivePopupState(args: {
   stored: SelectedTab | null
   currentTab: CurrentTabInfo
@@ -27,20 +37,20 @@ export function derivePopupState(args: {
 }): PopupState {
   const { stored, currentTab, liveLookup } = args
   const currentCompatible = isControllableTabUrl(currentTab.url)
-  const currentReason = currentCompatible ? undefined : getIncompatibleTabReason(currentTab.url)
+  const useCurrentCta: CtaState = {
+    kind: "use-current",
+    enabled: currentCompatible,
+    reason: currentCompatible ? undefined : getIncompatibleTabReason(currentTab.url),
+  }
 
   if (!stored) {
-    return {
-      card: { kind: "empty" },
-      cta: { kind: "use-current", enabled: currentCompatible, reason: currentReason },
-      canClear: false,
-    }
+    return { card: { kind: "empty" }, cta: useCurrentCta, canClear: false }
   }
 
   if (liveLookup?.ok === false) {
     return {
       card: { kind: "stale-closed", title: stored.title, origin: stored.origin },
-      cta: { kind: "use-current", enabled: currentCompatible, reason: currentReason },
+      cta: useCurrentCta,
       canClear: true,
     }
   }
@@ -51,7 +61,7 @@ export function derivePopupState(args: {
   if (!isControllableTabUrl(liveUrl)) {
     return {
       card: { kind: "stale-incompatible", title: liveTitle, origin: liveUrl },
-      cta: { kind: "use-current", enabled: currentCompatible, reason: currentReason },
+      cta: useCurrentCta,
       canClear: true,
     }
   }
@@ -68,7 +78,7 @@ export function derivePopupState(args: {
 
   return {
     card: { kind: "selected", title: liveTitle, origin: liveOrigin },
-    cta: { kind: "use-current", enabled: currentCompatible, reason: currentReason },
+    cta: useCurrentCta,
     canClear: true,
   }
 }

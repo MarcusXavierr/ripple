@@ -1,13 +1,4 @@
-type CardState =
-  | { kind: "empty" }
-  | { kind: "selected"; title?: string; origin: string }
-  | { kind: "selected-is-current"; title?: string; origin: string }
-  | { kind: "stale-closed"; title?: string; origin: string }
-  | { kind: "stale-incompatible"; title?: string; origin: string }
-
-type CtaState =
-  | { kind: "use-current"; enabled: boolean; reason?: string }
-  | { kind: "already-selected" }
+import type { CardState, CtaState } from "./derivePopupState"
 
 type PopupViewProps = {
   card: CardState
@@ -17,6 +8,17 @@ type PopupViewProps = {
   onClearSelectedTab: () => void
 }
 
+const PILL_BY_KIND = {
+  "selected-is-current": { label: "Selected", tone: "success" },
+  "stale-closed": { label: "Tab closed", tone: "warning" },
+  "stale-incompatible": { label: "Unavailable", tone: "danger" },
+} as const
+
+const STALE_CARD_REASON = {
+  "stale-closed": "Selected tab is no longer available.",
+  "stale-incompatible": "Selected tab is on a page Ripple can't control.",
+} as const
+
 export function PopupView({
   card,
   cta,
@@ -24,6 +26,12 @@ export function PopupView({
   onUseCurrentTab,
   onClearSelectedTab,
 }: PopupViewProps) {
+  const ctaReason = cta.kind === "use-current" ? cta.reason : undefined
+  const staleReason =
+    card.kind === "stale-closed" || card.kind === "stale-incompatible"
+      ? STALE_CARD_REASON[card.kind]
+      : undefined
+
   return (
     <main className="popup">
       <header className="popup-header">
@@ -38,14 +46,8 @@ export function PopupView({
         <div className="section-label">Selected tab</div>
         <TabCard card={card} />
         <PrimaryCta cta={cta} onClick={onUseCurrentTab} />
-        {cta.kind === "use-current" && cta.reason && <p className="warning-chip">{cta.reason}</p>}
-        {(card.kind === "stale-closed" || card.kind === "stale-incompatible") && (
-          <p className="warning-chip">
-            {card.kind === "stale-closed"
-              ? "Selected tab is no longer available."
-              : "Selected tab is on a page Ripple can't control."}
-          </p>
-        )}
+        {ctaReason && <p className="warning-chip">{ctaReason}</p>}
+        {staleReason && <p className="warning-chip">{staleReason}</p>}
       </section>
 
       {canClear && (
@@ -75,13 +77,7 @@ function TabCard({ card }: { card: CardState }) {
 
   const dimmed = card.kind === "stale-closed" || card.kind === "stale-incompatible"
   const pill =
-    card.kind === "selected-is-current"
-      ? { label: "Selected", tone: "success" as const }
-      : card.kind === "stale-closed"
-        ? { label: "Tab closed", tone: "warning" as const }
-        : card.kind === "stale-incompatible"
-          ? { label: "Unavailable", tone: "danger" as const }
-          : null
+    card.kind in PILL_BY_KIND ? PILL_BY_KIND[card.kind as keyof typeof PILL_BY_KIND] : null
 
   return (
     <div className={`tab-card${dimmed ? " tab-card--dimmed" : ""}`}>
@@ -111,5 +107,3 @@ function PrimaryCta({ cta, onClick }: { cta: CtaState; onClick: () => void }) {
     </button>
   )
 }
-
-export type { CardState, CtaState, PopupViewProps }
