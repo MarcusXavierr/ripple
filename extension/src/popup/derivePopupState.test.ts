@@ -36,7 +36,7 @@ describe("derivePopupState", () => {
     expect(out.cta.kind).toBe("use-current")
     if (out.cta.kind === "use-current") {
       expect(out.cta.enabled).toBe(false)
-      expect(out.cta.reason).toBeTruthy()
+      expect(out.cta.reasonKey).toBe("reason_tab_chrome_internal")
     }
   })
 
@@ -79,6 +79,8 @@ describe("derivePopupState", () => {
       kind: "stale-closed",
       title: "Old title",
       origin: "https://example.com",
+      statusKey: "popup_status_tab_closed",
+      staleReasonKey: "popup_reason_selected_tab_closed",
     })
     expect(out.canClear).toBe(true)
   })
@@ -94,6 +96,8 @@ describe("derivePopupState", () => {
     if (out.card.kind === "stale-incompatible") {
       expect(out.card.title).toBe("Settings")
       expect(out.card.origin).toBe("chrome://settings")
+      expect(out.card.statusKey).toBe("popup_status_unavailable")
+      expect(out.card.staleReasonKey).toBe("popup_reason_selected_tab_incompatible")
     }
   })
 })

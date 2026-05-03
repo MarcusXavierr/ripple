@@ -1,4 +1,4 @@
-import { getIncompatibleTabReason, isControllableTabUrl } from "./isControllableTab"
+import { getIncompatibleTabReasonKey, isControllableTabUrl } from "./isControllableTab"
 
 describe("isControllableTabUrl", () => {
   it("accepts normal web pages", () => {
@@ -13,10 +13,8 @@ describe("isControllableTabUrl", () => {
     expect(isControllableTabUrl("file:///tmp/demo.html")).toBe(false)
   })
 
-  it("returns readable reasons for incompatible tabs", () => {
-    expect(getIncompatibleTabReason("chrome://extensions")).toBe(
-      "Chrome internal pages cannot be controlled."
-    )
-    expect(getIncompatibleTabReason(undefined)).toBe("This tab has no controllable URL.")
+  it("returns reason keys for incompatible tabs", () => {
+    expect(getIncompatibleTabReasonKey("chrome://extensions")).toBe("reason_tab_chrome_internal")
+    expect(getIncompatibleTabReasonKey(undefined)).toBe("reason_tab_no_controllable_url")
   })
 })

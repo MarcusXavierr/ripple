@@ -1,3 +1,4 @@
+import { t } from "../i18n/t"
 import type { CardState, CtaState } from "./derivePopupState"
 
 type PopupViewProps = {
@@ -8,17 +9,6 @@ type PopupViewProps = {
   onClearSelectedTab: () => void
 }
 
-const PILL_BY_KIND = {
-  "selected-is-current": { label: "Selected", tone: "success" },
-  "stale-closed": { label: "Tab closed", tone: "warning" },
-  "stale-incompatible": { label: "Unavailable", tone: "danger" },
-} as const
-
-const STALE_CARD_REASON = {
-  "stale-closed": "Selected tab is no longer available.",
-  "stale-incompatible": "Selected tab is on a page Ripple can't control.",
-} as const
-
 export function PopupView({
   card,
   cta,
@@ -26,10 +16,10 @@ export function PopupView({
   onUseCurrentTab,
   onClearSelectedTab,
 }: PopupViewProps) {
-  const ctaReason = cta.kind === "use-current" ? cta.reason : undefined
+  const ctaReason = cta.kind === "use-current" && cta.reasonKey ? t(cta.reasonKey) : undefined
   const staleReason =
     card.kind === "stale-closed" || card.kind === "stale-incompatible"
-      ? STALE_CARD_REASON[card.kind]
+      ? t(card.staleReasonKey)
       : undefined
 
   return (
@@ -37,13 +27,13 @@ export function PopupView({
       <header className="popup-header">
         <img className="ripple-logo" src="/favicon.svg" alt="" width={36} height={36} />
         <div className="popup-title">
-          <div className="name">Ripple Control</div>
-          <div className="tagline">Remote click target</div>
+          <div className="name">{t("popup_title")}</div>
+          <div className="tagline">{t("popup_tagline")}</div>
         </div>
       </header>
 
       <section className="section">
-        <div className="section-label">Selected tab</div>
+        <div className="section-label">{t("popup_selected_tab_label")}</div>
         <TabCard card={card} />
         <PrimaryCta cta={cta} onClick={onUseCurrentTab} />
         {ctaReason && <p className="warning-chip">{ctaReason}</p>}
@@ -53,7 +43,7 @@ export function PopupView({
       {canClear && (
         <footer className="popup-footer">
           <button type="button" className="cta-btn secondary" onClick={onClearSelectedTab}>
-            Clear selected tab
+            {t("popup_clear_selected_tab")}
           </button>
         </footer>
       )}
@@ -67,8 +57,8 @@ function TabCard({ card }: { card: CardState }) {
       <div className="tab-card tab-card--empty">
         <div className="tab-card-inner">
           <div className="tab-meta">
-            <div className="title muted">No tab selected yet</div>
-            <div className="url">Choose a tab to receive remote clicks.</div>
+            <div className="title muted">{t("popup_no_tab_selected")}</div>
+            <div className="url">{t("popup_choose_tab")}</div>
           </div>
         </div>
       </div>
@@ -76,8 +66,12 @@ function TabCard({ card }: { card: CardState }) {
   }
 
   const dimmed = card.kind === "stale-closed" || card.kind === "stale-incompatible"
-  const pill =
-    card.kind in PILL_BY_KIND ? PILL_BY_KIND[card.kind as keyof typeof PILL_BY_KIND] : null
+  const statusKey =
+    card.kind === "selected-is-current" ||
+    card.kind === "stale-closed" ||
+    card.kind === "stale-incompatible"
+      ? card.statusKey
+      : null
 
   return (
     <div className={`tab-card${dimmed ? " tab-card--dimmed" : ""}`}>
@@ -86,24 +80,31 @@ function TabCard({ card }: { card: CardState }) {
           <div className="title">{card.title || card.origin}</div>
           <div className="url">{card.origin}</div>
         </div>
-        {pill && <span className={`pill pill--${pill.tone}`}>{pill.label}</span>}
+        {statusKey && <span className={`pill pill--${pillTone(card.kind)}`}>{t(statusKey)}</span>}
       </div>
     </div>
   )
+}
+
+function pillTone(kind: CardState["kind"]): string {
+  if (kind === "selected-is-current") return "success"
+  if (kind === "stale-closed") return "warning"
+  if (kind === "stale-incompatible") return "danger"
+  return ""
 }
 
 function PrimaryCta({ cta, onClick }: { cta: CtaState; onClick: () => void }) {
   if (cta.kind === "already-selected") {
     return (
       <button type="button" className="cta-btn primary cta-btn--success" disabled>
-        This tab is selected ✓
+        {t("popup_tab_selected")}
       </button>
     )
   }
 
   return (
     <button type="button" className="cta-btn primary" disabled={!cta.enabled} onClick={onClick}>
-      Use current tab
+      {t("popup_use_current_tab")}
     </button>
   )
 }

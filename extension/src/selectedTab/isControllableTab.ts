@@ -1,3 +1,5 @@
+import type { MessageKey } from "../i18n/t"
+
 export function isControllableTabUrl(url: string | undefined): boolean {
   if (!url) return false
 
@@ -9,14 +11,14 @@ export function isControllableTabUrl(url: string | undefined): boolean {
   }
 }
 
-export function getIncompatibleTabReason(url: string | undefined): string {
-  if (!url) return "This tab has no controllable URL."
-  if (isControllableTabUrl(url)) return ""
+export function getIncompatibleTabReasonKey(url: string | undefined): MessageKey {
+  if (!url) return "reason_tab_no_controllable_url"
+  if (isControllableTabUrl(url)) return "reason_tab_not_controllable"
 
-  if (url.startsWith("chrome://")) return "Chrome internal pages cannot be controlled."
-  if (url.startsWith("chrome-extension://")) return "Extension pages cannot be controlled."
-  if (url.startsWith("file://")) return "Local files are not supported in V1."
-  return "This tab cannot be controlled."
+  if (url.startsWith("chrome://")) return "reason_tab_chrome_internal"
+  if (url.startsWith("chrome-extension://")) return "reason_tab_extension_page"
+  if (url.startsWith("file://")) return "reason_tab_file_unsupported"
+  return "reason_tab_not_controllable"
 }
 
 export function getTabOrigin(url: string): string {
