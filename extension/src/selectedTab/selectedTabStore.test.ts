@@ -31,7 +31,8 @@ describe("selectedTabStore", () => {
         title: "YouTube",
         url: "https://www.youtube.com/watch?v=1",
       },
-      12345
+      12345,
+      ["https://youtube.com/*", "https://*.youtube.com/*"]
     )
 
     expect(selected).toEqual({
@@ -41,6 +42,7 @@ describe("selectedTabStore", () => {
       url: "https://www.youtube.com/watch?v=1",
       origin: "https://www.youtube.com",
       selectedAt: 12345,
+      grantedPatterns: ["https://youtube.com/*", "https://*.youtube.com/*"],
     })
   })
 
@@ -55,7 +57,8 @@ describe("selectedTabStore", () => {
     const storage = createMemoryStorage()
     const selected = createSelectedTabFromTab(
       { id: 7, windowId: 3, title: "Example", url: "https://example.com/path" },
-      12345
+      12345,
+      ["https://example.com/*"]
     )
 
     expect(selected).not.toBeNull()
@@ -80,6 +83,50 @@ describe("selectedTabStore", () => {
     })
 
     await expect(readSelectedTab(storage)).resolves.toBeNull()
+  })
+
+  it("migrates legacy storage missing grantedPatterns", async () => {
+    const storage = createMemoryStorage()
+
+    await storage.set({
+      "ripple.selectedTab": {
+        tabId: 7,
+        windowId: 3,
+        url: "https://example.com/path",
+        origin: "https://example.com",
+        selectedAt: 12345,
+      },
+    })
+
+    await expect(readSelectedTab(storage)).resolves.toEqual({
+      tabId: 7,
+      windowId: 3,
+      url: "https://example.com/path",
+      origin: "https://example.com",
+      selectedAt: 12345,
+      grantedPatterns: ["https://example.com/*"],
+    })
+  })
+
+  it("returns stored grantedPatterns when present", async () => {
+    const storage = createMemoryStorage()
+    await saveSelectedTab(storage, {
+      tabId: 1,
+      windowId: 2,
+      url: "https://wikipedia.org/",
+      origin: "https://wikipedia.org",
+      selectedAt: 0,
+      grantedPatterns: ["https://wikipedia.org/*", "https://*.wikipedia.org/*"],
+    })
+
+    await expect(readSelectedTab(storage)).resolves.toEqual({
+      tabId: 1,
+      windowId: 2,
+      url: "https://wikipedia.org/",
+      origin: "https://wikipedia.org",
+      selectedAt: 0,
+      grantedPatterns: ["https://wikipedia.org/*", "https://*.wikipedia.org/*"],
+    })
   })
 
   it("SelectedTabSchema does not include approvalStatus field", () => {
