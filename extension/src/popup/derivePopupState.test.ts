@@ -32,17 +32,17 @@ describe("derivePopupState", () => {
     expect(state.kind).toBe("tabClosed")
   })
 
-  it("permissionLost when armed origin differs from current origin regardless of permission", () => {
+  it("controllable when wildcard grant covers a different live origin", () => {
     const state = derivePopupState({
       stored: armedTab,
-      liveTab: { ok: true, url: "https://other.test/", title: "Other" },
+      liveTab: { ok: true, url: "https://pt.example.com/", title: "Other" },
       hasPermission: true,
     })
 
-    expect(state.kind).toBe("permissionLost")
+    expect(state.kind).toBe("controllable")
   })
 
-  it("pendingApproval when origins match but permission missing", () => {
+  it("pendingApproval when permission missing and origins match", () => {
     const state = derivePopupState({
       stored: armedTab,
       liveTab: { ok: true, url: "https://example.com/somewhere", title: "Example" },
@@ -52,7 +52,17 @@ describe("derivePopupState", () => {
     expect(state.kind).toBe("pendingApproval")
   })
 
-  it("controllable when origin matches and permission granted", () => {
+  it("permissionLost when permission missing and origin differs", () => {
+    const state = derivePopupState({
+      stored: armedTab,
+      liveTab: { ok: true, url: "https://other.test/", title: "Other" },
+      hasPermission: false,
+    })
+
+    expect(state.kind).toBe("permissionLost")
+  })
+
+  it("controllable when permission granted on same origin", () => {
     const state = derivePopupState({
       stored: armedTab,
       liveTab: { ok: true, url: "https://example.com/x", title: "Example" },

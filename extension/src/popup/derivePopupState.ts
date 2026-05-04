@@ -20,13 +20,12 @@ export function derivePopupState(args: {
   if (!stored) return { kind: "idle" }
   if (!liveTab || liveTab.ok === false) return { kind: "tabClosed", armed: stored }
 
-  const currentOrigin = safeOrigin(liveTab.url)
-  if (currentOrigin !== stored.origin) {
-    return { kind: "permissionLost", armed: stored, currentOrigin: currentOrigin ?? "" }
-  }
+  if (hasPermission) return { kind: "controllable", armed: stored }
 
-  if (!hasPermission) return { kind: "pendingApproval", armed: stored }
-  return { kind: "controllable", armed: stored }
+  const currentOrigin = safeOrigin(liveTab.url)
+  if (currentOrigin === stored.origin) return { kind: "pendingApproval", armed: stored }
+
+  return { kind: "permissionLost", armed: stored, currentOrigin: currentOrigin ?? "" }
 }
 
 function safeOrigin(url: string): string | null {
