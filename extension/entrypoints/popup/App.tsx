@@ -87,7 +87,7 @@ export function App() {
       return
     }
 
-    await armTab(targetTab, makeArmTabDeps(browser.storage.local, console))
+    await armTab(targetTab, false, makeArmTabDeps(browser.storage.local, console))
     await refresh()
   }, [refresh, state])
 

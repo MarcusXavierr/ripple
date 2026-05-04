@@ -8,6 +8,7 @@ const armedTab = {
   url: "https://example.com/page",
   origin: "https://example.com",
   selectedAt: 0,
+  grantedPatterns: ["https://example.com/*"],
 }
 
 describe("derivePopupState", () => {

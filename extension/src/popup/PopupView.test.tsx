@@ -37,6 +37,7 @@ const armed = {
   url: "https://youtube.com/watch?v=1",
   origin: "https://youtube.com",
   selectedAt: 0,
+  grantedPatterns: ["https://youtube.com/*"],
 }
 
 describe("PopupView", () => {

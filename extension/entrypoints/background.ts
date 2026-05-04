@@ -12,13 +12,15 @@ const permissionsGate = createPermissionsGate({
 })
 
 safeRegisterListener(() =>
-  browser.permissions.onAdded.addListener(async (permissions) => {
+  browser.permissions.onAdded.addListener(async (_permissions) => {
     const armed = await readSelectedTab(browser.storage.local)
     if (!armed) return
 
     const armedPattern = urlToOriginPattern(armed.url)
     if (!armedPattern) return
-    if (!permissions.origins?.includes(armedPattern)) return
+
+    const covers = await browser.permissions.contains({ origins: [armedPattern] })
+    if (!covers) return
 
     await activateSelectedTab(armed.tabId)
   })
