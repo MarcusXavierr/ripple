@@ -27,11 +27,12 @@ safeRegisterListener(() =>
 safeRegisterListener(() =>
   browser.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
     const armed = await readSelectedTab(browser.storage.local)
-    const action = armedTabNavigationAction({
+    const action = await armedTabNavigationAction({
       armed,
       eventTabId: tabId,
       changeUrl: changeInfo.url,
       status: changeInfo.status,
+      contains: (perm) => browser.permissions.contains(perm),
     })
 
     if (action.kind === "noop") return
