@@ -6,7 +6,7 @@ import {
   type SelectedTab,
   type SelectedTabStorage,
 } from "../selectedTab/selectedTabStore"
-import { urlToOriginPattern } from "./urlToOriginPattern"
+import { urlToGrantPatterns } from "./urlToGrantPatterns"
 
 const CONTENT_SCRIPT = "/content-scripts/content.js"
 
@@ -24,13 +24,17 @@ export type ArmTabDeps = {
   logger: Pick<Console, "warn" | "debug">
 }
 
-export async function armTab(tab: TabLike, deps: ArmTabDeps): Promise<ArmTabResult> {
-  const selected = createSelectedTabFromTab(tab)
-  const pattern = urlToOriginPattern(tab.url)
+export async function armTab(
+  tab: TabLike,
+  includeSubdomains: boolean,
+  deps: ArmTabDeps
+): Promise<ArmTabResult> {
+  const patterns = tab.url ? urlToGrantPatterns(tab.url, includeSubdomains) : null
+  const selected = patterns ? createSelectedTabFromTab(tab, Date.now(), patterns) : null
 
-  if (!selected || !pattern) return { ok: false, reason: "unsupported_origin" }
+  if (!selected || !patterns) return { ok: false, reason: "unsupported_origin" }
 
-  const granted = await deps.request({ origins: [pattern] })
+  const granted = await deps.request({ origins: patterns })
   if (!granted) return { ok: false, reason: "permission_denied" }
 
   try {
@@ -40,7 +44,7 @@ export async function armTab(tab: TabLike, deps: ArmTabDeps): Promise<ArmTabResu
     })
   } catch (error) {
     deps.logger.warn("[Ripple Extension] executeScript failed; rolling back grant", error)
-    await deps.remove({ origins: [pattern] }).catch(() => {})
+    await deps.remove({ origins: patterns }).catch(() => {})
     return { ok: false, reason: "injection_failed" }
   }
 
