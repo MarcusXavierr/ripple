@@ -12,6 +12,7 @@ vi.mock("../i18n/t", () => ({
         popup_no_tab_selected: "Nenhuma aba selecionada ainda",
         popup_choose_tab: "Escolha uma aba para receber cliques remotos.",
         popup_use_current_tab: "Usar aba atual",
+        popup_include_subdomains_label: "Permitir também subdomínios deste site",
         popup_grant_access: "Conceder acesso",
         popup_stop_controlling: "Parar de controlar",
         popup_tab_selected: "Esta aba está selecionada ✓",
@@ -37,32 +38,58 @@ const armed = {
   url: "https://youtube.com/watch?v=1",
   origin: "https://youtube.com",
   selectedAt: 0,
+  grantedPatterns: ["https://youtube.com/*"],
 }
 
 describe("PopupView", () => {
   it("renders idle with the original empty card and current-tab CTA", () => {
-    render(<PopupView state={{ kind: "idle" }} onArm={vi.fn()} onDisarm={vi.fn()} />)
+    render(
+      <PopupView
+        state={{ kind: "idle" }}
+        onArm={vi.fn()}
+        onDisarm={vi.fn()}
+        canExpandSubdomains={true}
+        includeSubdomains={true}
+        onIncludeSubdomainsChange={vi.fn()}
+      />
+    )
 
     expect(screen.getByText(/nenhuma aba selecionada ainda/i)).toBeInTheDocument()
     expect(screen.getByText(/escolha uma aba para receber cliques remotos/i)).toBeInTheDocument()
     expect(screen.getByRole("button", { name: /usar aba atual/i })).toBeEnabled()
+    expect(screen.getByRole("checkbox")).toBeChecked()
   })
 
   it("renders pendingApproval inside the existing card shell", () => {
     render(
-      <PopupView state={{ kind: "pendingApproval", armed }} onArm={vi.fn()} onDisarm={vi.fn()} />
+      <PopupView
+        state={{ kind: "pendingApproval", armed }}
+        onArm={vi.fn()}
+        onDisarm={vi.fn()}
+        canExpandSubdomains={true}
+        includeSubdomains={true}
+        onIncludeSubdomainsChange={vi.fn()}
+      />
     )
 
     expect(screen.getByText("YouTube")).toBeInTheDocument()
     expect(screen.getByText("https://youtube.com")).toBeInTheDocument()
     expect(screen.getByRole("button", { name: /conceder acesso/i })).toBeInTheDocument()
+    expect(screen.getByRole("checkbox")).toBeChecked()
   })
 
   it("renders controllable with selected pill and stop button", () => {
     const onDisarm = vi.fn()
 
     render(
-      <PopupView state={{ kind: "controllable", armed }} onArm={vi.fn()} onDisarm={onDisarm} />
+      <PopupView
+        state={{ kind: "controllable", armed }}
+        onArm={vi.fn()}
+        onDisarm={onDisarm}
+        canExpandSubdomains={true}
+        includeSubdomains={true}
+        onIncludeSubdomainsChange={vi.fn()}
+      />
     )
 
     expect(screen.getByText(/^selecionada$/i)).toBeInTheDocument()
@@ -79,6 +106,9 @@ describe("PopupView", () => {
         state={{ kind: "permissionLost", armed, currentOrigin: "https://google.com" }}
         onArm={onArm}
         onDisarm={vi.fn()}
+        canExpandSubdomains={true}
+        includeSubdomains={true}
+        onIncludeSubdomainsChange={vi.fn()}
       />
     )
 
@@ -92,11 +122,53 @@ describe("PopupView", () => {
   it("renders tabClosed with warning card and clear button", () => {
     const onDisarm = vi.fn()
 
-    render(<PopupView state={{ kind: "tabClosed", armed }} onArm={vi.fn()} onDisarm={onDisarm} />)
+    render(
+      <PopupView
+        state={{ kind: "tabClosed", armed }}
+        onArm={vi.fn()}
+        onDisarm={onDisarm}
+        canExpandSubdomains={true}
+        includeSubdomains={true}
+        onIncludeSubdomainsChange={vi.fn()}
+      />
+    )
 
     expect(screen.getByText(/^aba fechada$/i)).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole("button", { name: /limpar aba selecionada/i }))
     expect(onDisarm).toHaveBeenCalledOnce()
+  })
+
+  it("toggles the subdomain checkbox in idle state", () => {
+    const onIncludeSubdomainsChange = vi.fn()
+
+    render(
+      <PopupView
+        state={{ kind: "idle" }}
+        onArm={vi.fn()}
+        onDisarm={vi.fn()}
+        canExpandSubdomains={true}
+        includeSubdomains={true}
+        onIncludeSubdomainsChange={onIncludeSubdomainsChange}
+      />
+    )
+
+    fireEvent.click(screen.getByRole("checkbox"))
+    expect(onIncludeSubdomainsChange).toHaveBeenCalledWith(false)
+  })
+
+  it("hides the subdomain checkbox when the current tab cannot expand", () => {
+    render(
+      <PopupView
+        state={{ kind: "idle" }}
+        onArm={vi.fn()}
+        onDisarm={vi.fn()}
+        canExpandSubdomains={false}
+        includeSubdomains={true}
+        onIncludeSubdomainsChange={vi.fn()}
+      />
+    )
+
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument()
   })
 })

@@ -1,5 +1,6 @@
 import * as v from "valibot"
 import type { Browser } from "wxt/browser"
+import { urlToOriginPattern } from "../permissions/urlToOriginPattern"
 import { getTabOrigin, isControllableTabUrl } from "./isControllableTab"
 
 const SELECTED_TAB_KEY = "ripple.selectedTab"
@@ -13,6 +14,7 @@ export const SelectedTabSchema = v.object({
   url: v.string(),
   origin: v.string(),
   selectedAt: FiniteNumberSchema,
+  grantedPatterns: v.array(v.string()),
 })
 
 export type SelectedTab = v.InferOutput<typeof SelectedTabSchema>
@@ -23,11 +25,22 @@ export type SelectedTabStorage = {
   remove(key: string): Promise<void>
 }
 
+const LegacySelectedTabSchema = v.object({
+  tabId: FiniteNumberSchema,
+  windowId: FiniteNumberSchema,
+  title: v.optional(v.string()),
+  url: v.string(),
+  origin: v.string(),
+  selectedAt: FiniteNumberSchema,
+  grantedPatterns: v.optional(v.array(v.string())),
+})
+
 type TabLike = Pick<Browser.tabs.Tab, "id" | "windowId" | "title" | "url">
 
 export function createSelectedTabFromTab(
   tab: TabLike,
-  selectedAt = Date.now()
+  selectedAt = Date.now(),
+  grantedPatterns: string[] = []
 ): SelectedTab | null {
   if (typeof tab.id !== "number" || typeof tab.windowId !== "number" || !tab.url) return null
   if (!isControllableTabUrl(tab.url)) return null
@@ -39,6 +52,7 @@ export function createSelectedTabFromTab(
     url: tab.url,
     origin: getTabOrigin(tab.url),
     selectedAt,
+    grantedPatterns,
   }
 }
 
@@ -49,11 +63,20 @@ export async function saveSelectedTab(storage: SelectedTabStorage, selectedTab: 
 export async function readSelectedTab(storage: SelectedTabStorage): Promise<SelectedTab | null> {
   const result = await storage.get(SELECTED_TAB_KEY)
   const value = result[SELECTED_TAB_KEY]
-  const parsed = v.safeParse(SelectedTabSchema, value)
+  const parsed = v.safeParse(LegacySelectedTabSchema, value)
   if (!parsed.success) return null
-  return parsed.output
+
+  return {
+    ...parsed.output,
+    grantedPatterns: parsed.output.grantedPatterns ?? fallbackPatterns(parsed.output.url),
+  }
 }
 
 export async function clearSelectedTab(storage: SelectedTabStorage) {
   await storage.remove(SELECTED_TAB_KEY)
+}
+
+function fallbackPatterns(url: string): string[] {
+  const pattern = urlToOriginPattern(url)
+  return pattern ? [pattern] : []
 }

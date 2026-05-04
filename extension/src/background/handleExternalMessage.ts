@@ -5,7 +5,7 @@ import {
 } from "@shared/remoteInputProtocol"
 import { urlToOriginPattern } from "../permissions/urlToOriginPattern"
 import type { ContentMessage, ContentMessageResult } from "../remoteInput/contentMessages"
-import { getTabOrigin, isControllableTabUrl } from "../selectedTab/isControllableTab"
+import { isControllableTabUrl } from "../selectedTab/isControllableTab"
 import type { SelectedTab } from "../selectedTab/selectedTabStore"
 
 export type BackgroundDeps = {
@@ -46,9 +46,6 @@ export async function handleExternalMessage(
     return rejected(message, "reason_selected_tab_not_controllable", "selected-tab")
   }
   const tabUrl = tab.url
-  if (getTabOrigin(tabUrl) !== selectedTab.origin) {
-    return rejected(message, "reason_origin_changed", "permission")
-  }
 
   const originPattern = urlToOriginPattern(tabUrl)
   if (!originPattern) {

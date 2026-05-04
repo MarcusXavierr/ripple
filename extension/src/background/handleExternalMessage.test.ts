@@ -6,9 +6,10 @@ const selectedTab: SelectedTab = {
   tabId: 7,
   windowId: 3,
   title: "Example",
-  url: "https://example.com/page",
-  origin: "https://example.com",
+  url: "https://wikipedia.org/page",
+  origin: "https://wikipedia.org",
   selectedAt: 12345,
+  grantedPatterns: ["https://wikipedia.org/*", "https://*.wikipedia.org/*"],
 }
 
 const message: RemoteInputMessage = {
@@ -41,7 +42,7 @@ const scrollMessage: RemoteInputMessage = {
 function createDeps(overrides: Partial<BackgroundDeps> = {}): BackgroundDeps {
   return {
     readSelectedTab: vi.fn().mockResolvedValue(selectedTab),
-    getTab: vi.fn().mockResolvedValue({ id: 7, url: "https://example.com/page" }),
+    getTab: vi.fn().mockResolvedValue({ id: 7, url: "https://wikipedia.org/page" }),
     hasAccess: vi.fn().mockResolvedValue(true),
     sendMessageToTab: vi.fn().mockResolvedValue({ ok: true, stage: "dispatched" }),
     logger: { debug: vi.fn(), warn: vi.fn() },
@@ -137,16 +138,34 @@ describe("handleExternalMessage", () => {
     })
   })
 
-  it("drops with origin_changed when current tab origin differs from armed origin", async () => {
+  it("forwards when live-tab URL is covered by a wildcard grant on a different host", async () => {
+    const deps = createDeps({
+      getTab: vi.fn().mockResolvedValue({ id: 7, url: "https://pt.wikipedia.org/x" }),
+      hasAccess: vi.fn().mockResolvedValue(true),
+    })
+
+    await expect(handleExternalMessage(message, deps)).resolves.toEqual({
+      ok: true,
+      type: "remote-click-applied",
+      targetTabId: 7,
+    })
+
+    expect(deps.hasAccess).toHaveBeenCalledWith("https://pt.wikipedia.org/*")
+  })
+
+  it("rejects with reason_permission_missing when live-tab URL is not covered by any grant", async () => {
     await expect(
       handleExternalMessage(
         message,
-        createDeps({ getTab: vi.fn().mockResolvedValue({ id: 7, url: "https://other.test/" }) })
+        createDeps({
+          getTab: vi.fn().mockResolvedValue({ id: 7, url: "https://example.com/" }),
+          hasAccess: vi.fn().mockResolvedValue(false),
+        })
       )
     ).resolves.toEqual({
       ok: false,
       type: "remote-click-rejected",
-      reason: "reason_origin_changed",
+      reason: "reason_permission_missing",
       stage: "permission",
     })
   })
@@ -160,7 +179,7 @@ describe("handleExternalMessage", () => {
       targetTabId: 7,
     })
 
-    expect(deps.hasAccess).toHaveBeenCalledWith("https://example.com/*")
+    expect(deps.hasAccess).toHaveBeenCalledWith("https://wikipedia.org/*")
   })
 
   it("returns rejected when sendMessageToTab rejects", async () => {

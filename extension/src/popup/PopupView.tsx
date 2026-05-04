@@ -5,6 +5,9 @@ type PopupViewProps = {
   state: PopupState
   onArm: () => void
   onDisarm: () => void
+  canExpandSubdomains: boolean
+  includeSubdomains: boolean
+  onIncludeSubdomainsChange: (next: boolean) => void
 }
 
 type CardState =
@@ -32,7 +35,14 @@ type CtaState =
   | { kind: "success"; labelKey: MessageKey }
   | { kind: "secondary"; labelKey: MessageKey }
 
-export function PopupView({ state, onArm, onDisarm }: PopupViewProps) {
+export function PopupView({
+  state,
+  onArm,
+  onDisarm,
+  canExpandSubdomains,
+  includeSubdomains,
+  onIncludeSubdomainsChange,
+}: PopupViewProps) {
   const view = mapPopupState(state)
   const staleReason =
     view.card.kind === "stale-closed"
@@ -54,6 +64,16 @@ export function PopupView({ state, onArm, onDisarm }: PopupViewProps) {
       <section className="section">
         <div className="section-label">{t("popup_selected_tab_label")}</div>
         <TabCard card={view.card} />
+        {canExpandSubdomains && (
+          <label className="subdomain-toggle">
+            <input
+              type="checkbox"
+              checked={includeSubdomains}
+              onChange={(event) => onIncludeSubdomainsChange(event.target.checked)}
+            />
+            <span>{t("popup_include_subdomains_label")}</span>
+          </label>
+        )}
         <PrimaryCta cta={view.cta} onArm={onArm} onDisarm={onDisarm} />
         {staleReason && <p className="warning-chip">{staleReason}</p>}
       </section>

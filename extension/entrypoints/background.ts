@@ -1,6 +1,7 @@
 import { browser } from "wxt/browser"
 import { handleExternalMessage } from "../src/background/handleExternalMessage"
 import { armedTabNavigationAction } from "../src/permissions/armedTabNavigationHandler"
+import { disarmTab } from "../src/permissions/disarmTab"
 import { createPermissionsGate } from "../src/permissions/permissionsGate"
 import { urlToOriginPattern } from "../src/permissions/urlToOriginPattern"
 import { clearSelectedTab, readSelectedTab } from "../src/selectedTab/selectedTabStore"
@@ -11,13 +12,15 @@ const permissionsGate = createPermissionsGate({
 })
 
 safeRegisterListener(() =>
-  browser.permissions.onAdded.addListener(async (permissions) => {
+  browser.permissions.onAdded.addListener(async (_permissions) => {
     const armed = await readSelectedTab(browser.storage.local)
     if (!armed) return
 
     const armedPattern = urlToOriginPattern(armed.url)
     if (!armedPattern) return
-    if (!permissions.origins?.includes(armedPattern)) return
+
+    const covers = await browser.permissions.contains({ origins: [armedPattern] })
+    if (!covers) return
 
     await activateSelectedTab(armed.tabId)
   })
@@ -26,11 +29,12 @@ safeRegisterListener(() =>
 safeRegisterListener(() =>
   browser.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
     const armed = await readSelectedTab(browser.storage.local)
-    const action = armedTabNavigationAction({
+    const action = await armedTabNavigationAction({
       armed,
       eventTabId: tabId,
       changeUrl: changeInfo.url,
       status: changeInfo.status,
+      contains: (perm) => browser.permissions.contains(perm),
     })
 
     if (action.kind === "noop") return
@@ -53,7 +57,11 @@ safeRegisterListener(() =>
     const armed = await readSelectedTab(browser.storage.local)
     if (!armed || armed.tabId !== tabId) return
 
-    await clearSelectedTab(browser.storage.local)
+    await disarmTab({
+      readSelectedTab: () => readSelectedTab(browser.storage.local),
+      remove: (perm) => browser.permissions.remove(perm),
+      clearSelectedTab: () => clearSelectedTab(browser.storage.local),
+    })
   })
 )
 

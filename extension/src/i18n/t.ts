@@ -11,6 +11,7 @@ export type MessageKey =
   | "popup_no_tab_selected"
   | "popup_choose_tab"
   | "popup_use_current_tab"
+  | "popup_include_subdomains_label"
   | "popup_grant_access"
   | "popup_stop_controlling"
   | "popup_tab_selected"
