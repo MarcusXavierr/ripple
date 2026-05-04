@@ -94,7 +94,11 @@ export function App() {
   const onDisarm = useCallback(async () => {
     if (state.kind === "idle") return
 
-    await disarmTab({ clearSelectedTab: () => clearSelectedTab(browser.storage.local) })
+    await disarmTab({
+      readSelectedTab: () => readSelectedTab(browser.storage.local),
+      remove: (perm) => browser.permissions.remove(perm),
+      clearSelectedTab: () => clearSelectedTab(browser.storage.local),
+    })
     await refresh()
   }, [refresh, state])
 

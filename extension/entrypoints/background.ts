@@ -1,6 +1,7 @@
 import { browser } from "wxt/browser"
 import { handleExternalMessage } from "../src/background/handleExternalMessage"
 import { armedTabNavigationAction } from "../src/permissions/armedTabNavigationHandler"
+import { disarmTab } from "../src/permissions/disarmTab"
 import { createPermissionsGate } from "../src/permissions/permissionsGate"
 import { urlToOriginPattern } from "../src/permissions/urlToOriginPattern"
 import { clearSelectedTab, readSelectedTab } from "../src/selectedTab/selectedTabStore"
@@ -53,7 +54,11 @@ safeRegisterListener(() =>
     const armed = await readSelectedTab(browser.storage.local)
     if (!armed || armed.tabId !== tabId) return
 
-    await clearSelectedTab(browser.storage.local)
+    await disarmTab({
+      readSelectedTab: () => readSelectedTab(browser.storage.local),
+      remove: (perm) => browser.permissions.remove(perm),
+      clearSelectedTab: () => clearSelectedTab(browser.storage.local),
+    })
   })
 )
 
