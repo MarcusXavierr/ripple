@@ -75,7 +75,7 @@ describe("PopupView", () => {
     expect(screen.getByText("YouTube")).toBeInTheDocument()
     expect(screen.getByText("https://youtube.com")).toBeInTheDocument()
     expect(screen.getByRole("button", { name: /conceder acesso/i })).toBeInTheDocument()
-    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument()
+    expect(screen.getByRole("checkbox")).toBeChecked()
   })
 
   it("renders controllable with selected pill and stop button", () => {

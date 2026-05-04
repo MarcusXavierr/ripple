@@ -64,7 +64,7 @@ export function PopupView({
       <section className="section">
         <div className="section-label">{t("popup_selected_tab_label")}</div>
         <TabCard card={view.card} />
-        {state.kind === "idle" && canExpandSubdomains && (
+        {canExpandSubdomains && (
           <label className="subdomain-toggle">
             <input
               type="checkbox"
