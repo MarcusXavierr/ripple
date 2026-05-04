@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react"
 import { browser } from "wxt/browser"
 import { armTab, makeArmTabDeps } from "../../src/permissions/armTab"
 import { disarmTab } from "../../src/permissions/disarmTab"
+import { canExpandSubdomains, urlToGrantPatterns } from "../../src/permissions/urlToGrantPatterns"
 import { urlToOriginPattern } from "../../src/permissions/urlToOriginPattern"
 import { derivePopupState, type LiveTab, type PopupState } from "../../src/popup/derivePopupState"
 import { PopupView } from "../../src/popup/PopupView"
@@ -18,24 +19,38 @@ const INITIAL_STATE: PopupState = { kind: "idle" }
 
 export function App() {
   const [state, setState] = useState<PopupState>(INITIAL_STATE)
+  const [liveActiveTabUrl, setLiveActiveTabUrl] = useState<string | undefined>(undefined)
+  const [includeSubdomains, setIncludeSubdomains] = useState(true)
 
   const refresh = useCallback(async () => {
     const stored = await readSelectedTab(browser.storage.local)
     const liveTab = stored ? await lookupLiveTab(stored.tabId) : null
     const hasPermission = await lookupPermission(stored, liveTab)
+    const next = derivePopupState({
+      stored,
+      liveTab,
+      hasPermission,
+    })
 
-    setState(
-      derivePopupState({
-        stored,
-        liveTab,
-        hasPermission,
-      })
-    )
+    setState(next)
+
+    if (next.kind === "idle") {
+      const tabs = await browser.tabs.query({ active: true, currentWindow: true })
+      setLiveActiveTabUrl(tabs[0]?.url)
+      return
+    }
+
+    setLiveActiveTabUrl(undefined)
   }, [])
 
   useEffect(() => {
     void refresh()
   }, [refresh])
+
+  useEffect(() => {
+    if (liveActiveTabUrl === undefined) return
+    setIncludeSubdomains(true)
+  }, [liveActiveTabUrl])
 
   useEffect(() => {
     const onPermissionChange = () => {
@@ -69,27 +84,55 @@ export function App() {
   }, [refresh])
 
   const onArm = useCallback(async () => {
-    const targetTab = await getArmTarget(state)
-    if (!targetTab) return
+    if (state.kind === "idle") {
+      const tabs = await browser.tabs.query({ active: true, currentWindow: true })
+      const targetTab = tabs[0]
+      if (!targetTab?.url) return
 
-    const targetPattern = urlToOriginPattern(targetTab.url)
-    const selectedTab = createSelectedTabFromTab(targetTab)
-    if (!targetPattern || !selectedTab) return
+      const effectiveInclude = canExpandSubdomains(targetTab.url) ? includeSubdomains : false
+      const patterns = urlToGrantPatterns(targetTab.url, effectiveInclude)
+      const selectedTab = patterns
+        ? createSelectedTabFromTab(targetTab, Date.now(), patterns)
+        : null
+      if (!patterns || !selectedTab) return
 
-    const hasPermission = await browser.permissions.contains({ origins: [targetPattern] })
-    if (!hasPermission) {
-      await saveSelectedTab(browser.storage.local, selectedTab)
-      const granted = await browser.permissions.request({ origins: [targetPattern] })
-      if (!granted) {
-        await clearSelectedTab(browser.storage.local)
+      const hasPermission = await browser.permissions.contains({ origins: patterns })
+      if (!hasPermission) {
+        await saveSelectedTab(browser.storage.local, selectedTab)
+        const granted = await browser.permissions.request({ origins: patterns })
+        if (!granted) {
+          await clearSelectedTab(browser.storage.local)
+        }
+        await refresh()
+        return
       }
+
+      await armTab(targetTab, effectiveInclude, makeArmTabDeps(browser.storage.local, console))
       await refresh()
       return
     }
 
-    await armTab(targetTab, false, makeArmTabDeps(browser.storage.local, console))
-    await refresh()
-  }, [refresh, state])
+    if (state.kind === "pendingApproval" || state.kind === "permissionLost") {
+      const targetTab = await browser.tabs.get(state.armed.tabId).catch(() => null)
+      if (!targetTab?.url) return
+
+      const patterns = state.armed.grantedPatterns
+      const effectiveInclude = patterns.length > 1
+      const hasPermission = await browser.permissions.contains({ origins: patterns })
+
+      if (!hasPermission) {
+        const granted = await browser.permissions.request({ origins: patterns })
+        if (!granted) {
+          await clearSelectedTab(browser.storage.local)
+          await refresh()
+          return
+        }
+      }
+
+      await armTab(targetTab, effectiveInclude, makeArmTabDeps(browser.storage.local, console))
+      await refresh()
+    }
+  }, [includeSubdomains, refresh, state])
 
   const onDisarm = useCallback(async () => {
     if (state.kind === "idle") return
@@ -102,20 +145,18 @@ export function App() {
     await refresh()
   }, [refresh, state])
 
-  return <PopupView state={state} onArm={onArm} onDisarm={onDisarm} />
-}
+  const canExpand = liveActiveTabUrl ? canExpandSubdomains(liveActiveTabUrl) : false
 
-async function getArmTarget(state: PopupState) {
-  if (state.kind !== "idle") {
-    try {
-      return await browser.tabs.get(state.armed.tabId)
-    } catch {
-      return null
-    }
-  }
-
-  const tabs = await browser.tabs.query({ active: true, currentWindow: true })
-  return tabs[0] ?? null
+  return (
+    <PopupView
+      state={state}
+      onArm={onArm}
+      onDisarm={onDisarm}
+      canExpandSubdomains={canExpand}
+      includeSubdomains={includeSubdomains}
+      onIncludeSubdomainsChange={setIncludeSubdomains}
+    />
+  )
 }
 
 async function lookupLiveTab(tabId: number): Promise<LiveTab> {
