@@ -1,9 +1,7 @@
 {
   "nav": {
     "brand": "Ripple",
-    "howItWorks": "How it works",
-    "privacy": "Privacy",
-    "openSource": "Open source"
+    "privacy": "Privacy"
   },
   "home": {
     "hero": {
@@ -97,5 +95,112 @@
     "title": "Call ended",
     "rejoin": "Rejoin",
     "returnHome": "Return home"
+  },
+  "privacy": {
+    "nav": { "back": "Back to home" },
+    "hero": {
+      "label": "Legal & Privacy",
+      "titleA": "Your tab stays",
+      "titleEm": "yours.",
+      "sub": "Ripple Remote Control lets your call partner click, scroll, and type in a tab you choose and approve. This page explains what the extension does with your data.",
+      "updated": "Last updated May 3, 2026"
+    },
+    "principles": {
+      "local": {
+        "title": "Local only",
+        "body": "Stored data stays in your browser via chrome.storage.local. Nothing syncs to a server."
+      },
+      "noTel": {
+        "title": "No telemetry",
+        "body": "No analytics, crash reports, or usage metrics. The extension never contacts a server on its own."
+      },
+      "perSite": {
+        "title": "You approve each site",
+        "body": "Host permissions are optional. Chrome asks you to grant access one origin at a time."
+      }
+    },
+    "sections": {
+      "stores": {
+        "title": "What the extension stores",
+        "intro": "When you select a tab to be controlled, the extension saves the following in your browser's local storage (chrome.storage.local):",
+        "rows": {
+          "ids": { "key": "Tab identifiers", "val": "Tab id, window id, and selection timestamp." },
+          "url": { "key": "Tab URL & title", "val": "URL, origin, and title of the armed tab." },
+          "hosts": {
+            "key": "Host patterns",
+            "val": "The site patterns you granted access to (e.g., https://example.com/*)."
+          }
+        },
+        "outro": "This information stays on your device. It is used so the extension remembers which tab you armed and can verify that your call partner's input goes to the tab you actually approved."
+      },
+      "network": {
+        "title": "What the extension sends over the network",
+        "callout": "Nothing.",
+        "intro": "The extension does not contact any server on its own. It does not collect analytics, telemetry, crash reports, or usage metrics.",
+        "body": "The only data flowing through the extension is the input messages your call partner sends through the Ripple web app, which the extension forwards to the tab you approved as synthetic click, scroll, and keyboard events. Those events do not leave your device through the extension.",
+        "outro": "The Ripple web app itself uses signaling and WebRTC infrastructure to make the call work. That data flow is covered by the Ripple web app's privacy policy, not this one."
+      },
+      "notCollect": {
+        "title": "What the extension does not collect",
+        "items": [
+          "It does not record pages you visit outside the tab you explicitly armed.",
+          "It does not read or transmit form values, passwords, or page text.",
+          "It does not track which sites you spend time on.",
+          "It does not contain advertising, fingerprinting, or third-party SDKs."
+        ]
+      },
+      "permissions": {
+        "title": "Permissions the extension requests",
+        "rows": {
+          "activeTab": {
+            "key": "activeTab",
+            "val": "Read the URL and title of the current tab when you click \"Use current tab\", so the popup can show what you're about to arm."
+          },
+          "scripting": {
+            "key": "scripting",
+            "val": "Inject the input-replay content script into the tab you approved."
+          },
+          "storage": {
+            "key": "storage",
+            "val": "Remember the tab you selected across popup opens."
+          },
+          "tabs": {
+            "key": "tabs",
+            "val": "Look up the title and URL of the selected tab so the popup can show it, and verify the tab still exists before forwarding input."
+          },
+          "hosts": {
+            "key": "Host permissions",
+            "val": "https://*/* and http://*/* are declared as optional. Chrome will ask for your approval one site at a time when you arm a tab on a new origin."
+          },
+          "extConn": {
+            "key": "externally_connectable",
+            "val": "Restricted to the Ripple web app's origin. No other site can talk to the extension."
+          }
+        }
+      },
+      "control": {
+        "title": "Your control",
+        "body": "You can clear the selected tab from the popup at any time using \"Clear selected tab\" or \"Stop controlling\". You can also revoke per-site host permissions from Chrome's extension settings page.",
+        "callout": "Removing the extension deletes all stored state."
+      },
+      "crossOrigin": {
+        "title": "Cross-origin re-approval",
+        "body": "When the tab you armed navigates to a different origin, Chrome treats it as a new site. The extension will ask you to grant access again before it can forward input to the new origin. This is intentional: it keeps the extension scoped to sites you have explicitly approved."
+      },
+      "security": {
+        "title": "Security",
+        "body": "The extension validates every incoming message against a strict schema and ignores anything that does not match. It only accepts messages from the Ripple web app's exact origin. The synthetic events it dispatches are best-effort: a site can ignore them, and the extension does not attempt to bypass site-level protections."
+      },
+      "contact": {
+        "title": "Questions or concerns?",
+        "body": "Reach me at {{email}} — I read every email.",
+        "cta": "Email me"
+      }
+    },
+    "toc": { "title": "On this page" },
+    "footer": {
+      "copyright": "© 2026 Ripple · v0.1"
+    },
+    "badges": { "browserOnly": "Browser only" }
   }
 }

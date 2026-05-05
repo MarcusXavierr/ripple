@@ -38,6 +38,12 @@ describe("Home page", () => {
     expect(screen.getByRole("button", { name: /create room/i })).toBeInTheDocument()
   })
 
+  it("renders a Privacy nav link pointing to /privacy", () => {
+    renderHome()
+    const link = screen.getByRole("link", { name: /^privacy$/i })
+    expect(link).toHaveAttribute("href", "/privacy")
+  })
+
   it("renders a join input and Join button", () => {
     renderHome()
     expect(screen.getByLabelText(/room id or link/i)).toBeInTheDocument()

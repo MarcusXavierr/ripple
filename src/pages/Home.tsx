@@ -1,7 +1,7 @@
 import { Globe, Lock, MonitorUp, Plus, Send } from "lucide-react"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
-import { useNavigate } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import { generateRoomSlug, parseRoomInput } from "@/lib/room"
 
 export default function Home() {
@@ -140,6 +140,19 @@ export default function Home() {
           >
             <RippleMark size={28} />
             {t("nav.brand")}
+          </div>
+          <div
+            style={{
+              display: "flex",
+              gap: 28,
+              fontSize: 13,
+              color: "var(--ripple-ink-soft)",
+              alignItems: "center",
+            }}
+          >
+            <Link to="/privacy" style={{ color: "inherit", textDecoration: "none" }}>
+              {t("nav.privacy")}
+            </Link>
           </div>
         </nav>
 

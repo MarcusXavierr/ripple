@@ -1,9 +1,7 @@
 {
   "nav": {
     "brand": "Ripple",
-    "howItWorks": "Como funciona",
-    "privacy": "Privacidade",
-    "openSource": "Código aberto"
+    "privacy": "Privacidade"
   },
   "home": {
     "hero": {
@@ -97,5 +95,115 @@
     "title": "Chamada encerrada",
     "rejoin": "Entrar novamente",
     "returnHome": "Voltar ao início"
+  },
+  "privacy": {
+    "nav": { "back": "Voltar ao início" },
+    "hero": {
+      "label": "Privacidade",
+      "titleA": "Sua aba continua",
+      "titleEm": "sua.",
+      "sub": "A extensão Ripple Remote Control permite que a outra pessoa na chamada clique, role e digite em uma aba que você escolheu e aprovou. Esta página explica o que a extensão faz com os seus dados.",
+      "updated": "Atualizado em 3 de maio de 2026"
+    },
+    "principles": {
+      "local": {
+        "title": "Apenas local",
+        "body": "Os dados ficam no seu navegador via chrome.storage.local. Nada é sincronizado com nenhum servidor."
+      },
+      "noTel": {
+        "title": "Sem telemetria",
+        "body": "Sem análises, relatórios de falha ou métricas de uso. A extensão nunca contata um servidor por conta própria."
+      },
+      "perSite": {
+        "title": "Você aprova cada site",
+        "body": "As permissões de host são opcionais. O Chrome pede sua aprovação uma origem por vez."
+      }
+    },
+    "sections": {
+      "stores": {
+        "title": "O que a extensão guarda",
+        "intro": "Quando você seleciona uma aba para ser controlada, a extensão salva o seguinte no armazenamento local do seu navegador (chrome.storage.local):",
+        "rows": {
+          "ids": {
+            "key": "Identificadores da aba",
+            "val": "ID da aba, ID da janela e momento da seleção."
+          },
+          "url": { "key": "URL e título da aba", "val": "URL, origem e título da aba armada." },
+          "hosts": {
+            "key": "Padrões de host",
+            "val": "Os padrões de site para os quais você concedeu acesso (ex.: https://example.com/*)."
+          }
+        },
+        "outro": "Esses dados ficam no seu dispositivo. Eles servem para a extensão lembrar qual aba você armou e verificar que a entrada da outra pessoa na chamada vá para a aba que você aprovou."
+      },
+      "network": {
+        "title": "O que a extensão envia pela rede",
+        "callout": "Nada.",
+        "intro": "A extensão não contata nenhum servidor por conta própria. Ela não coleta análises, telemetria, relatórios de falha nem métricas de uso.",
+        "body": "O único dado que passa pela extensão são as mensagens de input que a outra pessoa na chamada envia pelo aplicativo web do Ripple. A extensão repassa essas mensagens para a aba que você aprovou, como eventos sintéticos de clique, rolagem e teclado. Esses eventos não saem do seu dispositivo pela extensão.",
+        "outro": "O aplicativo web do Ripple usa sinalização e infraestrutura WebRTC para a chamada funcionar. Esse fluxo de dados é coberto pela política de privacidade do aplicativo web, não por esta."
+      },
+      "notCollect": {
+        "title": "O que a extensão não coleta",
+        "items": [
+          "Não registra páginas que você visita fora da aba que você armou.",
+          "Não lê nem transmite valores de formulário, senhas ou texto da página.",
+          "Não rastreia em quais sites você passa tempo.",
+          "Não contém publicidade, fingerprinting ou SDKs de terceiros."
+        ]
+      },
+      "permissions": {
+        "title": "Permissões solicitadas pela extensão",
+        "rows": {
+          "activeTab": {
+            "key": "activeTab",
+            "val": "Lê a URL e o título da aba atual quando você clica em \"Usar aba atual\", para que o popup mostre o que você está prestes a armar."
+          },
+          "scripting": {
+            "key": "scripting",
+            "val": "Injeta o content script de replay de input na aba que você aprovou."
+          },
+          "storage": {
+            "key": "storage",
+            "val": "Lembra a aba que você selecionou entre aberturas do popup."
+          },
+          "tabs": {
+            "key": "tabs",
+            "val": "Procura o título e a URL da aba selecionada para o popup mostrar, e verifica que a aba ainda existe antes de repassar o input."
+          },
+          "hosts": {
+            "key": "Permissões de host",
+            "val": "https://*/* e http://*/* são declaradas como opcionais. O Chrome pede sua aprovação uma origem por vez quando você arma uma aba em um novo site."
+          },
+          "extConn": {
+            "key": "externally_connectable",
+            "val": "Restrita à origem do aplicativo web do Ripple. Nenhum outro site pode falar com a extensão."
+          }
+        }
+      },
+      "control": {
+        "title": "No seu controle",
+        "body": "Você pode limpar a aba selecionada a qualquer momento pelo popup, com \"Limpar aba selecionada\" ou \"Parar de controlar\". Você também pode revogar permissões de host por site na página de configurações de extensões do Chrome.",
+        "callout": "Remover a extensão apaga todos os dados armazenados."
+      },
+      "crossOrigin": {
+        "title": "Reaprovação entre origens",
+        "body": "Quando a aba que você armou navega para uma origem diferente, o Chrome trata isso como um novo site. A extensão vai pedir para você conceder acesso de novo antes de repassar input para a nova origem. Isso é intencional: mantém a extensão restrita aos sites que você aprovou explicitamente."
+      },
+      "security": {
+        "title": "Segurança",
+        "body": "A extensão valida toda mensagem recebida com um schema estrito e ignora qualquer coisa que não bata. Ela só aceita mensagens da origem exata do aplicativo web do Ripple. Os eventos sintéticos que ela dispara são best-effort: um site pode ignorá-los, e a extensão não tenta contornar proteções do próprio site."
+      },
+      "contact": {
+        "title": "Dúvidas ou preocupações?",
+        "body": "Fale comigo em {{email}} — leio todo email.",
+        "cta": "Mandar email"
+      }
+    },
+    "toc": { "title": "Nesta página" },
+    "footer": {
+      "copyright": "© 2026 Ripple · v0.1"
+    },
+    "badges": { "browserOnly": "Apenas navegador" }
   }
 }
