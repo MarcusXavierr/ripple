@@ -5,12 +5,26 @@
   },
   "home": {
     "hero": {
-      "badge": "Sem contas. Sem histórico. Peer‑to‑peer.",
+      "eyebrow": "Chegando no Chrome · entra na lista",
+      "eyebrowCompact": "Chegando no Chrome",
       "headlineLine1": "Dois cliques",
       "headlineLine2": "pra conversar.",
-      "description": "Ripple é uma sala de vídeo privada pra duas pessoas. Abre um link, compartilha a tela, conversa. Nada fica salvo — quando você sai, a sala some.",
+      "description": "Ripple é uma sala de vídeo privada pra duas pessoas, direto no navegador. Começa a chamada de qualquer aba — sem conta, sem histórico, ponto a ponto. Deixa seu email que a gente te avisa no dia que a extensão sair.",
+      "descriptionCompact": "Sala de vídeo privada pra duas pessoas, direto no navegador. Deixa seu email que a gente te avisa quando a extensão sair.",
       "featureEncrypted": "Criptografia de ponta a ponta",
-      "featureScreenShare": "Compartilha tela num clique"
+      "featureScreenShare": "Compartilha tela num clique",
+      "featureNoAccounts": "Sem conta",
+      "emailPlaceholder": "voce@email.com",
+      "emailPlaceholderCompact": "seu@email.com",
+      "notifyButton": "Me avisa quando sair",
+      "notifyButtonCompact": "Me avisa",
+      "notifyMeta": "Sem spam · um email só · sai quando quiser",
+      "emailInvalid": "Coloca um email válido pra gente te avisar.",
+      "waitlistNetworkError": "Não rolou enviar — tenta de novo.",
+      "waitlistUnavailable": "A lista tá fora do ar agora.",
+      "waitlistSuccess": "Você tá na lista.",
+      "waitlistSuccessDetail": "A gente avisa {{email}} no dia que sair.",
+      "waitlistChange": "Trocar"
     },
     "card": {
       "title": "Abrir uma sala",

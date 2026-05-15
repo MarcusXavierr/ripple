@@ -17,14 +17,10 @@ export function SelfTile({ stream }: SelfTileProps) {
   return (
     <div
       data-testid="self-tile"
-      className={`glass absolute h-36 w-48 overflow-hidden rounded-2xl shadow-xl select-none ${
+      className={`glass absolute right-3 bottom-[calc(env(safe-area-inset-bottom)+5rem)] h-24 w-32 overflow-hidden rounded-2xl shadow-xl select-none sm:right-4 sm:bottom-[100px] sm:h-36 sm:w-48 ${
         dragging ? "cursor-grabbing" : "cursor-grab"
       }`}
-      style={
-        position
-          ? { left: `${position.x}px`, top: `${position.y}px` }
-          : { bottom: "100px", right: "16px" }
-      }
+      style={position ? { left: `${position.x}px`, top: `${position.y}px` } : undefined}
       onPointerDown={(event) => {
         event.preventDefault()
         event.currentTarget.setPointerCapture(event.pointerId)

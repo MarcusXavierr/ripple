@@ -32,13 +32,20 @@ describe("SelfTile", () => {
     expect(screen.getByTestId("self-tile-video")).toHaveProperty("srcObject", stream)
   })
 
-  it("renders at the default lower-right position on first mount", () => {
+  it("renders with responsive default lower-right placement before dragging", () => {
     render(<SelfTile stream={null} />)
 
-    expect(screen.getByTestId("self-tile")).toHaveStyle({
-      bottom: "100px",
-      right: "16px",
-    })
+    const tile = screen.getByTestId("self-tile")
+
+    expect(tile.className).toContain("right-3")
+    expect(tile.className).toContain("bottom-[calc(env(safe-area-inset-bottom)+5rem)]")
+    expect(tile.className).toContain("h-24")
+    expect(tile.className).toContain("w-32")
+    expect(tile.className).toContain("sm:right-4")
+    expect(tile.className).toContain("sm:bottom-[100px]")
+    expect(tile.className).toContain("sm:h-36")
+    expect(tile.className).toContain("sm:w-48")
+    expect(tile).not.toHaveStyle({ bottom: "100px", right: "16px" })
   })
 
   it("pointer down/move/up updates the tile's position to the move target", () => {
@@ -91,7 +98,11 @@ describe("SelfTile", () => {
 
     unmount()
     render(<SelfTile stream={null} />)
-    expect(screen.getByTestId("self-tile")).toHaveStyle({ bottom: "100px", right: "16px" })
+    const remountedTile = screen.getByTestId("self-tile")
+    expect(remountedTile.className).toContain("right-3")
+    expect(remountedTile.className).toContain("bottom-[calc(env(safe-area-inset-bottom)+5rem)]")
+    expect(remountedTile.className).toContain("sm:bottom-[100px]")
+    expect(remountedTile).not.toHaveStyle({ left: "280px", top: "180px" })
   })
 
   it("clamps position to viewport bounds on drag past edges", () => {

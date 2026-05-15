@@ -114,4 +114,25 @@ describe("StatusPill", () => {
     expect(writeText).toHaveBeenCalledWith("http://localhost:3000/room/coral-42")
     expect(toastMock).toHaveBeenCalledWith("Link copied", "success")
   })
+
+  it("uses mobile width constraints and truncates the room id before increasing height", () => {
+    render(<StatusPill roomId="teal-fox-72" status="connected" />)
+
+    const pill = screen.getByTestId("status-pill")
+    const roomId = screen.getByTestId("status-pill-room-id")
+    const timer = screen.getByText("00:00")
+
+    expect(pill.className).toContain("right-3")
+    expect(pill.className).toContain("left-3")
+    expect(pill.className).toContain("top-[max(0.75rem,env(safe-area-inset-top))]")
+    expect(pill.className).toContain("sm:top-3")
+    expect(pill.className).toContain("sm:right-auto")
+    expect(pill.className).toContain("sm:left-1/2")
+    expect(pill.className).toContain("text-xs")
+    expect(pill.className).toContain("sm:text-sm")
+    expect(roomId.className).toContain("min-w-0")
+    expect(roomId.className).toContain("truncate")
+    expect(timer.className).toContain("hidden")
+    expect(timer.className).toContain("min-[380px]:inline-flex")
+  })
 })
