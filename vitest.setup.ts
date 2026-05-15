@@ -2,18 +2,21 @@ import { vi } from "vitest"
 import "@testing-library/jest-dom"
 import "./src/i18n"
 
-if (typeof HTMLDivElement !== "undefined") {
-  Object.defineProperty(HTMLDivElement.prototype, "setPointerCapture", {
+const HTMLDivElementConstructor = (globalThis as { HTMLDivElement?: { prototype: object } })
+  .HTMLDivElement
+
+if (HTMLDivElementConstructor) {
+  Object.defineProperty(HTMLDivElementConstructor.prototype, "setPointerCapture", {
     value: vi.fn(),
     configurable: true,
   })
 
-  Object.defineProperty(HTMLDivElement.prototype, "hasPointerCapture", {
+  Object.defineProperty(HTMLDivElementConstructor.prototype, "hasPointerCapture", {
     value: vi.fn(() => true),
     configurable: true,
   })
 
-  Object.defineProperty(HTMLDivElement.prototype, "releasePointerCapture", {
+  Object.defineProperty(HTMLDivElementConstructor.prototype, "releasePointerCapture", {
     value: vi.fn(),
     configurable: true,
   })
