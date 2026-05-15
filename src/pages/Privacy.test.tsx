@@ -80,11 +80,11 @@ describe("Privacy page (pt-BR)", () => {
 
   it("renders the pt-BR hero label", () => {
     renderPrivacy()
-    expect(screen.getByText("Privacidade")).toBeInTheDocument()
+    expect(screen.getByText("Privacidade e termos")).toBeInTheDocument()
   })
 
   it("renders the pt-BR back-to-home label", () => {
     renderPrivacy()
-    expect(screen.getByRole("link", { name: /voltar ao início/i })).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: /ir pra tela inicial/i })).toBeInTheDocument()
   })
 })

@@ -3,14 +3,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { SelfTile } from "./SelfTile"
 
 beforeEach(() => {
-  Object.defineProperty(HTMLDivElement.prototype, "setPointerCapture", {
-    value: vi.fn(),
-    configurable: true,
-  })
-  Object.defineProperty(HTMLDivElement.prototype, "releasePointerCapture", {
-    value: vi.fn(),
-    configurable: true,
-  })
   Object.defineProperty(HTMLMediaElement.prototype, "srcObject", {
     configurable: true,
     get() {

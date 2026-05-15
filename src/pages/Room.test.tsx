@@ -76,14 +76,6 @@ beforeEach(() => {
     value: vi.fn().mockResolvedValue(undefined),
     configurable: true,
   })
-  Object.defineProperty(HTMLDivElement.prototype, "setPointerCapture", {
-    value: vi.fn(),
-    configurable: true,
-  })
-  Object.defineProperty(HTMLDivElement.prototype, "releasePointerCapture", {
-    value: vi.fn(),
-    configurable: true,
-  })
 })
 
 it("renders the room page", () => {
