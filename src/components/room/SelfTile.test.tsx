@@ -48,6 +48,12 @@ describe("SelfTile", () => {
     expect(tile).not.toHaveStyle({ bottom: "100px", right: "16px" })
   })
 
+  it("has touch-none class so the browser doesn't steal touch gestures for scroll", () => {
+    render(<SelfTile stream={null} />)
+    const tile = screen.getByTestId("self-tile")
+    expect(tile.className).toContain("touch-none")
+  })
+
   it("pointer down/move/up updates the tile's position to the move target", () => {
     render(<SelfTile stream={null} />)
     const tile = screen.getByTestId("self-tile")
@@ -69,7 +75,7 @@ describe("SelfTile", () => {
     fireEvent.pointerMove(tile, { pointerId: 1, clientX: 300, clientY: 200 })
     fireEvent.pointerUp(tile, { pointerId: 1, clientX: 300, clientY: 200 })
 
-    expect(tile).toHaveStyle({ left: "280px", top: "180px" })
+    expect(tile.style.transform).toBe("translate3d(280px, 180px, 0)")
   })
 
   it("position is preserved between drag end and next render but reset on unmount/remount", () => {
@@ -94,7 +100,7 @@ describe("SelfTile", () => {
     fireEvent.pointerUp(tile, { pointerId: 1, clientX: 300, clientY: 200 })
 
     rerender(<SelfTile stream={null} />)
-    expect(screen.getByTestId("self-tile")).toHaveStyle({ left: "280px", top: "180px" })
+    expect(screen.getByTestId("self-tile").style.transform).toBe("translate3d(280px, 180px, 0)")
 
     unmount()
     render(<SelfTile stream={null} />)
@@ -102,7 +108,7 @@ describe("SelfTile", () => {
     expect(remountedTile.className).toContain("right-3")
     expect(remountedTile.className).toContain("bottom-[calc(env(safe-area-inset-bottom)+5rem)]")
     expect(remountedTile.className).toContain("sm:bottom-[100px]")
-    expect(remountedTile).not.toHaveStyle({ left: "280px", top: "180px" })
+    expect(remountedTile.style.transform).toBe("")
   })
 
   it("clamps position to viewport bounds on drag past edges", () => {
@@ -124,7 +130,8 @@ describe("SelfTile", () => {
 
     fireEvent.pointerDown(tile, { pointerId: 1, clientX: 620, clientY: 320 })
     fireEvent.pointerMove(tile, { pointerId: 1, clientX: 10_000, clientY: 10_000 })
+    fireEvent.pointerUp(tile, { pointerId: 1, clientX: 10_000, clientY: 10_000 })
 
-    expect(tile).toHaveStyle({ left: "608px", top: "456px" })
+    expect(tile.style.transform).toBe("translate3d(608px, 456px, 0)")
   })
 })

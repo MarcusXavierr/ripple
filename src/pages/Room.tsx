@@ -89,6 +89,20 @@ export default function Room() {
   }, [remoteStream])
 
   useEffect(() => {
+    const prevHtmlOverflow = document.documentElement.style.overflow
+    const prevBodyOverflow = document.body.style.overflow
+    const prevOverscroll = document.body.style.overscrollBehavior
+    document.documentElement.style.overflow = "hidden"
+    document.body.style.overflow = "hidden"
+    document.body.style.overscrollBehavior = "none"
+    return () => {
+      document.documentElement.style.overflow = prevHtmlOverflow
+      document.body.style.overflow = prevBodyOverflow
+      document.body.style.overscrollBehavior = prevOverscroll
+    }
+  }, [])
+
+  useEffect(() => {
     const updateBackdropVisibility = () => {
       const allowed =
         remoteStream !== null &&
@@ -125,7 +139,7 @@ export default function Room() {
   }
 
   return (
-    <div data-testid="room-page" className="relative h-screen w-screen overflow-hidden bg-black">
+    <div data-testid="room-page" className="relative h-dvh w-screen overflow-hidden bg-black">
       {showBackdrop ? (
         <video
           ref={backdropCallbackRef}
