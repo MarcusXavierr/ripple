@@ -14,7 +14,7 @@ export function SettingsMenu() {
         <button
           type="button"
           aria-label={t("room.settings.open")}
-          className="flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-white/30 text-white transition hover:bg-white/45"
+          className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/50 bg-white/40 text-ripple-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] transition hover:bg-white/65"
         >
           <MoreVertical className="h-4 w-4" />
         </button>

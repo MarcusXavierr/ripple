@@ -76,14 +76,6 @@ beforeEach(() => {
     value: vi.fn().mockResolvedValue(undefined),
     configurable: true,
   })
-  Object.defineProperty(HTMLDivElement.prototype, "setPointerCapture", {
-    value: vi.fn(),
-    configurable: true,
-  })
-  Object.defineProperty(HTMLDivElement.prototype, "releasePointerCapture", {
-    value: vi.fn(),
-    configurable: true,
-  })
 })
 
 it("renders the room page", () => {
@@ -106,6 +98,17 @@ describe("waiting state", () => {
   it("renders a Copy link button", () => {
     renderRoom()
     expect(screen.getByRole("button", { name: /copy link/i })).toBeInTheDocument()
+  })
+
+  it("uses a contrast-safe room style for the Copy link button", () => {
+    renderRoom()
+
+    const copyButton = screen.getByRole("button", { name: /copy link/i })
+
+    expect(copyButton.className).toContain("bg-white/10")
+    expect(copyButton.className).toContain("text-white")
+    expect(copyButton.className).toContain("border-white/25")
+    expect(copyButton.className).not.toContain("bg-background")
   })
 })
 

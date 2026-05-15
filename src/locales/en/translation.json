@@ -5,12 +5,26 @@
   },
   "home": {
     "hero": {
-      "badge": "No accounts. No history. Peer‑to‑peer.",
+      "eyebrow": "Coming to Chrome · join the waitlist",
+      "eyebrowCompact": "Coming to Chrome",
       "headlineLine1": "Talk like",
       "headlineLine2": "water flows.",
-      "description": "Ripple is a private, two‑person video room. Open a link, share your screen, talk. Nothing is stored — when you leave, the room disappears.",
+      "description": "Ripple is a private, two-person video room that lives in your browser. Start a call from any tab — no accounts, no history, peer-to-peer. Drop your email and we'll let you know the day the extension ships.",
+      "descriptionCompact": "A private, two-person video room that lives in your browser. Drop your email and we'll ping you the day the extension ships.",
       "featureEncrypted": "End‑to‑end encrypted",
-      "featureScreenShare": "One‑click screen share"
+      "featureScreenShare": "One‑click screen share",
+      "featureNoAccounts": "No accounts",
+      "emailPlaceholder": "you@domain.com",
+      "emailPlaceholderCompact": "your@email.com",
+      "notifyButton": "Notify me on launch",
+      "notifyButtonCompact": "Notify me",
+      "notifyMeta": "No spam · one email when it ships · unsubscribe anytime",
+      "emailInvalid": "Enter a valid email so we can ping you.",
+      "waitlistNetworkError": "Couldn't reach the waitlist — try again.",
+      "waitlistUnavailable": "The waitlist isn't available right now.",
+      "waitlistSuccess": "You're on the list.",
+      "waitlistSuccessDetail": "We'll email {{email}} the day it ships.",
+      "waitlistChange": "Change"
     },
     "card": {
       "title": "Start a room",

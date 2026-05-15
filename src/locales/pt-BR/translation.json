@@ -5,27 +5,41 @@
   },
   "home": {
     "hero": {
-      "badge": "Sem contas. Sem histórico. Peer‑to‑peer.",
-      "headlineLine1": "Converse como",
-      "headlineLine2": "água que flui.",
-      "description": "Ripple é uma sala de vídeo privada para duas pessoas. Abra um link, compartilhe sua tela, converse. Nada é armazenado — quando você sai, a sala desaparece.",
+      "eyebrow": "Chegando no Chrome · entra na lista",
+      "eyebrowCompact": "Chegando no Chrome",
+      "headlineLine1": "Dois cliques",
+      "headlineLine2": "pra conversar.",
+      "description": "Ripple é uma sala de vídeo privada pra duas pessoas, direto no navegador. Começa a chamada de qualquer aba — sem conta, sem histórico, ponto a ponto. Deixa seu email que a gente te avisa no dia que a extensão sair.",
+      "descriptionCompact": "Sala de vídeo privada pra duas pessoas, direto no navegador. Deixa seu email que a gente te avisa quando a extensão sair.",
       "featureEncrypted": "Criptografia de ponta a ponta",
-      "featureScreenShare": "Compartilhe a tela com um clique"
+      "featureScreenShare": "Compartilha tela num clique",
+      "featureNoAccounts": "Sem conta",
+      "emailPlaceholder": "voce@email.com",
+      "emailPlaceholderCompact": "seu@email.com",
+      "notifyButton": "Me avisa quando sair",
+      "notifyButtonCompact": "Me avisa",
+      "notifyMeta": "Sem spam · um email só · sai quando quiser",
+      "emailInvalid": "Coloca um email válido pra gente te avisar.",
+      "waitlistNetworkError": "Não rolou enviar — tenta de novo.",
+      "waitlistUnavailable": "A lista tá fora do ar agora.",
+      "waitlistSuccess": "Você tá na lista.",
+      "waitlistSuccessDetail": "A gente avisa {{email}} no dia que sair.",
+      "waitlistChange": "Trocar"
     },
     "card": {
-      "title": "Criar uma sala",
-      "subtitle": "Crie uma sala privada e envie o link para uma pessoa.",
+      "title": "Abrir uma sala",
+      "subtitle": "Cria uma sala privada e manda o link pra uma pessoa.",
       "createRoom": "Criar sala",
       "suggestName": "Sugerir outro nome",
-      "orJoin": "ou entrar em existente",
+      "orJoin": "ou entrar em uma",
       "inputAriaLabel": "ID da sala ou link",
       "inputPlaceholder": "ripple.app/azure-otter-42",
       "paste": "Colar",
       "joinRoom": "Entrar na sala",
-      "joinError": "Digite um ID de sala ou link válido"
+      "joinError": "Coloca um ID de sala ou link válido"
     },
     "footer": {
-      "version": "v0.1 — feito para conversas pequenas",
+      "version": "v0.1 — feito pra conversas curtas",
       "status": "Status",
       "changelog": "Changelog",
       "github": "github"
@@ -35,21 +49,21 @@
     "status": {
       "idle": "Conectando...",
       "connecting": "Conectando...",
-      "waiting": "Aguardando o par...",
+      "waiting": "Esperando a outra pessoa...",
       "negotiating": "Conectando...",
       "connected": "Conectado",
       "reconnecting": "Reconectando...",
       "disconnected": "Desconectado",
       "ended": "Chamada encerrada",
-      "copyLinkAria": "Status: {{status}}, sala {{roomId}}, clique para copiar o link da sala"
+      "copyLinkAria": "Status: {{status}}, sala {{roomId}}, clique pra copiar o link"
     },
     "waiting": {
-      "message": "Aguardando alguém entrar..."
+      "message": "Esperando alguém entrar..."
     },
     "controls": {
       "copyLink": "Copiar link",
-      "unmute": "Ativar microfone",
-      "mute": "Silenciar",
+      "unmute": "Ligar microfone",
+      "mute": "Desligar microfone",
       "enableCamera": "Ligar câmera",
       "disableCamera": "Desligar câmera",
       "stopSharing": "Parar compartilhamento",
@@ -63,18 +77,18 @@
       "ok": "OK"
     },
     "reconnect": {
-      "title": "Par desconectado",
-      "description": "A outra pessoa saiu. Você pode aguardar a reconexão ou voltar ao início.",
-      "stay": "Permanecer na sala",
-      "goHome": "Voltar ao início"
+      "title": "A outra pessoa saiu",
+      "description": "Você pode esperar ela voltar ou ir pra tela inicial.",
+      "stay": "Ficar na sala",
+      "goHome": "Ir pra tela inicial"
     },
     "toast": {
       "linkCopied": "Link copiado",
       "micChanged": "Microfone alterado",
       "cameraChanged": "Câmera alterada",
-      "cameraChangedDeferred": "Câmera alterada. Ela será aplicada quando o compartilhamento terminar",
-      "deviceUnplugged": "Um dispositivo foi desconectado; alternado para o padrão",
-      "deviceUnpluggedFatal": "Um dispositivo foi desconectado e não há fallback disponível",
+      "cameraChangedDeferred": "Câmera alterada. Vai valer quando você parar de compartilhar a tela",
+      "deviceUnplugged": "Um dispositivo foi desconectado — mudamos pro padrão",
+      "deviceUnpluggedFatal": "Um dispositivo foi desconectado e não tem outro disponível",
       "computerAudioUnavailable": "O áudio do computador não foi incluído neste compartilhamento."
     },
     "devices": {
@@ -88,122 +102,122 @@
     "settings": {
       "open": "Abrir configurações",
       "section": "Configurações",
-      "empty": "Nenhuma configuração ainda"
+      "empty": "Nada por aqui ainda"
     }
   },
   "callEnded": {
     "title": "Chamada encerrada",
-    "rejoin": "Entrar novamente",
-    "returnHome": "Voltar ao início"
+    "rejoin": "Entrar de novo",
+    "returnHome": "Ir pra tela inicial"
   },
   "privacy": {
-    "nav": { "back": "Voltar ao início" },
+    "nav": { "back": "Ir pra tela inicial" },
     "hero": {
-      "label": "Privacidade",
+      "label": "Privacidade e termos",
       "titleA": "Sua aba continua",
       "titleEm": "sua.",
-      "sub": "A extensão Ripple Remote Control permite que a outra pessoa na chamada clique, role e digite em uma aba que você escolheu e aprovou. Esta página explica o que a extensão faz com os seus dados.",
+      "sub": "A extensão Ripple Remote Control deixa a outra pessoa da chamada clicar, rolar e digitar numa aba que você escolheu e liberou. Esta página explica o que a extensão faz com seus dados.",
       "updated": "Atualizado em 3 de maio de 2026"
     },
     "principles": {
       "local": {
         "title": "Apenas local",
-        "body": "Os dados ficam no seu navegador via chrome.storage.local. Nada é sincronizado com nenhum servidor."
+        "body": "Os dados ficam no seu navegador, via chrome.storage.local. Nada vai pra servidor nenhum."
       },
       "noTel": {
         "title": "Sem telemetria",
-        "body": "Sem análises, relatórios de falha ou métricas de uso. A extensão nunca contata um servidor por conta própria."
+        "body": "Sem analytics, relatórios de erro ou métricas de uso. A extensão nunca fala com servidor por conta própria."
       },
       "perSite": {
         "title": "Você aprova cada site",
-        "body": "As permissões de host são opcionais. O Chrome pede sua aprovação uma origem por vez."
+        "body": "As permissões de host são opcionais. O Chrome pede sua aprovação um site de cada vez."
       }
     },
     "sections": {
       "stores": {
         "title": "O que a extensão guarda",
-        "intro": "Quando você seleciona uma aba para ser controlada, a extensão salva o seguinte no armazenamento local do seu navegador (chrome.storage.local):",
+        "intro": "Quando você escolhe uma aba pra controlar, a extensão guarda o seguinte no armazenamento local do seu navegador (chrome.storage.local):",
         "rows": {
           "ids": {
             "key": "Identificadores da aba",
-            "val": "ID da aba, ID da janela e momento da seleção."
+            "val": "ID da aba, ID da janela e horário da seleção."
           },
-          "url": { "key": "URL e título da aba", "val": "URL, origem e título da aba armada." },
+          "url": { "key": "URL e título da aba", "val": "URL, site e título da aba ativa." },
           "hosts": {
             "key": "Padrões de host",
-            "val": "Os padrões de site para os quais você concedeu acesso (ex.: https://example.com/*)."
+            "val": "Os padrões de site que você liberou (ex.: https://example.com/*)."
           }
         },
-        "outro": "Esses dados ficam no seu dispositivo. Eles servem para a extensão lembrar qual aba você armou e verificar que a entrada da outra pessoa na chamada vá para a aba que você aprovou."
+        "outro": "Esses dados ficam no seu dispositivo. Servem pra extensão lembrar qual aba você ativou e conferir se o clique da outra pessoa vai mesmo pra aba que você liberou."
       },
       "network": {
         "title": "O que a extensão envia pela rede",
         "callout": "Nada.",
-        "intro": "A extensão não contata nenhum servidor por conta própria. Ela não coleta análises, telemetria, relatórios de falha nem métricas de uso.",
-        "body": "O único dado que passa pela extensão são as mensagens de input que a outra pessoa na chamada envia pelo aplicativo web do Ripple. A extensão repassa essas mensagens para a aba que você aprovou, como eventos sintéticos de clique, rolagem e teclado. Esses eventos não saem do seu dispositivo pela extensão.",
-        "outro": "O aplicativo web do Ripple usa sinalização e infraestrutura WebRTC para a chamada funcionar. Esse fluxo de dados é coberto pela política de privacidade do aplicativo web, não por esta."
+        "intro": "A extensão não fala com servidor nenhum por conta própria. Não coleta analytics, telemetria, relatórios de erro nem métricas de uso.",
+        "body": "A única coisa que passa pela extensão são os comandos (cliques, rolagem, digitação) que a outra pessoa manda pelo Ripple. A extensão repassa pra aba que você liberou, como eventos sintéticos. Eles não saem do seu dispositivo.",
+        "outro": "O site do Ripple usa sinalização e WebRTC pra chamada funcionar. Esse fluxo entra na política de privacidade do site, não desta página."
       },
       "notCollect": {
         "title": "O que a extensão não coleta",
         "items": [
-          "Não registra páginas que você visita fora da aba que você armou.",
-          "Não envia valores de formulário, senhas nem texto da página para lugar nenhum. A digitação é aplicada localmente na aba que você aprovou.",
-          "Não rastreia em quais sites você passa tempo.",
+          "Não vê páginas que você abre fora da aba ativa.",
+          "Não manda valores de formulário, senhas nem texto de página pra lugar nenhum. A digitação acontece localmente, na aba que você liberou.",
+          "Não rastreia em que sites você gasta tempo.",
           "Não contém publicidade, fingerprinting ou SDKs de terceiros."
         ]
       },
       "permissions": {
-        "title": "Permissões solicitadas pela extensão",
+        "title": "Permissões que a extensão pede",
         "rows": {
           "activeTab": {
             "key": "activeTab",
-            "val": "Lê a URL e o título da aba atual quando você clica em \"Usar aba atual\", para que o popup mostre o que você está prestes a armar."
+            "val": "Lê a URL e o título da aba atual quando você clica em \"Usar aba atual\", pra mostrar no popup o que você vai ativar."
           },
           "scripting": {
             "key": "scripting",
-            "val": "Injeta o content script de replay de input na aba que você aprovou."
+            "val": "Injeta o content script (que reproduz os comandos) na aba que você liberou."
           },
           "storage": {
             "key": "storage",
-            "val": "Lembra a aba que você selecionou entre aberturas do popup."
+            "val": "Lembra qual aba você escolheu entre uma abertura e outra do popup."
           },
           "tabs": {
             "key": "tabs",
-            "val": "Procura o título e a URL da aba selecionada para o popup mostrar, e verifica que a aba ainda existe antes de repassar o input."
+            "val": "Busca o título e a URL da aba selecionada pra mostrar no popup, e confere se ela ainda existe antes de repassar os comandos."
           },
           "hosts": {
             "key": "Permissões de host",
-            "val": "https://*/* e http://*/* são declaradas como opcionais. O Chrome pede sua aprovação uma origem por vez quando você arma uma aba em um novo site."
+            "val": "https://*/* e http://*/* são declaradas como opcionais. O Chrome pede sua aprovação um site de cada vez, quando você ativa uma aba num site novo."
           },
           "extConn": {
             "key": "externally_connectable",
-            "val": "Restrita à origem do aplicativo web do Ripple. Nenhum outro site pode falar com a extensão."
+            "val": "Restrita ao site do Ripple. Nenhum outro site consegue falar com a extensão."
           }
         }
       },
       "control": {
-        "title": "No seu controle",
-        "body": "Você pode limpar a aba selecionada a qualquer momento pelo popup, com \"Limpar aba selecionada\" ou \"Parar de controlar\". Você também pode revogar permissões de host por site na página de configurações de extensões do Chrome.",
-        "callout": "Remover a extensão apaga todos os dados armazenados."
+        "title": "Você no controle",
+        "body": "Dá pra limpar a aba selecionada a qualquer momento pelo popup, em \"Limpar aba selecionada\" ou \"Parar de controlar\". Também dá pra revogar permissões por site, nas configurações de extensão do Chrome.",
+        "callout": "Remover a extensão apaga tudo que estava salvo."
       },
       "crossOrigin": {
-        "title": "Reaprovação entre origens",
-        "body": "Quando a aba que você armou navega para uma origem diferente, o Chrome trata isso como um novo site. A extensão vai pedir para você conceder acesso de novo antes de repassar input para a nova origem. Isso é intencional: mantém a extensão restrita aos sites que você aprovou explicitamente."
+        "title": "Reaprovação por site",
+        "body": "Quando a aba ativa navega pra um site diferente, o Chrome trata como site novo. A extensão vai te pedir acesso de novo antes de repassar qualquer comando. É de propósito: mantém a extensão só nos sites que você liberou."
       },
       "security": {
         "title": "Segurança",
-        "body": "A extensão valida toda mensagem recebida com um schema estrito e ignora qualquer coisa que não bata. Ela só aceita mensagens da origem exata do aplicativo web do Ripple. Os eventos sintéticos que ela dispara são best-effort: um site pode ignorá-los, e a extensão não tenta contornar proteções do próprio site."
+        "body": "A extensão valida toda mensagem que chega com um schema estrito e ignora o que não bate. Só aceita mensagens vindas exatamente do site do Ripple. Os eventos sintéticos que ela dispara são best-effort: um site pode ignorar, e a extensão não tenta passar por cima das proteções do site."
       },
       "contact": {
         "title": "Dúvidas ou preocupações?",
-        "body": "Fale comigo em {{email}} — leio todo email.",
-        "cta": "Mandar email"
+        "body": "Fala comigo em {{email}} — leio todos os emails.",
+        "cta": "Mandar um email"
       }
     },
     "toc": { "title": "Nesta página" },
     "footer": {
       "copyright": "© 2026 Ripple · v0.1"
     },
-    "badges": { "browserOnly": "Apenas navegador" }
+    "badges": { "browserOnly": "Só no navegador" }
   }
 }

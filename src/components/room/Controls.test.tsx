@@ -146,4 +146,57 @@ describe("Controls", () => {
 
     expect(bar.style.maxHeight).toBe("0px")
   })
+
+  it("marks the dock as full-width compact on mobile while preserving desktop centering", () => {
+    renderControls()
+
+    const dock = screen.getByTestId("controls-dock")
+    const bar = screen.getByTestId("controls-bar")
+
+    expect(dock.className).toContain("left-0")
+    expect(dock.className).toContain("right-0")
+    expect(dock.className).toContain("px-2")
+    expect(dock.className).toContain("bottom-[max(0.5rem,env(safe-area-inset-bottom))]")
+    expect(dock.className).toContain("sm:bottom-0")
+    expect(dock.className).toContain("sm:left-1/2")
+    expect(dock.className).toContain("sm:right-auto")
+    expect(dock.className).toContain("sm:px-0")
+    expect(bar.className).toContain("w-full")
+    expect(bar.className).toContain("justify-between")
+    expect(bar.className).toContain("sm:w-auto")
+    expect(bar.className).toContain("sm:justify-start")
+  })
+
+  it("hides the settings cluster below 370px and shows it from 370px up", () => {
+    renderControls()
+
+    const settingsCluster = screen.getByTestId("settings-cluster")
+
+    expect(settingsCluster.className).toContain("hidden")
+    expect(settingsCluster.className).toContain("min-[370px]:flex")
+    expect(screen.getByRole("button", { name: "Open settings" })).toBeInTheDocument()
+  })
+
+  it("keeps action names accessible while hiding long labels visually on mobile", () => {
+    renderControls()
+
+    expect(screen.getByRole("button", { name: "Share screen" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Leave call" })).toBeInTheDocument()
+    expect(screen.getByTestId("share-screen-label").className).toContain("sr-only")
+    expect(screen.getByTestId("share-screen-label").className).toContain("sm:not-sr-only")
+    expect(screen.getByTestId("hangup-label").className).toContain("sr-only")
+    expect(screen.getByTestId("hangup-label").className).toContain("sm:not-sr-only")
+  })
+
+  it("keeps the collapse tab touch target usable while preserving a compact visual tab", () => {
+    renderControls()
+
+    const collapseTab = screen.getByTestId("controls-collapse-tab")
+    const collapseSurface = screen.getByTestId("controls-collapse-tab-surface")
+
+    expect(collapseTab.className).toContain("h-11")
+    expect(collapseTab.className).toContain("w-12")
+    expect(collapseSurface.className).toContain("h-[22px]")
+    expect(collapseSurface.className).toContain("w-12")
+  })
 })

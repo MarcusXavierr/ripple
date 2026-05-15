@@ -97,7 +97,7 @@ export function DeviceSplitButton({
               kind === "mic" ? t("room.devices.openMicMenu") : t("room.devices.openCameraMenu")
             }
             className={cn(
-              "flex h-11 w-7 items-center justify-center rounded-r-2xl border border-l-0 border-white/50 text-ripple-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] transition",
+              "flex h-11 w-11 items-center justify-center rounded-r-2xl border border-l-0 border-white/50 text-ripple-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] transition sm:w-7",
               active
                 ? "bg-white/40 hover:bg-white/65"
                 : "border-transparent bg-rose-500 text-white hover:bg-rose-600"

@@ -3,14 +3,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { SelfTile } from "./SelfTile"
 
 beforeEach(() => {
-  Object.defineProperty(HTMLDivElement.prototype, "setPointerCapture", {
-    value: vi.fn(),
-    configurable: true,
-  })
-  Object.defineProperty(HTMLDivElement.prototype, "releasePointerCapture", {
-    value: vi.fn(),
-    configurable: true,
-  })
   Object.defineProperty(HTMLMediaElement.prototype, "srcObject", {
     configurable: true,
     get() {
@@ -32,13 +24,26 @@ describe("SelfTile", () => {
     expect(screen.getByTestId("self-tile-video")).toHaveProperty("srcObject", stream)
   })
 
-  it("renders at the default lower-right position on first mount", () => {
+  it("renders with responsive default lower-right placement before dragging", () => {
     render(<SelfTile stream={null} />)
 
-    expect(screen.getByTestId("self-tile")).toHaveStyle({
-      bottom: "100px",
-      right: "16px",
-    })
+    const tile = screen.getByTestId("self-tile")
+
+    expect(tile.className).toContain("right-3")
+    expect(tile.className).toContain("bottom-[calc(env(safe-area-inset-bottom)+5rem)]")
+    expect(tile.className).toContain("h-24")
+    expect(tile.className).toContain("w-32")
+    expect(tile.className).toContain("sm:right-4")
+    expect(tile.className).toContain("sm:bottom-[100px]")
+    expect(tile.className).toContain("sm:h-36")
+    expect(tile.className).toContain("sm:w-48")
+    expect(tile).not.toHaveStyle({ bottom: "100px", right: "16px" })
+  })
+
+  it("has touch-none class so the browser doesn't steal touch gestures for scroll", () => {
+    render(<SelfTile stream={null} />)
+    const tile = screen.getByTestId("self-tile")
+    expect(tile.className).toContain("touch-none")
   })
 
   it("pointer down/move/up updates the tile's position to the move target", () => {
@@ -62,7 +67,7 @@ describe("SelfTile", () => {
     fireEvent.pointerMove(tile, { pointerId: 1, clientX: 300, clientY: 200 })
     fireEvent.pointerUp(tile, { pointerId: 1, clientX: 300, clientY: 200 })
 
-    expect(tile).toHaveStyle({ left: "280px", top: "180px" })
+    expect(tile.style.transform).toBe("translate3d(280px, 180px, 0)")
   })
 
   it("position is preserved between drag end and next render but reset on unmount/remount", () => {
@@ -87,11 +92,15 @@ describe("SelfTile", () => {
     fireEvent.pointerUp(tile, { pointerId: 1, clientX: 300, clientY: 200 })
 
     rerender(<SelfTile stream={null} />)
-    expect(screen.getByTestId("self-tile")).toHaveStyle({ left: "280px", top: "180px" })
+    expect(screen.getByTestId("self-tile").style.transform).toBe("translate3d(280px, 180px, 0)")
 
     unmount()
     render(<SelfTile stream={null} />)
-    expect(screen.getByTestId("self-tile")).toHaveStyle({ bottom: "100px", right: "16px" })
+    const remountedTile = screen.getByTestId("self-tile")
+    expect(remountedTile.className).toContain("right-3")
+    expect(remountedTile.className).toContain("bottom-[calc(env(safe-area-inset-bottom)+5rem)]")
+    expect(remountedTile.className).toContain("sm:bottom-[100px]")
+    expect(remountedTile.style.transform).toBe("")
   })
 
   it("clamps position to viewport bounds on drag past edges", () => {
@@ -113,7 +122,8 @@ describe("SelfTile", () => {
 
     fireEvent.pointerDown(tile, { pointerId: 1, clientX: 620, clientY: 320 })
     fireEvent.pointerMove(tile, { pointerId: 1, clientX: 10_000, clientY: 10_000 })
+    fireEvent.pointerUp(tile, { pointerId: 1, clientX: 10_000, clientY: 10_000 })
 
-    expect(tile).toHaveStyle({ left: "608px", top: "456px" })
+    expect(tile.style.transform).toBe("translate3d(608px, 456px, 0)")
   })
 })

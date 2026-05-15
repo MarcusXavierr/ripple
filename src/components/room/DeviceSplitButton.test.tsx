@@ -139,4 +139,17 @@ describe("DeviceSplitButton", () => {
     expect(screen.getByText("Camera")).toBeInTheDocument()
     expect(screen.queryByText("Speaker")).not.toBeInTheDocument()
   })
+
+  it("keeps mobile split-button hit targets at least 44px and restores the narrower desktop caret at sm", () => {
+    renderMicButton()
+
+    const toggle = screen.getByRole("button", { name: "Mute microphone" })
+    const menu = screen.getByRole("button", { name: "Choose microphone or speaker" })
+
+    expect(toggle.className).toContain("h-11")
+    expect(toggle.className).toContain("w-11")
+    expect(menu.className).toContain("h-11")
+    expect(menu.className).toContain("w-11")
+    expect(menu.className).toContain("sm:w-7")
+  })
 })

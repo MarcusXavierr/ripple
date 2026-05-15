@@ -89,10 +89,10 @@ export function StatusPill({ roomId, status, hidden = false }: StatusPillProps) 
         void handleCopyLink()
       }}
       aria-label={t("room.status.copyLinkAria", { status: getStatusLabel(status, t), roomId })}
-      className={`glass absolute top-3 left-1/2 flex items-center gap-2 rounded-full px-4 py-1.5 text-sm text-ripple-ink transition-all duration-300 ${
+      className={`glass absolute top-[max(0.75rem,env(safe-area-inset-top))] right-3 left-3 flex min-w-0 items-center justify-center gap-1.5 rounded-full px-3 py-1.5 text-xs text-ripple-ink transition-all duration-300 sm:top-3 sm:right-auto sm:left-1/2 sm:gap-2 sm:px-4 sm:text-sm ${
         hidden
-          ? "pointer-events-none -translate-x-1/2 -translate-y-3 opacity-0"
-          : "-translate-x-1/2 translate-y-0 opacity-100"
+          ? "pointer-events-none -translate-y-3 opacity-0 sm:-translate-x-1/2"
+          : "translate-y-0 opacity-100 sm:-translate-x-1/2"
       }`}
       data-testid="status-pill"
       data-hidden={hidden ? "true" : "false"}
@@ -102,11 +102,13 @@ export function StatusPill({ roomId, status, hidden = false }: StatusPillProps) 
         aria-hidden="true"
         className={`h-2 w-2 rounded-full animate-[ripple-pulse_1.6s_infinite] ${getDotClassName(status)}`}
       />
-      <span>{getStatusLabel(status, t)}</span>
+      <span className="shrink-0">{getStatusLabel(status, t)}</span>
       <span aria-hidden="true">·</span>
-      <span className="font-mono">{roomId}</span>
+      <span data-testid="status-pill-room-id" className="min-w-0 truncate font-mono">
+        {roomId}
+      </span>
       {hasEverConnected ? (
-        <span className="ml-2 rounded-full bg-black/5 px-2 py-0.5 font-mono tabular-nums">
+        <span className="ml-1 hidden shrink-0 rounded-full bg-black/5 px-2 py-0.5 font-mono tabular-nums min-[380px]:inline-flex sm:ml-2">
           {formatMmSs(elapsedMs)}
         </span>
       ) : null}

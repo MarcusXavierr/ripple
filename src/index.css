@@ -187,6 +187,11 @@
   color: var(--ripple-ink-soft);
 }
 
+.waitlist-input::placeholder {
+  color: var(--ripple-ink-mute);
+  opacity: 0.55;
+}
+
 @keyframes ripple-drift {
   0%, 100% { transform: translate(0, 0) scale(1); }
   33%       { transform: translate(60px, -40px) scale(1.08); }
