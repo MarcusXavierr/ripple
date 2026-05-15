@@ -147,7 +147,7 @@
         "title": "O que a extensão não coleta",
         "items": [
           "Não registra páginas que você visita fora da aba que você armou.",
-          "Não lê nem transmite valores de formulário, senhas ou texto da página.",
+          "Não envia valores de formulário, senhas nem texto da página para lugar nenhum. A digitação é aplicada localmente na aba que você aprovou.",
           "Não rastreia em quais sites você passa tempo.",
           "Não contém publicidade, fingerprinting ou SDKs de terceiros."
         ]

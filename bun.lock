@@ -45,7 +45,7 @@
     },
     "extension": {
       "name": "@ripple/extension",
-      "version": "0.0.0",
+      "version": "1.0.0",
       "dependencies": {
         "@fontsource/inter": "^5.2.8",
         "react": "^19.2.4",

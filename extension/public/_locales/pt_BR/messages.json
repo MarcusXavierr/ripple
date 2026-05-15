@@ -1,15 +1,17 @@
 {
   "ext_name": { "message": "Controle Remoto Ripple" },
   "ext_description": {
-    "message": "Aplica eventos remotos do Ripple na aba selecionada do Chrome."
+    "message": "Permite que a outra pessoa na chamada clique, role e digite em uma aba que você selecionou e aprovou."
   },
   "action_title": { "message": "Controle Remoto Ripple" },
   "popup_title": { "message": "Ripple" },
-  "popup_tagline": { "message": "Cliques remotos" },
+  "popup_tagline": { "message": "Controle remoto para uma aba aprovada" },
   "popup_selected_tab_label": { "message": "Aba selecionada" },
   "popup_clear_selected_tab": { "message": "Limpar aba selecionada" },
   "popup_no_tab_selected": { "message": "Nenhuma aba selecionada ainda" },
-  "popup_choose_tab": { "message": "Escolha uma aba para receber cliques remotos." },
+  "popup_choose_tab": {
+    "message": "Escolha a aba em que a outra pessoa poderá clicar, rolar e digitar."
+  },
   "popup_use_current_tab": { "message": "Usar aba atual" },
   "popup_include_subdomains_label": { "message": "Permitir também subdomínios deste site" },
   "popup_grant_access": { "message": "Conceder acesso" },
