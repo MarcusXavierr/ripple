@@ -144,7 +144,7 @@
         "title": "What the extension does not collect",
         "items": [
           "It does not record pages you visit outside the tab you explicitly armed.",
-          "It does not read or transmit form values, passwords, or page text.",
+          "It does not send form values, passwords, or page text anywhere. Keyboard input is applied locally in the tab you approved.",
           "It does not track which sites you spend time on.",
           "It does not contain advertising, fingerprinting, or third-party SDKs."
         ]
