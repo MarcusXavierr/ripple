@@ -96,6 +96,14 @@ export class CallSession {
       media: this.media,
       store: useCallStore,
       navigate,
+      onConnected: () => {
+        if (this.connected) return
+        this.connected = true
+        track("call_connected", {
+          roomId: this.roomId,
+          msToConnect: Math.round(performance.now() - this.startedAtPerf),
+        })
+      },
     })
 
     window.addEventListener("pagehide", this.onPageHide)

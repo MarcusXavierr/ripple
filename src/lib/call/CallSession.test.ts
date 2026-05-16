@@ -439,4 +439,18 @@ describe("analytics call lifecycle events", () => {
 
     expect(trackMock).not.toHaveBeenCalled()
   })
+
+  it("call_connected emitted once even across ICE restart", async () => {
+    const session = new CallSession("room1", vi.fn())
+    await session.start()
+    const { onConnected } = capturedMachineDepsRef.value as { onConnected: () => void }
+
+    onConnected()
+    onConnected()
+
+    const calls = trackMock.mock.calls.filter((call) => call[0] === "call_connected")
+    expect(calls).toHaveLength(1)
+    expect(calls[0][1]).toMatchObject({ roomId: "room1" })
+    expect(typeof (calls[0][1] as { msToConnect: number }).msToConnect).toBe("number")
+  })
 })
