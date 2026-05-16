@@ -426,6 +426,41 @@ describe("analytics call lifecycle events", () => {
     )
   })
 
+  it("pagehide during media permission wait prevents later connect", async () => {
+    let resolveMedia: (stream: unknown) => void = () => {}
+    mediaInit.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveMedia = resolve
+      })
+    )
+    const session = new CallSession("room1", vi.fn())
+
+    const start = session.start()
+    window.dispatchEvent(new PageTransitionEvent("pagehide", { persisted: false }))
+    resolveMedia({ getTracks: () => [] })
+    await start
+
+    expect(capturedSignalingCallbacksRef.value).not.toBeNull()
+    expect(signalingSend).not.toHaveBeenCalled()
+  })
+
+  it("pagehide during media permission wait prevents later media_error", async () => {
+    let rejectMedia: (error: unknown) => void = () => {}
+    mediaInit.mockReturnValueOnce(
+      new Promise((_resolve, reject) => {
+        rejectMedia = reject
+      })
+    )
+    const session = new CallSession("room1", vi.fn())
+
+    const start = session.start()
+    window.dispatchEvent(new PageTransitionEvent("pagehide", { persisted: false }))
+    rejectMedia(new DOMException("x", "NotAllowedError"))
+    await start
+
+    expect(trackMock).not.toHaveBeenCalledWith("media_error", expect.anything())
+  })
+
   it("pagehide persisted=true (bfcache) emits nothing", async () => {
     const session = new CallSession("room1", vi.fn())
     await session.start()

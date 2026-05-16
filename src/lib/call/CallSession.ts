@@ -40,10 +40,13 @@ export class CallSession {
   private callEndable = false
   private connected = false
   private ended = false
+  private closed = false
   private startedAtPerf = 0
   private readonly onPageHide = (event: PageTransitionEvent) => {
     if (event.persisted) return
+    this.closed = true
     this.endCall("tab_closed")
+    this.signalingChannel.close(1000, "tab_closed")
   }
 
   // ── Lifecycle ───────────────────────────────────────────────────────────────
@@ -116,7 +119,7 @@ export class CallSession {
     useCallStore.setState({ peerId: getPeerId(this.roomId) })
     try {
       const stream = await this.media.init()
-      if (!this.signalingChannel.isAlive) {
+      if (this.closed || !this.signalingChannel.isAlive) {
         this.media.teardown()
         return
       }
@@ -125,7 +128,7 @@ export class CallSession {
       this.signalingChannel.connect()
       this.announcePeerMediaMode()
     } catch (e) {
-      if (!this.signalingChannel.isAlive) return
+      if (this.closed || !this.signalingChannel.isAlive) return
       const errorName = e instanceof DOMException ? e.name : "Unknown"
       track("media_error", { errorName })
       console.error("[Media Devices] We can't get the stream", e)
@@ -135,6 +138,7 @@ export class CallSession {
 
   teardown(reason: "unmount" | "hangup" = "unmount") {
     window.removeEventListener("pagehide", this.onPageHide)
+    this.closed = true
     this.endCall(reason === "hangup" ? "hangup" : "navigated_away")
     const { remoteStream } = useCallStore.getState()
     remoteStream?.getTracks().forEach((t) => t.stop())
