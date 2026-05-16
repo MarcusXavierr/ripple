@@ -6,6 +6,7 @@ import { samplePeerVideoScroll } from "@/testing/peerVideoScroll.fixture"
 import { CallSession } from "./CallSession"
 import type { PeerConnectionCallbacks } from "./PeerConnection"
 import { RemoteInputTransport } from "./RemoteInputTransport"
+import type { SignalingChannelCallbacks } from "./SignalingChannel"
 
 const {
   sendRemoteClickMock,
@@ -16,10 +17,22 @@ const {
   mockedPeerConnection,
   PeerConnectionConstructorSpy,
   capturedPeerConnectionCallbacksRef,
+  capturedSignalingCallbacksRef,
+  capturedMachineDepsRef,
+  mediaInit,
+  signalingState,
+  signalingClose,
 } = vi.hoisted(() => {
   const capturedPeerConnectionCallbacksRef: { value: PeerConnectionCallbacks | null } = {
     value: null,
   }
+  const capturedSignalingCallbacksRef: { value: SignalingChannelCallbacks | null } = {
+    value: null,
+  }
+  const capturedMachineDepsRef: { value: unknown } = { value: null }
+  const mediaInit = vi.fn(async () => undefined as unknown)
+  const signalingState = { isAlive: true }
+  const signalingClose = vi.fn()
   const mockedPeerConnection = {
     raw: null,
     close: vi.fn(),
@@ -47,6 +60,11 @@ const {
     mockedPeerConnection,
     PeerConnectionConstructorSpy,
     capturedPeerConnectionCallbacksRef,
+    capturedSignalingCallbacksRef,
+    capturedMachineDepsRef,
+    mediaInit,
+    signalingState,
+    signalingClose,
   }
 })
 
@@ -65,7 +83,7 @@ vi.mock("@/lib/peerId", () => ({
 vi.mock("./MediaController", () => ({
   MediaController: vi.fn().mockImplementation(function MediaControllerMock() {
     return {
-      init: vi.fn(),
+      init: mediaInit,
       teardown: vi.fn(),
       attachPC: vi.fn(),
     }
@@ -77,7 +95,8 @@ vi.mock("./PeerConnection", () => ({
 }))
 
 vi.mock("./SignalingMachine", () => ({
-  SignalingMachine: vi.fn().mockImplementation(function SignalingMachineMock() {
+  SignalingMachine: vi.fn().mockImplementation(function SignalingMachineMock(deps: unknown) {
+    capturedMachineDepsRef.value = deps
     return {
       handleProtocolMessage: machineHandleProtocolMessage,
       send: vi.fn(),
@@ -86,12 +105,18 @@ vi.mock("./SignalingMachine", () => ({
 }))
 
 vi.mock("./SignalingChannel", () => ({
-  SignalingChannel: vi.fn().mockImplementation(function SignalingChannelMock() {
+  SignalingChannel: vi.fn().mockImplementation(function SignalingChannelMock(
+    _url: string,
+    callbacks: SignalingChannelCallbacks
+  ) {
+    capturedSignalingCallbacksRef.value = callbacks
     return {
       send: signalingSend,
       connect: vi.fn(),
-      close: vi.fn(),
-      isAlive: true,
+      close: signalingClose,
+      get isAlive() {
+        return signalingState.isAlive
+      },
     }
   }),
 }))
@@ -101,10 +126,16 @@ let handleChannelMessageSpy: MockInstance<RemoteInputTransport["handleChannelMes
 
 beforeEach(() => {
   capturedPeerConnectionCallbacksRef.value = null
+  capturedSignalingCallbacksRef.value = null
+  capturedMachineDepsRef.value = null
+  signalingState.isAlive = true
   mockedPeerConnection.sendOnChannel.mockReset()
   mockedPeerConnection.sendOnChannel.mockReturnValue(true)
   signalingSend.mockReset()
+  signalingClose.mockReset()
   machineHandleProtocolMessage.mockReset()
+  mediaInit.mockReset()
+  mediaInit.mockResolvedValue(undefined)
   sendRemoteClickMock.mockReset()
   sendRemoteScrollMock.mockReset()
   sendRemoteKeyboardMock.mockReset()
