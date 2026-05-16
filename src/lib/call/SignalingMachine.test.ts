@@ -5,6 +5,12 @@ import type { PeerConnection } from "./PeerConnection"
 import type { SignalingChannel } from "./SignalingChannel"
 import { SignalingMachine } from "./SignalingMachine"
 
+vi.mock("@/lib/analytics", () => ({
+  track: vi.fn(),
+  isAnalyticsEnabled: false,
+  posthogClient: { capture: vi.fn() },
+}))
+
 function makeMachine(extra: Partial<{ onConnected: () => void }> = {}) {
   return new SignalingMachine({
     pc: {
