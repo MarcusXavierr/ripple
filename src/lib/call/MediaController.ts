@@ -1,3 +1,4 @@
+import { track } from "@/lib/analytics"
 import { readDevicePref } from "@/lib/call/devicePreferences"
 import { type ScreenShareSurface, useCallStore } from "@/store/call"
 
@@ -126,6 +127,9 @@ export class MediaController {
         useCallStore.setState({ isScreenSharing: false, screenShareSurface: null })
         return
       }
+      track("screenshare_error", {
+        errorName: err instanceof DOMException ? err.name : "Unknown",
+      })
       console.error("[Screenshare] failed to start", err)
       useCallStore.setState({ error: "Could not start screen share.", screenShareSurface: null })
     }

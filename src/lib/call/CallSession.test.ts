@@ -368,6 +368,26 @@ describe("analytics call lifecycle events", () => {
     expect(callEndedEvents()).toHaveLength(0)
   })
 
+  it("media_error emitted with DOMException name when still alive", async () => {
+    mediaInit.mockRejectedValueOnce(new DOMException("x", "NotAllowedError"))
+    signalingState.isAlive = true
+    const session = new CallSession("room1", vi.fn())
+
+    await session.start()
+
+    expect(trackMock).toHaveBeenCalledWith("media_error", { errorName: "NotAllowedError" })
+  })
+
+  it("media_error NOT emitted when session no longer alive", async () => {
+    mediaInit.mockRejectedValueOnce(new DOMException("x", "NotAllowedError"))
+    signalingState.isAlive = false
+    const session = new CallSession("room1", vi.fn())
+
+    await session.start()
+
+    expect(trackMock).not.toHaveBeenCalledWith("media_error", expect.anything())
+  })
+
   it("hangup emits call_ended with hangup exactly once", async () => {
     const session = new CallSession("room1", vi.fn())
     await session.start()

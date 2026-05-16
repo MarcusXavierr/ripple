@@ -118,6 +118,8 @@ export class CallSession {
       this.announcePeerMediaMode()
     } catch (e) {
       if (!this.signalingChannel.isAlive) return
+      const errorName = e instanceof DOMException ? e.name : "Unknown"
+      track("media_error", { errorName })
       console.error("[Media Devices] We can't get the stream", e)
       useCallStore.setState({ error: "Camera and microphone access is required to join a call." })
     }
