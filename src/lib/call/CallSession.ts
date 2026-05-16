@@ -6,7 +6,7 @@ import type {
   PeerVideoScroll,
   RemoteInputMessage,
 } from "@shared/remoteInputProtocol"
-import { track } from "@/lib/analytics"
+import { type CallEndReason, track } from "@/lib/analytics"
 import { getPeerId } from "@/lib/peerId"
 import { extensionBridge } from "@/platform/extensionBridge"
 import { useCallStore } from "@/store/call"
@@ -36,6 +36,11 @@ export class CallSession {
   private readonly signalingChannel: SignalingChannel
   private readonly machine: SignalingMachine
   private readonly remoteInput: RemoteInputTransport
+  private started = false
+  private callEndable = false
+  private connected = false
+  private ended = false
+  private startedAtPerf = 0
 
   // ── Lifecycle ───────────────────────────────────────────────────────────────
 
@@ -75,6 +80,7 @@ export class CallSession {
       onTerminalClose: (code) => this.handleTerminalClose(code),
       onMaxRetriesExceeded: (attempts: number) => {
         track("signaling_reconnect_exhausted", { attempts })
+        this.endCall("connect_failed")
         console.error("[WS] can't connect to the server")
         useCallStore.setState({ error: "Unable to connect to the server." })
       },
@@ -90,6 +96,9 @@ export class CallSession {
   }
 
   async start() {
+    this.started = true
+    this.startedAtPerf = performance.now()
+    track("call_started", { roomId: this.roomId })
     useCallStore.setState({ peerId: getPeerId(this.roomId) })
     try {
       const stream = await this.media.init()
@@ -98,6 +107,7 @@ export class CallSession {
         return
       }
       useCallStore.setState({ localStream: stream as MediaStream })
+      this.callEndable = true
       this.signalingChannel.connect()
       this.announcePeerMediaMode()
     } catch (e) {
@@ -108,6 +118,7 @@ export class CallSession {
   }
 
   teardown(reason: "unmount" | "hangup" = "unmount") {
+    this.endCall(reason === "hangup" ? "hangup" : "navigated_away")
     const { remoteStream } = useCallStore.getState()
     remoteStream?.getTracks().forEach((t) => t.stop())
     this.media.teardown()
@@ -176,6 +187,22 @@ export class CallSession {
     this.signalingChannel.send({ type: "peer-media-mode", mode: getLocalPeerMediaMode() })
   }
 
+  private endCall(reason: CallEndReason): void {
+    if (!this.started || !this.callEndable) return
+    if (this.ended) return
+    this.ended = true
+    track(
+      "call_ended",
+      {
+        reason,
+        roomId: this.roomId,
+        durationMs: Math.round(performance.now() - this.startedAtPerf),
+        wasConnected: this.connected,
+      },
+      { beacon: reason === "tab_closed" }
+    )
+  }
+
   private async handleMessage(msg: ReceivedMessage): Promise<void> {
     if (msg.type === "peer-media-mode") {
       useCallStore.setState({ remoteMediaMode: msg.mode })
@@ -190,6 +217,15 @@ export class CallSession {
   }
 
   private handleTerminalClose(code: number): void {
+    const reasons: Record<number, CallEndReason> = {
+      [CLOSE_CODES.ROOM_FULL]: "room_full",
+      [CLOSE_CODES.PEER_DISCONNECTED]: "peer_disconnected",
+      [CLOSE_CODES.ROOM_NOT_FOUND]: "room_not_found",
+      [CLOSE_CODES.DUPLICATE_SESSION]: "duplicate_session",
+      [CLOSE_CODES.PING_TIMEOUT]: "ping_timeout",
+    }
+    this.endCall(reasons[code] ?? "unknown_close")
+
     const handlers: Record<number, () => void> = {
       [CLOSE_CODES.ROOM_FULL]: () =>
         useCallStore.setState({ error: "This room is full. Only two participants are allowed." }),
@@ -198,6 +234,8 @@ export class CallSession {
         useCallStore.setState({ error: "This room doesn't exist." }),
       [CLOSE_CODES.DUPLICATE_SESSION]: () =>
         useCallStore.setState({ error: "You're connected to this room from another tab." }),
+      [CLOSE_CODES.PING_TIMEOUT]: () =>
+        useCallStore.setState({ error: "Connection timed out. Please rejoin." }),
     }
     const handler = handlers[code]
     if (handler) {

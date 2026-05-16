@@ -292,3 +292,89 @@ describe("analytics reconnect events", () => {
     expect(trackMock).toHaveBeenCalledWith("call_reconnecting", { attempt: 2, delayMs: 4000 })
   })
 })
+
+describe("analytics call lifecycle events", () => {
+  function callEndedEvents() {
+    return trackMock.mock.calls.filter((call) => call[0] === "call_ended")
+  }
+
+  it("call_ended does not emit when session never became endable", () => {
+    const session = new CallSession("room1", vi.fn())
+
+    session.teardown("unmount")
+
+    expect(callEndedEvents()).toHaveLength(0)
+  })
+
+  it("call_started fires at start()", async () => {
+    const session = new CallSession("room1", vi.fn())
+
+    await session.start()
+
+    expect(trackMock).toHaveBeenCalledWith("call_started", { roomId: "room1" })
+  })
+
+  it("call_ended fires once with first reason (terminal then unmount)", async () => {
+    const session = new CallSession("room1", vi.fn())
+    await session.start()
+
+    ;(session as unknown as { handleTerminalClose(code: number): void }).handleTerminalClose(4002)
+    session.teardown("unmount")
+
+    const ended = callEndedEvents()
+    expect(ended).toHaveLength(1)
+    expect(ended[0][1]).toMatchObject({ reason: "peer_disconnected" })
+  })
+
+  it.each([
+    [4001, "room_full"],
+    [4002, "peer_disconnected"],
+    [4003, "room_not_found"],
+    [4004, "duplicate_session"],
+    [4005, "ping_timeout"],
+    [4999, "unknown_close"],
+  ])("close %i -> %s", async (code, reason) => {
+    const session = new CallSession("room1", vi.fn())
+    await session.start()
+
+    ;(session as unknown as { handleTerminalClose(code: number): void }).handleTerminalClose(code)
+
+    expect(trackMock).toHaveBeenCalledWith(
+      "call_ended",
+      expect.objectContaining({ reason }),
+      expect.anything()
+    )
+  })
+
+  it("onMaxRetriesExceeded emits connect_failed exactly once", async () => {
+    const session = new CallSession("room1", vi.fn())
+    await session.start()
+
+    capturedSignalingCallbacksRef.value!.onMaxRetriesExceeded(3)
+
+    const ended = callEndedEvents()
+    expect(ended).toHaveLength(1)
+    expect(ended[0][1]).toMatchObject({ reason: "connect_failed" })
+  })
+
+  it("no call_ended when start() failed before connect, then teardown", async () => {
+    mediaInit.mockRejectedValueOnce(new DOMException("x", "NotAllowedError"))
+    const session = new CallSession("room1", vi.fn())
+
+    await session.start()
+    session.teardown("unmount")
+
+    expect(callEndedEvents()).toHaveLength(0)
+  })
+
+  it("hangup emits call_ended with hangup exactly once", async () => {
+    const session = new CallSession("room1", vi.fn())
+    await session.start()
+
+    session.hangup()
+
+    const ended = callEndedEvents()
+    expect(ended).toHaveLength(1)
+    expect(ended[0][1]).toMatchObject({ reason: "hangup" })
+  })
+})
