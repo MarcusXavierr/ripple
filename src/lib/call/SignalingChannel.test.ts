@@ -1,5 +1,5 @@
 // src/lib/call/SignalingChannel.test.ts
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { installGlobalMocks, MockWebSocket, resetMocks } from "./__tests__/mocks"
 import { SignalingChannel, type SignalingChannelCallbacks } from "./SignalingChannel"
 
@@ -25,6 +25,10 @@ function createCallbacks(): SignalingChannelCallbacks & {
 
 beforeEach(() => {
   resetMocks()
+})
+
+afterEach(() => {
+  vi.useRealTimers()
 })
 
 // ── connect() ────────────────────────────────────────────────────────────────

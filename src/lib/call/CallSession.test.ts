@@ -412,6 +412,20 @@ describe("analytics call lifecycle events", () => {
     )
   })
 
+  it("pagehide during media permission wait emits tab_closed via beacon", () => {
+    mediaInit.mockReturnValueOnce(new Promise(() => undefined))
+    const session = new CallSession("room1", vi.fn())
+
+    void session.start()
+    window.dispatchEvent(new PageTransitionEvent("pagehide", { persisted: false }))
+
+    expect(trackMock).toHaveBeenCalledWith(
+      "call_ended",
+      expect.objectContaining({ reason: "tab_closed", wasConnected: false }),
+      { beacon: true }
+    )
+  })
+
   it("pagehide persisted=true (bfcache) emits nothing", async () => {
     const session = new CallSession("room1", vi.fn())
     await session.start()

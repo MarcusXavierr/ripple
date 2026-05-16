@@ -205,7 +205,8 @@ export class CallSession {
   }
 
   private endCall(reason: CallEndReason): void {
-    if (!this.started || !this.callEndable) return
+    if (!this.started) return
+    if (!this.callEndable && reason !== "tab_closed") return
     if (this.ended) return
     this.ended = true
     track(
