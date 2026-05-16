@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } from "vitest"
+import { track } from "@/lib/analytics"
 import { useCallStore } from "@/store/call"
 import { samplePeerKeyboardInput } from "@/testing/peerKeyboardInput.fixture"
 import { samplePeerVideoClick } from "@/testing/peerVideoClick.fixture"
@@ -7,6 +8,14 @@ import { CallSession } from "./CallSession"
 import type { PeerConnectionCallbacks } from "./PeerConnection"
 import { RemoteInputTransport } from "./RemoteInputTransport"
 import type { SignalingChannelCallbacks } from "./SignalingChannel"
+
+vi.mock("@/lib/analytics", () => ({
+  track: vi.fn(),
+  isAnalyticsEnabled: false,
+  posthogClient: { capture: vi.fn() },
+}))
+
+const trackMock = vi.mocked(track)
 
 const {
   sendRemoteClickMock,
@@ -134,6 +143,7 @@ beforeEach(() => {
   signalingSend.mockReset()
   signalingClose.mockReset()
   machineHandleProtocolMessage.mockReset()
+  trackMock.mockReset()
   mediaInit.mockReset()
   mediaInit.mockResolvedValue(undefined)
   sendRemoteClickMock.mockReset()
@@ -269,5 +279,16 @@ describe("peer media mode signaling", () => {
     })
 
     expect(signalingSend).toHaveBeenCalledWith({ type: "peer-media-mode", mode: "screen" })
+  })
+})
+
+describe("analytics reconnect events", () => {
+  it("call_reconnecting emitted with attempt + delayMs", async () => {
+    const session = new CallSession("room1", vi.fn())
+    await session.start()
+
+    capturedSignalingCallbacksRef.value!.onReconnecting(2, 4000)
+
+    expect(trackMock).toHaveBeenCalledWith("call_reconnecting", { attempt: 2, delayMs: 4000 })
   })
 })

@@ -6,6 +6,7 @@ import type {
   PeerVideoScroll,
   RemoteInputMessage,
 } from "@shared/remoteInputProtocol"
+import { track } from "@/lib/analytics"
 import { getPeerId } from "@/lib/peerId"
 import { extensionBridge } from "@/platform/extensionBridge"
 import { useCallStore } from "@/store/call"
@@ -67,9 +68,13 @@ export class CallSession {
     this.signalingChannel = new SignalingChannel(wsUrl, {
       onMessage: (msg) => this.handleMessage(msg),
       onConnecting: () => useCallStore.setState({ status: "connecting" }),
-      onReconnecting: () => useCallStore.setState({ status: "reconnecting" }),
+      onReconnecting: (attempt: number, delayMs: number) => {
+        track("call_reconnecting", { attempt, delayMs })
+        useCallStore.setState({ status: "reconnecting" })
+      },
       onTerminalClose: (code) => this.handleTerminalClose(code),
-      onMaxRetriesExceeded: () => {
+      onMaxRetriesExceeded: (attempts: number) => {
+        track("signaling_reconnect_exhausted", { attempts })
         console.error("[WS] can't connect to the server")
         useCallStore.setState({ error: "Unable to connect to the server." })
       },

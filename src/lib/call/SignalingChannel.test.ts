@@ -160,6 +160,16 @@ describe("ws.onclose — reconnect (non-4xxx)", () => {
     vi.useRealTimers()
   })
 
+  it("calls onReconnecting with attempt and delayMs", () => {
+    vi.useFakeTimers()
+    const cb = createCallbacks()
+    const ch = new SignalingChannel(URL, cb)
+    ch.connect()
+    MockWebSocket.lastInstance?.simulateClose(1006)
+    expect(cb.onReconnecting).toHaveBeenCalledWith(1, 1000)
+    vi.useRealTimers()
+  })
+
   it("creates a new WebSocket after the reconnect delay", () => {
     vi.useFakeTimers()
     const cb = createCallbacks()
@@ -220,6 +230,21 @@ describe("ws.onclose — reconnect (non-4xxx)", () => {
     }
 
     expect(cb.onMaxRetriesExceeded).toHaveBeenCalledOnce()
+    vi.useRealTimers()
+  })
+
+  it("calls onMaxRetriesExceeded with attempts count", () => {
+    vi.useFakeTimers()
+    const cb = createCallbacks()
+    const ch = new SignalingChannel(URL, cb, 3)
+    ch.connect()
+
+    for (let i = 0; i < 3; i++) {
+      MockWebSocket.lastInstance?.simulateClose(1006)
+      vi.runAllTimers()
+    }
+
+    expect(cb.onMaxRetriesExceeded).toHaveBeenCalledWith(3)
     vi.useRealTimers()
   })
 
