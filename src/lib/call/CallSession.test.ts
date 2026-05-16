@@ -134,6 +134,7 @@ let sendSpy: MockInstance<RemoteInputTransport["send"]>
 let handleChannelMessageSpy: MockInstance<RemoteInputTransport["handleChannelMessage"]>
 
 beforeEach(() => {
+  window.dispatchEvent(new PageTransitionEvent("pagehide", { persisted: false }))
   capturedPeerConnectionCallbacksRef.value = null
   capturedSignalingCallbacksRef.value = null
   capturedMachineDepsRef.value = null
@@ -376,5 +377,46 @@ describe("analytics call lifecycle events", () => {
     const ended = callEndedEvents()
     expect(ended).toHaveLength(1)
     expect(ended[0][1]).toMatchObject({ reason: "hangup" })
+  })
+
+  it("pagehide persisted=false after start emits tab_closed via beacon", async () => {
+    const session = new CallSession("room1", vi.fn())
+    await session.start()
+
+    window.dispatchEvent(new PageTransitionEvent("pagehide", { persisted: false }))
+
+    expect(trackMock).toHaveBeenCalledWith(
+      "call_ended",
+      expect.objectContaining({ reason: "tab_closed" }),
+      { beacon: true }
+    )
+  })
+
+  it("pagehide persisted=true (bfcache) emits nothing", async () => {
+    const session = new CallSession("room1", vi.fn())
+    await session.start()
+
+    window.dispatchEvent(new PageTransitionEvent("pagehide", { persisted: true }))
+
+    expect(callEndedEvents()).toHaveLength(0)
+  })
+
+  it("pagehide before connect (not endable) emits nothing", () => {
+    new CallSession("room1", vi.fn())
+
+    window.dispatchEvent(new PageTransitionEvent("pagehide", { persisted: false }))
+
+    expect(callEndedEvents()).toHaveLength(0)
+  })
+
+  it("teardown removes the pagehide listener", async () => {
+    const session = new CallSession("room1", vi.fn())
+    await session.start()
+    session.teardown("unmount")
+    trackMock.mockClear()
+
+    window.dispatchEvent(new PageTransitionEvent("pagehide", { persisted: false }))
+
+    expect(trackMock).not.toHaveBeenCalled()
   })
 })

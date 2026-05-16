@@ -41,6 +41,10 @@ export class CallSession {
   private connected = false
   private ended = false
   private startedAtPerf = 0
+  private readonly onPageHide = (event: PageTransitionEvent) => {
+    if (event.persisted) return
+    this.endCall("tab_closed")
+  }
 
   // ── Lifecycle ───────────────────────────────────────────────────────────────
 
@@ -93,6 +97,8 @@ export class CallSession {
       store: useCallStore,
       navigate,
     })
+
+    window.addEventListener("pagehide", this.onPageHide)
   }
 
   async start() {
@@ -118,6 +124,7 @@ export class CallSession {
   }
 
   teardown(reason: "unmount" | "hangup" = "unmount") {
+    window.removeEventListener("pagehide", this.onPageHide)
     this.endCall(reason === "hangup" ? "hangup" : "navigated_away")
     const { remoteStream } = useCallStore.getState()
     remoteStream?.getTracks().forEach((t) => t.stop())
