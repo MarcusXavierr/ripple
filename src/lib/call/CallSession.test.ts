@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } from "vitest"
+import { track } from "@/lib/analytics"
 import { useCallStore } from "@/store/call"
 import { samplePeerKeyboardInput } from "@/testing/peerKeyboardInput.fixture"
 import { samplePeerVideoClick } from "@/testing/peerVideoClick.fixture"
@@ -6,6 +7,15 @@ import { samplePeerVideoScroll } from "@/testing/peerVideoScroll.fixture"
 import { CallSession } from "./CallSession"
 import type { PeerConnectionCallbacks } from "./PeerConnection"
 import { RemoteInputTransport } from "./RemoteInputTransport"
+import type { SignalingChannelCallbacks } from "./SignalingChannel"
+
+vi.mock("@/lib/analytics", () => ({
+  track: vi.fn(),
+  isAnalyticsEnabled: false,
+  posthogClient: { capture: vi.fn() },
+}))
+
+const trackMock = vi.mocked(track)
 
 const {
   sendRemoteClickMock,
@@ -16,10 +26,22 @@ const {
   mockedPeerConnection,
   PeerConnectionConstructorSpy,
   capturedPeerConnectionCallbacksRef,
+  capturedSignalingCallbacksRef,
+  capturedMachineDepsRef,
+  mediaInit,
+  signalingState,
+  signalingClose,
 } = vi.hoisted(() => {
   const capturedPeerConnectionCallbacksRef: { value: PeerConnectionCallbacks | null } = {
     value: null,
   }
+  const capturedSignalingCallbacksRef: { value: SignalingChannelCallbacks | null } = {
+    value: null,
+  }
+  const capturedMachineDepsRef: { value: unknown } = { value: null }
+  const mediaInit = vi.fn(async () => undefined as unknown)
+  const signalingState = { isAlive: true }
+  const signalingClose = vi.fn()
   const mockedPeerConnection = {
     raw: null,
     close: vi.fn(),
@@ -47,6 +69,11 @@ const {
     mockedPeerConnection,
     PeerConnectionConstructorSpy,
     capturedPeerConnectionCallbacksRef,
+    capturedSignalingCallbacksRef,
+    capturedMachineDepsRef,
+    mediaInit,
+    signalingState,
+    signalingClose,
   }
 })
 
@@ -65,7 +92,7 @@ vi.mock("@/lib/peerId", () => ({
 vi.mock("./MediaController", () => ({
   MediaController: vi.fn().mockImplementation(function MediaControllerMock() {
     return {
-      init: vi.fn(),
+      init: mediaInit,
       teardown: vi.fn(),
       attachPC: vi.fn(),
     }
@@ -77,7 +104,8 @@ vi.mock("./PeerConnection", () => ({
 }))
 
 vi.mock("./SignalingMachine", () => ({
-  SignalingMachine: vi.fn().mockImplementation(function SignalingMachineMock() {
+  SignalingMachine: vi.fn().mockImplementation(function SignalingMachineMock(deps: unknown) {
+    capturedMachineDepsRef.value = deps
     return {
       handleProtocolMessage: machineHandleProtocolMessage,
       send: vi.fn(),
@@ -86,12 +114,18 @@ vi.mock("./SignalingMachine", () => ({
 }))
 
 vi.mock("./SignalingChannel", () => ({
-  SignalingChannel: vi.fn().mockImplementation(function SignalingChannelMock() {
+  SignalingChannel: vi.fn().mockImplementation(function SignalingChannelMock(
+    _url: string,
+    callbacks: SignalingChannelCallbacks
+  ) {
+    capturedSignalingCallbacksRef.value = callbacks
     return {
       send: signalingSend,
       connect: vi.fn(),
-      close: vi.fn(),
-      isAlive: true,
+      close: signalingClose,
+      get isAlive() {
+        return signalingState.isAlive
+      },
     }
   }),
 }))
@@ -100,11 +134,19 @@ let sendSpy: MockInstance<RemoteInputTransport["send"]>
 let handleChannelMessageSpy: MockInstance<RemoteInputTransport["handleChannelMessage"]>
 
 beforeEach(() => {
+  window.dispatchEvent(new PageTransitionEvent("pagehide", { persisted: false }))
   capturedPeerConnectionCallbacksRef.value = null
+  capturedSignalingCallbacksRef.value = null
+  capturedMachineDepsRef.value = null
+  signalingState.isAlive = true
   mockedPeerConnection.sendOnChannel.mockReset()
   mockedPeerConnection.sendOnChannel.mockReturnValue(true)
   signalingSend.mockReset()
+  signalingClose.mockReset()
   machineHandleProtocolMessage.mockReset()
+  trackMock.mockReset()
+  mediaInit.mockReset()
+  mediaInit.mockResolvedValue(undefined)
   sendRemoteClickMock.mockReset()
   sendRemoteScrollMock.mockReset()
   sendRemoteKeyboardMock.mockReset()
@@ -238,5 +280,226 @@ describe("peer media mode signaling", () => {
     })
 
     expect(signalingSend).toHaveBeenCalledWith({ type: "peer-media-mode", mode: "screen" })
+  })
+})
+
+describe("analytics reconnect events", () => {
+  it("call_reconnecting emitted with attempt + delayMs", async () => {
+    const session = new CallSession("room1", vi.fn())
+    await session.start()
+
+    capturedSignalingCallbacksRef.value!.onReconnecting(2, 4000)
+
+    expect(trackMock).toHaveBeenCalledWith("call_reconnecting", { attempt: 2, delayMs: 4000 })
+  })
+})
+
+describe("analytics call lifecycle events", () => {
+  function callEndedEvents() {
+    return trackMock.mock.calls.filter((call) => call[0] === "call_ended")
+  }
+
+  it("call_ended does not emit when session never became endable", () => {
+    const session = new CallSession("room1", vi.fn())
+
+    session.teardown("unmount")
+
+    expect(callEndedEvents()).toHaveLength(0)
+  })
+
+  it("call_started fires at start()", async () => {
+    const session = new CallSession("room1", vi.fn())
+
+    await session.start()
+
+    expect(trackMock).toHaveBeenCalledWith("call_started", { roomId: "room1" })
+  })
+
+  it("call_ended fires once with first reason (terminal then unmount)", async () => {
+    const session = new CallSession("room1", vi.fn())
+    await session.start()
+
+    ;(session as unknown as { handleTerminalClose(code: number): void }).handleTerminalClose(4002)
+    session.teardown("unmount")
+
+    const ended = callEndedEvents()
+    expect(ended).toHaveLength(1)
+    expect(ended[0][1]).toMatchObject({ reason: "peer_disconnected" })
+  })
+
+  it.each([
+    [4001, "room_full"],
+    [4002, "peer_disconnected"],
+    [4003, "room_not_found"],
+    [4004, "duplicate_session"],
+    [4005, "ping_timeout"],
+    [4999, "unknown_close"],
+  ])("close %i -> %s", async (code, reason) => {
+    const session = new CallSession("room1", vi.fn())
+    await session.start()
+
+    ;(session as unknown as { handleTerminalClose(code: number): void }).handleTerminalClose(code)
+
+    expect(trackMock).toHaveBeenCalledWith(
+      "call_ended",
+      expect.objectContaining({ reason }),
+      expect.anything()
+    )
+  })
+
+  it("onMaxRetriesExceeded emits connect_failed exactly once", async () => {
+    const session = new CallSession("room1", vi.fn())
+    await session.start()
+
+    capturedSignalingCallbacksRef.value!.onMaxRetriesExceeded(3)
+
+    const ended = callEndedEvents()
+    expect(ended).toHaveLength(1)
+    expect(ended[0][1]).toMatchObject({ reason: "connect_failed" })
+  })
+
+  it("no call_ended when start() failed before connect, then teardown", async () => {
+    mediaInit.mockRejectedValueOnce(new DOMException("x", "NotAllowedError"))
+    const session = new CallSession("room1", vi.fn())
+
+    await session.start()
+    session.teardown("unmount")
+
+    expect(callEndedEvents()).toHaveLength(0)
+  })
+
+  it("media_error emitted with DOMException name when still alive", async () => {
+    mediaInit.mockRejectedValueOnce(new DOMException("x", "NotAllowedError"))
+    signalingState.isAlive = true
+    const session = new CallSession("room1", vi.fn())
+
+    await session.start()
+
+    expect(trackMock).toHaveBeenCalledWith("media_error", { errorName: "NotAllowedError" })
+  })
+
+  it("media_error NOT emitted when session no longer alive", async () => {
+    mediaInit.mockRejectedValueOnce(new DOMException("x", "NotAllowedError"))
+    signalingState.isAlive = false
+    const session = new CallSession("room1", vi.fn())
+
+    await session.start()
+
+    expect(trackMock).not.toHaveBeenCalledWith("media_error", expect.anything())
+  })
+
+  it("hangup emits call_ended with hangup exactly once", async () => {
+    const session = new CallSession("room1", vi.fn())
+    await session.start()
+
+    session.hangup()
+
+    const ended = callEndedEvents()
+    expect(ended).toHaveLength(1)
+    expect(ended[0][1]).toMatchObject({ reason: "hangup" })
+  })
+
+  it("pagehide persisted=false after start emits tab_closed via beacon", async () => {
+    const session = new CallSession("room1", vi.fn())
+    await session.start()
+
+    window.dispatchEvent(new PageTransitionEvent("pagehide", { persisted: false }))
+
+    expect(trackMock).toHaveBeenCalledWith(
+      "call_ended",
+      expect.objectContaining({ reason: "tab_closed" }),
+      { beacon: true }
+    )
+  })
+
+  it("pagehide during media permission wait emits tab_closed via beacon", () => {
+    mediaInit.mockReturnValueOnce(new Promise(() => undefined))
+    const session = new CallSession("room1", vi.fn())
+
+    void session.start()
+    window.dispatchEvent(new PageTransitionEvent("pagehide", { persisted: false }))
+
+    expect(trackMock).toHaveBeenCalledWith(
+      "call_ended",
+      expect.objectContaining({ reason: "tab_closed", wasConnected: false }),
+      { beacon: true }
+    )
+  })
+
+  it("pagehide during media permission wait prevents later connect", async () => {
+    let resolveMedia: (stream: unknown) => void = () => {}
+    mediaInit.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveMedia = resolve
+      })
+    )
+    const session = new CallSession("room1", vi.fn())
+
+    const start = session.start()
+    window.dispatchEvent(new PageTransitionEvent("pagehide", { persisted: false }))
+    resolveMedia({ getTracks: () => [] })
+    await start
+
+    expect(capturedSignalingCallbacksRef.value).not.toBeNull()
+    expect(signalingSend).not.toHaveBeenCalled()
+  })
+
+  it("pagehide during media permission wait prevents later media_error", async () => {
+    let rejectMedia: (error: unknown) => void = () => {}
+    mediaInit.mockReturnValueOnce(
+      new Promise((_resolve, reject) => {
+        rejectMedia = reject
+      })
+    )
+    const session = new CallSession("room1", vi.fn())
+
+    const start = session.start()
+    window.dispatchEvent(new PageTransitionEvent("pagehide", { persisted: false }))
+    rejectMedia(new DOMException("x", "NotAllowedError"))
+    await start
+
+    expect(trackMock).not.toHaveBeenCalledWith("media_error", expect.anything())
+  })
+
+  it("pagehide persisted=true (bfcache) emits nothing", async () => {
+    const session = new CallSession("room1", vi.fn())
+    await session.start()
+
+    window.dispatchEvent(new PageTransitionEvent("pagehide", { persisted: true }))
+
+    expect(callEndedEvents()).toHaveLength(0)
+  })
+
+  it("pagehide before connect (not endable) emits nothing", () => {
+    new CallSession("room1", vi.fn())
+
+    window.dispatchEvent(new PageTransitionEvent("pagehide", { persisted: false }))
+
+    expect(callEndedEvents()).toHaveLength(0)
+  })
+
+  it("teardown removes the pagehide listener", async () => {
+    const session = new CallSession("room1", vi.fn())
+    await session.start()
+    session.teardown("unmount")
+    trackMock.mockClear()
+
+    window.dispatchEvent(new PageTransitionEvent("pagehide", { persisted: false }))
+
+    expect(trackMock).not.toHaveBeenCalled()
+  })
+
+  it("call_connected emitted once even across ICE restart", async () => {
+    const session = new CallSession("room1", vi.fn())
+    await session.start()
+    const { onConnected } = capturedMachineDepsRef.value as { onConnected: () => void }
+
+    onConnected()
+    onConnected()
+
+    const calls = trackMock.mock.calls.filter((call) => call[0] === "call_connected")
+    expect(calls).toHaveLength(1)
+    expect(calls[0][1]).toMatchObject({ roomId: "room1" })
+    expect(typeof (calls[0][1] as { msToConnect: number }).msToConnect).toBe("number")
   })
 })

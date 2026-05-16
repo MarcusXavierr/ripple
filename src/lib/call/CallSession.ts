@@ -6,6 +6,7 @@ import type {
   PeerVideoScroll,
   RemoteInputMessage,
 } from "@shared/remoteInputProtocol"
+import { type CallEndReason, track } from "@/lib/analytics"
 import { getPeerId } from "@/lib/peerId"
 import { extensionBridge } from "@/platform/extensionBridge"
 import { useCallStore } from "@/store/call"
@@ -35,6 +36,18 @@ export class CallSession {
   private readonly signalingChannel: SignalingChannel
   private readonly machine: SignalingMachine
   private readonly remoteInput: RemoteInputTransport
+  private started = false
+  private callEndable = false
+  private connected = false
+  private ended = false
+  private closed = false
+  private startedAtPerf = 0
+  private readonly onPageHide = (event: PageTransitionEvent) => {
+    if (event.persisted) return
+    this.closed = true
+    this.endCall("tab_closed")
+    this.signalingChannel.close(1000, "tab_closed")
+  }
 
   // ── Lifecycle ───────────────────────────────────────────────────────────────
 
@@ -67,9 +80,14 @@ export class CallSession {
     this.signalingChannel = new SignalingChannel(wsUrl, {
       onMessage: (msg) => this.handleMessage(msg),
       onConnecting: () => useCallStore.setState({ status: "connecting" }),
-      onReconnecting: () => useCallStore.setState({ status: "reconnecting" }),
+      onReconnecting: (attempt: number, delayMs: number) => {
+        track("call_reconnecting", { attempt, delayMs })
+        useCallStore.setState({ status: "reconnecting" })
+      },
       onTerminalClose: (code) => this.handleTerminalClose(code),
-      onMaxRetriesExceeded: () => {
+      onMaxRetriesExceeded: (attempts: number) => {
+        track("signaling_reconnect_exhausted", { attempts })
+        this.endCall("connect_failed")
         console.error("[WS] can't connect to the server")
         useCallStore.setState({ error: "Unable to connect to the server." })
       },
@@ -81,28 +99,47 @@ export class CallSession {
       media: this.media,
       store: useCallStore,
       navigate,
+      onConnected: () => {
+        if (this.connected) return
+        this.connected = true
+        track("call_connected", {
+          roomId: this.roomId,
+          msToConnect: Math.round(performance.now() - this.startedAtPerf),
+        })
+      },
     })
+
+    window.addEventListener("pagehide", this.onPageHide)
   }
 
   async start() {
+    this.started = true
+    this.startedAtPerf = performance.now()
+    track("call_started", { roomId: this.roomId })
     useCallStore.setState({ peerId: getPeerId(this.roomId) })
     try {
       const stream = await this.media.init()
-      if (!this.signalingChannel.isAlive) {
+      if (this.closed || !this.signalingChannel.isAlive) {
         this.media.teardown()
         return
       }
       useCallStore.setState({ localStream: stream as MediaStream })
+      this.callEndable = true
       this.signalingChannel.connect()
       this.announcePeerMediaMode()
     } catch (e) {
-      if (!this.signalingChannel.isAlive) return
+      if (this.closed || !this.signalingChannel.isAlive) return
+      const errorName = e instanceof DOMException ? e.name : "Unknown"
+      track("media_error", { errorName })
       console.error("[Media Devices] We can't get the stream", e)
       useCallStore.setState({ error: "Camera and microphone access is required to join a call." })
     }
   }
 
   teardown(reason: "unmount" | "hangup" = "unmount") {
+    window.removeEventListener("pagehide", this.onPageHide)
+    this.closed = true
+    this.endCall(reason === "hangup" ? "hangup" : "navigated_away")
     const { remoteStream } = useCallStore.getState()
     remoteStream?.getTracks().forEach((t) => t.stop())
     this.media.teardown()
@@ -171,6 +208,23 @@ export class CallSession {
     this.signalingChannel.send({ type: "peer-media-mode", mode: getLocalPeerMediaMode() })
   }
 
+  private endCall(reason: CallEndReason): void {
+    if (!this.started) return
+    if (!this.callEndable && reason !== "tab_closed") return
+    if (this.ended) return
+    this.ended = true
+    track(
+      "call_ended",
+      {
+        reason,
+        roomId: this.roomId,
+        durationMs: Math.round(performance.now() - this.startedAtPerf),
+        wasConnected: this.connected,
+      },
+      { beacon: reason === "tab_closed" }
+    )
+  }
+
   private async handleMessage(msg: ReceivedMessage): Promise<void> {
     if (msg.type === "peer-media-mode") {
       useCallStore.setState({ remoteMediaMode: msg.mode })
@@ -185,6 +239,15 @@ export class CallSession {
   }
 
   private handleTerminalClose(code: number): void {
+    const reasons: Record<number, CallEndReason> = {
+      [CLOSE_CODES.ROOM_FULL]: "room_full",
+      [CLOSE_CODES.PEER_DISCONNECTED]: "peer_disconnected",
+      [CLOSE_CODES.ROOM_NOT_FOUND]: "room_not_found",
+      [CLOSE_CODES.DUPLICATE_SESSION]: "duplicate_session",
+      [CLOSE_CODES.PING_TIMEOUT]: "ping_timeout",
+    }
+    this.endCall(reasons[code] ?? "unknown_close")
+
     const handlers: Record<number, () => void> = {
       [CLOSE_CODES.ROOM_FULL]: () =>
         useCallStore.setState({ error: "This room is full. Only two participants are allowed." }),
@@ -193,6 +256,8 @@ export class CallSession {
         useCallStore.setState({ error: "This room doesn't exist." }),
       [CLOSE_CODES.DUPLICATE_SESSION]: () =>
         useCallStore.setState({ error: "You're connected to this room from another tab." }),
+      [CLOSE_CODES.PING_TIMEOUT]: () =>
+        useCallStore.setState({ error: "Connection timed out. Please rejoin." }),
     }
     const handler = handlers[code]
     if (handler) {

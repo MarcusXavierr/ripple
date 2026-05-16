@@ -4,9 +4,9 @@ import type { ClientMessage, ReceivedMessage } from "@/types/signaling"
 export interface SignalingChannelCallbacks {
   onMessage(msg: ReceivedMessage): Promise<void>
   onConnecting(): void
-  onReconnecting(): void
+  onReconnecting(attempt: number, delayMs: number): void
   onTerminalClose(code: number): void
-  onMaxRetriesExceeded(): void
+  onMaxRetriesExceeded(attempts: number): void
 }
 
 const DEFAULT_MAX_ATTEMPTS = 3
@@ -84,7 +84,7 @@ export class SignalingChannel {
     this.wsAttempts++
     if (this.wsAttempts >= this.maxAttempts) {
       console.error("[WS] max reconnect attempts reached")
-      this.callbacks.onMaxRetriesExceeded()
+      this.callbacks.onMaxRetriesExceeded(this.wsAttempts)
       return
     }
     console.warn("[WS] reconnecting", {
@@ -92,7 +92,7 @@ export class SignalingChannel {
       delay: this.reconnectDelay,
       reason,
     })
-    this.callbacks.onReconnecting()
+    this.callbacks.onReconnecting(this.wsAttempts, this.reconnectDelay)
     this.reconnectTimer = setTimeout(() => {
       if (this.alive) this.connect()
     }, this.reconnectDelay)

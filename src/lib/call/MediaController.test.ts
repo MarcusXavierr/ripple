@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
+import { track } from "@/lib/analytics"
 import { useCallStore } from "@/store/call"
 import {
   installGlobalMocks,
@@ -13,7 +14,15 @@ import {
 } from "./__tests__/mocks"
 import { MediaController } from "./MediaController"
 
+vi.mock("@/lib/analytics", () => ({
+  track: vi.fn(),
+  isAnalyticsEnabled: false,
+  posthogClient: { capture: vi.fn() },
+}))
+
 installGlobalMocks()
+
+const trackMock = vi.mocked(track)
 
 function createTrack(kind: "audio" | "video", overrides?: Partial<MediaStreamTrack>) {
   return {
@@ -43,6 +52,7 @@ describe("MediaController", () => {
     localStorage.clear()
     useCallStore.getState().reset()
     resetMocks()
+    trackMock.mockReset()
   })
 
   describe("init()", () => {
@@ -244,6 +254,28 @@ describe("MediaController", () => {
       await expect(media.startScreenShare()).resolves.not.toThrow()
       expect(useCallStore.getState().isScreenSharing).toBe(false)
       expect(useCallStore.getState().screenShareSurface).toBeNull()
+    })
+
+    it("screenshare_error NOT emitted on NotAllowedError and still resets state", async () => {
+      vi.mocked(navigator.mediaDevices.getDisplayMedia).mockRejectedValueOnce(
+        new DOMException("cancelled", "NotAllowedError")
+      )
+
+      await media.startScreenShare()
+
+      expect(trackMock).not.toHaveBeenCalledWith("screenshare_error", expect.anything())
+      expect(useCallStore.getState().isScreenSharing).toBe(false)
+      expect(useCallStore.getState().screenShareSurface).toBeNull()
+    })
+
+    it("screenshare_error emitted on generic failure", async () => {
+      vi.mocked(navigator.mediaDevices.getDisplayMedia).mockRejectedValueOnce(
+        new DOMException("failed", "AbortError")
+      )
+
+      await media.startScreenShare()
+
+      expect(trackMock).toHaveBeenCalledWith("screenshare_error", { errorName: "AbortError" })
     })
 
     it("routes the screen audio track to the dedicated transceiver, not the mic", async () => {

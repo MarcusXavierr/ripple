@@ -21,6 +21,7 @@ export class SignalingMachine {
     media: MediaController
     store: typeof useCallStore
     navigate: (path: string) => void
+    onConnected?: () => void
   }
 
   constructor(deps: {
@@ -29,6 +30,7 @@ export class SignalingMachine {
     media: MediaController
     store: typeof useCallStore
     navigate: (path: string) => void
+    onConnected?: () => void
   }) {
     this.deps = deps
   }
@@ -43,9 +45,13 @@ export class SignalingMachine {
   }
 
   async send(event: MachineEvent): Promise<void> {
+    const prev = this.current
     const { next, effects } = transition(this.current, event)
     this.current = next
     this.deps.store.setState({ status: STATUS_MAP[next.state] })
+    if (next.state === "CONNECTED" && prev.state !== "CONNECTED") {
+      this.deps.onConnected?.()
+    }
     for (const effect of effects) await this.executeEffect(effect)
   }
 
