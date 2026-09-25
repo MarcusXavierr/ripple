@@ -35,6 +35,7 @@ export default function Room() {
   const { t } = useTranslation()
   const {
     localStream,
+    localPreviewStream,
     remoteStream,
     remoteMediaMode,
     status,
@@ -44,6 +45,9 @@ export default function Room() {
     isScreenSharing,
     isMicMuted,
     isCameraOff,
+    backgroundBlur,
+    backgroundBlurSupported,
+    setBackgroundBlur,
     startScreenShare,
     stopScreenShare,
     sendPeerVideoClick,
@@ -181,11 +185,14 @@ export default function Room() {
       )}
 
       <StatusPill roomId={roomId!} status={status} hidden={collapsed} />
-      <SelfTile stream={localStream} />
+      <SelfTile stream={localPreviewStream ?? localStream} />
       <Controls
         isMicMuted={isMicMuted}
         isCameraOff={isCameraOff}
         isScreenSharing={isScreenSharing}
+        backgroundBlur={backgroundBlur}
+        backgroundBlurSupported={backgroundBlurSupported}
+        onBackgroundBlurChange={setBackgroundBlur}
         toggleMic={toggleMic}
         toggleCamera={toggleCamera}
         startScreenShare={startScreenShare}

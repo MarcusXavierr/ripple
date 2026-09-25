@@ -27,6 +27,7 @@ vi.mock("@/lib/call/CallSession", () => ({
         toggleMic: vi.fn(),
         toggleCamera: vi.fn(),
         startScreenShare: vi.fn(),
+        setBackgroundBlur: vi.fn(),
         stopScreenShare: vi.fn(),
       },
     }
@@ -35,6 +36,7 @@ vi.mock("@/lib/call/CallSession", () => ({
 
 beforeEach(() => {
   useCallStore.getState().reset()
+  localStorage.clear()
   mockNavigate.mockClear()
 })
 
@@ -93,6 +95,12 @@ it("exposes remoteMediaMode from the store", () => {
   useCallStore.setState({ remoteMediaMode: "screen" })
   const { result } = renderHook(() => useCallSession("test-room"))
   expect(result.current.remoteMediaMode).toBe("screen")
+})
+
+it("persists the chosen background blur for the next call", () => {
+  const { result } = renderHook(() => useCallSession("test-room"))
+  act(() => result.current.setBackgroundBlur("light"))
+  expect(localStorage.getItem("ripple.backgroundBlur")).toBe("light")
 })
 
 describe("dismissError", () => {

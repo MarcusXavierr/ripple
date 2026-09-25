@@ -11,6 +11,7 @@ export type CallStatus =
   | "ended"
 
 export type ScreenShareSurface = "browser" | "window" | "monitor" | null
+export type BackgroundBlurLevel = "off" | "light" | "strong"
 export type RemoteMediaMode = "unknown" | "camera" | "screen"
 
 export type CallNotice = {
@@ -23,10 +24,12 @@ type CallStore = {
   pc: RTCPeerConnection | null
   role: "caller" | "callee" | null
   localStream: MediaStream | null
+  localPreviewStream: MediaStream | null
   remoteStream: MediaStream | null
   isScreenSharing: boolean
   screenShareSurface: ScreenShareSurface
   remoteMediaMode: RemoteMediaMode
+  backgroundBlur: BackgroundBlurLevel
   isMicMuted: boolean
   isCameraOff: boolean
   status: CallStatus
@@ -41,10 +44,12 @@ const INITIAL_STATE = {
   pc: null,
   role: null,
   localStream: null,
+  localPreviewStream: null,
   remoteStream: null,
   isScreenSharing: false,
   screenShareSurface: null,
   remoteMediaMode: "unknown" as RemoteMediaMode,
+  backgroundBlur: "off" as BackgroundBlurLevel,
   isMicMuted: false,
   isCameraOff: false,
   status: "idle" as CallStatus,

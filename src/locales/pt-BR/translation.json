@@ -89,7 +89,8 @@
       "cameraChangedDeferred": "Câmera alterada. Vai valer quando você parar de compartilhar a tela",
       "deviceUnplugged": "Um dispositivo foi desconectado — mudamos pro padrão",
       "deviceUnpluggedFatal": "Um dispositivo foi desconectado e não tem outro disponível",
-      "computerAudioUnavailable": "O áudio do computador não foi incluído neste compartilhamento."
+      "computerAudioUnavailable": "O áudio do computador não foi incluído neste compartilhamento.",
+      "backgroundBlurFailed": "Não foi possível ativar o desfoque de fundo, então sua câmera foi desligada"
     },
     "devices": {
       "micSection": "Microfone",
@@ -101,8 +102,13 @@
     },
     "settings": {
       "open": "Abrir configurações",
-      "section": "Configurações",
-      "empty": "Nada por aqui ainda"
+      "backgroundBlur": {
+        "section": "Desfoque de fundo",
+        "off": "Desativado",
+        "light": "Desfoque leve",
+        "strong": "Desfoque forte",
+        "unsupported": "Indisponível neste navegador"
+      }
     }
   },
   "callEnded": {

@@ -14,6 +14,70 @@ import {
 } from "./__tests__/mocks"
 import { MediaController } from "./MediaController"
 
+const blurMocks = vi.hoisted(() => ({
+  supported: true,
+  create: vi.fn(),
+}))
+
+vi.mock("./BackgroundBlurProcessor", () => ({
+  isBackgroundBlurSupported: () => blurMocks.supported,
+  BackgroundBlurProcessor: { create: blurMocks.create },
+}))
+
+type FakeBlurTrack = {
+  kind: "video"
+  enabled: boolean
+  readyState: MediaStreamTrackState
+  source: MediaStreamTrack
+  stop: () => void
+}
+
+type FakeBlur = {
+  track: FakeBlurTrack
+  level: "light" | "strong"
+  setEnabled: (enabled: boolean) => void
+  stop: () => void
+  fail: () => void
+}
+
+function fakeBlur(
+  level: "light" | "strong",
+  source = mockVideoTrack as unknown as MediaStreamTrack,
+  onFailure: (failed: FakeBlur) => void = () => {}
+): FakeBlur {
+  const track: FakeBlurTrack = {
+    kind: "video",
+    enabled: true,
+    readyState: "live",
+    source,
+    stop() {
+      track.readyState = "ended"
+    },
+  }
+  const blur: FakeBlur = {
+    track,
+    level,
+    setEnabled(enabled: boolean) {
+      track.enabled = enabled
+    },
+    stop() {
+      track.stop()
+    },
+    fail() {
+      onFailure(blur)
+    },
+  }
+  return blur
+}
+
+function deferred<T>() {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((done) => {
+    resolve = done
+  })
+  return { promise, resolve }
+}
+
 vi.mock("@/lib/analytics", () => ({
   track: vi.fn(),
   isAnalyticsEnabled: false,
@@ -52,6 +116,15 @@ describe("MediaController", () => {
     localStorage.clear()
     useCallStore.getState().reset()
     resetMocks()
+    blurMocks.supported = true
+    blurMocks.create.mockReset()
+    blurMocks.create.mockImplementation(
+      async (
+        camera: MediaStreamTrack,
+        level: "light" | "strong",
+        onFailure: (failed: FakeBlur) => void
+      ) => fakeBlur(level, camera, onFailure)
+    )
     trackMock.mockReset()
   })
 
@@ -527,6 +600,410 @@ describe("MediaController", () => {
 
       expect(micSender.replaceTrack).toHaveBeenCalledWith(newTrack)
       expect(videoSender.replaceTrack).not.toHaveBeenCalled()
+    })
+  })
+
+  describe("background blur", () => {
+    async function withVideoSender() {
+      await media.init()
+      const sender: { track: MediaStreamTrack | null; replaceTrack: ReturnType<typeof vi.fn> } = {
+        track: mockVideoTrack as unknown as MediaStreamTrack,
+        replaceTrack: vi.fn().mockImplementation(async (track: MediaStreamTrack | null) => {
+          sender.track = track
+        }),
+      }
+      const pc = new MockRTCPeerConnection() as unknown as RTCPeerConnection
+      vi.mocked(pc.getSenders).mockReturnValue([sender as unknown as RTCRtpSender])
+      media.attachPC(pc)
+      return { sender, pc }
+    }
+
+    it("sends blurred camera to the peer and self preview, then restores the raw camera", async () => {
+      const { sender } = await withVideoSender()
+      await media.setBackgroundBlur("strong")
+      const processor = await blurMocks.create.mock.results[0].value
+      expect(sender.track).toBe(processor.track)
+      expect(useCallStore.getState().localPreviewStream?.getVideoTracks()[0]).toBe(processor.track)
+      expect(useCallStore.getState().backgroundBlur).toBe("strong")
+
+      await media.setBackgroundBlur("light")
+      expect(sender.track).toBe(processor.track)
+      expect(useCallStore.getState().backgroundBlur).toBe("light")
+
+      await media.setBackgroundBlur("off")
+      expect(sender.track).toBe(mockVideoTrack)
+      expect(useCallStore.getState().localPreviewStream).toBeNull()
+      expect(processor.track.readyState).toBe("ended")
+    })
+
+    it("restores the processed camera after screen sharing", async () => {
+      const { sender } = await withVideoSender()
+      await media.setBackgroundBlur("strong")
+      const processed = sender.track
+      await media.startScreenShare()
+      await media.stopScreenShare()
+      expect(sender.track).toBe(processed)
+      expect(sender.track).not.toBe(mockVideoTrack)
+    })
+
+    it("keeps the selected blur on a replacement camera", async () => {
+      const { sender } = await withVideoSender()
+      await media.setBackgroundBlur("strong")
+      const previous = await blurMocks.create.mock.results[0].value
+      const camera = createTrack("video")
+      vi.mocked(navigator.mediaDevices.getUserMedia).mockResolvedValueOnce(
+        createSingleTrackStream(camera)
+      )
+
+      await media.replaceTrack("cam", "cam-2")
+      const next = await blurMocks.create.mock.results[1].value
+      expect(sender.track).toBe(next.track)
+      expect(sender.track).toMatchObject({ source: camera })
+      expect(useCallStore.getState().localPreviewStream?.getVideoTracks()[0]).toBe(next.track)
+      expect(previous.track.readyState).toBe("ended")
+    })
+
+    it("reports a load failure and turns the camera off", async () => {
+      const { sender } = await withVideoSender()
+      blurMocks.create.mockRejectedValueOnce(new Error("CDN unavailable"))
+      const error = vi.spyOn(console, "error").mockImplementation(() => {})
+      try {
+        await media.setBackgroundBlur("light")
+      } finally {
+        error.mockRestore()
+      }
+      expect(sender.track).toBe(mockVideoTrack)
+      expect(mockVideoTrack.enabled).toBe(false)
+      expect(useCallStore.getState()).toMatchObject({
+        backgroundBlur: "off",
+        isCameraOff: true,
+        localPreviewStream: null,
+        notice: { kind: "error", messageKey: "room.toast.backgroundBlurFailed" },
+      })
+    })
+
+    it("discards a processor arriving after blur was turned off", async () => {
+      const { sender } = await withVideoSender()
+      let resolve!: (processor: FakeBlur) => void
+      blurMocks.create.mockImplementationOnce(
+        () =>
+          new Promise<FakeBlur>((done) => {
+            resolve = done
+          })
+      )
+      const pending = media.setBackgroundBlur("light")
+      await media.setBackgroundBlur("off")
+      const late = fakeBlur("light")
+      resolve(late)
+      await pending
+      expect(sender.track).toBe(mockVideoTrack)
+      expect(useCallStore.getState().localPreviewStream).toBeNull()
+      expect(late.track.readyState).toBe("ended")
+    })
+
+    it("keeps the processed camera disabled while the user turns the camera off", async () => {
+      const { sender } = await withVideoSender()
+      await media.setBackgroundBlur("strong")
+      const processed = sender.track
+      media.toggleCamera()
+      expect(mockVideoTrack.enabled).toBe(false)
+      expect(processed?.enabled).toBe(false)
+      media.toggleCamera()
+      expect(processed?.enabled).toBe(true)
+    })
+
+    it("keeps screen share visible during camera replacement and restores the new blurred camera", async () => {
+      const { sender } = await withVideoSender()
+      await media.setBackgroundBlur("strong")
+      await media.startScreenShare()
+      const camera = createTrack("video")
+      vi.mocked(navigator.mediaDevices.getUserMedia).mockResolvedValueOnce(
+        createSingleTrackStream(camera)
+      )
+      await media.replaceTrack("cam", "cam-2")
+      expect(sender.track).toBe(mockScreenTrack)
+      const next = await blurMocks.create.mock.results[1].value
+      await media.stopScreenShare()
+      expect(sender.track).toBe(next.track)
+      expect(useCallStore.getState().localPreviewStream?.getVideoTracks()[0]).toBe(next.track)
+    })
+
+    it("ignores an invalid saved level", async () => {
+      localStorage.setItem("ripple.backgroundBlur", "banana")
+      const stream = await media.init()
+      const pc = new MockRTCPeerConnection() as unknown as RTCPeerConnection
+      media.attachPC(pc)
+      expect(pc.addTrack).toHaveBeenCalledWith(mockVideoTrack, stream)
+      expect(useCallStore.getState().localPreviewStream).toBeNull()
+      expect(useCallStore.getState().backgroundBlur).toBe("off")
+    })
+
+    it("keeps the new camera off when the user turns the camera off while blur restarts", async () => {
+      const { sender } = await withVideoSender()
+      await media.setBackgroundBlur("strong")
+      const camera = createTrack("video")
+      vi.mocked(navigator.mediaDevices.getUserMedia).mockResolvedValueOnce(
+        createSingleTrackStream(camera)
+      )
+      const restart = deferred<FakeBlur>()
+      blurMocks.create.mockImplementationOnce(() => restart.promise)
+
+      const switching = media.replaceTrack("cam", "cam-2")
+      await vi.waitFor(() => expect(blurMocks.create).toHaveBeenCalledTimes(2))
+      media.toggleCamera()
+      restart.resolve(fakeBlur("strong", camera))
+      await switching
+
+      expect(sender.track).toMatchObject({ source: camera, enabled: false })
+      expect(camera.enabled).toBe(false)
+      expect(useCallStore.getState().isCameraOff).toBe(true)
+    })
+
+    it("releases the new camera when the call ends while blur restarts", async () => {
+      await withVideoSender()
+      await media.setBackgroundBlur("strong")
+      const camera = createTrack("video")
+      vi.mocked(navigator.mediaDevices.getUserMedia).mockResolvedValueOnce(
+        createSingleTrackStream(camera)
+      )
+      const restart = deferred<FakeBlur>()
+      blurMocks.create.mockImplementationOnce(() => restart.promise)
+
+      const switching = media.replaceTrack("cam", "cam-2")
+      await vi.waitFor(() => expect(blurMocks.create).toHaveBeenCalledTimes(2))
+      media.teardown()
+      const late = fakeBlur("strong", camera)
+      restart.resolve(late)
+      await switching
+
+      expect(camera.stop).toHaveBeenCalled()
+      expect(late.track.readyState).toBe("ended")
+    })
+
+    it("applies a blur level chosen during a camera switch to the new camera", async () => {
+      const { sender } = await withVideoSender()
+      await media.setBackgroundBlur("strong")
+      const camera = createTrack("video")
+      vi.mocked(navigator.mediaDevices.getUserMedia).mockResolvedValueOnce(
+        createSingleTrackStream(camera)
+      )
+      const restart = deferred<FakeBlur>()
+      blurMocks.create.mockImplementationOnce(() => restart.promise)
+
+      const switching = media.replaceTrack("cam", "cam-2")
+      await vi.waitFor(() => expect(blurMocks.create).toHaveBeenCalledTimes(2))
+      await media.setBackgroundBlur("off")
+      await media.setBackgroundBlur("light")
+      restart.resolve(fakeBlur("strong", camera))
+      await switching
+
+      expect(sender.track).toMatchObject({ source: camera, readyState: "live" })
+      expect(useCallStore.getState().localPreviewStream?.getVideoTracks()[0]).toBe(sender.track)
+      expect(useCallStore.getState().backgroundBlur).toBe("light")
+    })
+
+    it("sends the blurred camera when blur finishes loading while screen sharing stops", async () => {
+      const { sender } = await withVideoSender()
+      await media.startScreenShare()
+      const load = deferred<FakeBlur>()
+      blurMocks.create.mockImplementationOnce(() => load.promise)
+      const enabling = media.setBackgroundBlur("light")
+      await vi.waitFor(() => expect(blurMocks.create).toHaveBeenCalledOnce())
+      const swap = deferred<void>()
+      sender.replaceTrack.mockImplementationOnce(async (track: MediaStreamTrack | null) => {
+        await swap.promise
+        sender.track = track
+      })
+
+      const stopping = media.stopScreenShare()
+      load.resolve(fakeBlur("light"))
+      await enabling
+      swap.resolve()
+      await stopping
+
+      expect(sender.track).not.toBe(mockVideoTrack)
+      expect(sender.track).toBe(useCallStore.getState().localPreviewStream?.getVideoTracks()[0])
+    })
+
+    it("turns blur off when the peer cannot switch to the blurred camera", async () => {
+      const { sender } = await withVideoSender()
+      sender.replaceTrack.mockRejectedValueOnce(new Error("connection closed"))
+      const error = vi.spyOn(console, "error").mockImplementation(() => {})
+      try {
+        await media.setBackgroundBlur("light")
+      } finally {
+        error.mockRestore()
+      }
+      const processor = await blurMocks.create.mock.results[0].value
+      expect(processor.track.readyState).toBe("ended")
+      expect(mockVideoTrack.enabled).toBe(false)
+      expect(useCallStore.getState()).toMatchObject({
+        backgroundBlur: "off",
+        isCameraOff: true,
+        localPreviewStream: null,
+        notice: { kind: "error", messageKey: "room.toast.backgroundBlurFailed" },
+      })
+    })
+
+    it("turns the camera off when the blur pipeline breaks", async () => {
+      const { sender } = await withVideoSender()
+      await media.setBackgroundBlur("strong")
+      const processor = await blurMocks.create.mock.results[0].value
+
+      processor.fail()
+
+      await vi.waitFor(() => expect(processor.track.readyState).toBe("ended"))
+      expect(sender.track).toBe(mockVideoTrack)
+      expect(mockVideoTrack.enabled).toBe(false)
+      expect(useCallStore.getState()).toMatchObject({
+        backgroundBlur: "off",
+        isCameraOff: true,
+        localPreviewStream: null,
+        notice: { kind: "error", messageKey: "room.toast.backgroundBlurFailed" },
+      })
+    })
+
+    it("stops the new blurred camera when the peer rejects a camera switch", async () => {
+      const { sender } = await withVideoSender()
+      await media.setBackgroundBlur("strong")
+      const camera = createTrack("video")
+      vi.mocked(navigator.mediaDevices.getUserMedia).mockResolvedValueOnce(
+        createSingleTrackStream(camera)
+      )
+      sender.replaceTrack.mockRejectedValueOnce(new Error("connection closed"))
+
+      await expect(media.replaceTrack("cam", "cam-2")).rejects.toThrow("connection closed")
+
+      const next = await blurMocks.create.mock.results[1].value
+      expect(next.track.readyState).toBe("ended")
+      expect(camera.stop).toHaveBeenCalled()
+    })
+
+    it("waits for the saved blur before joining, even if the level changes meanwhile", async () => {
+      localStorage.setItem("ripple.backgroundBlur", "strong")
+      const first = deferred<FakeBlur>()
+      const second = deferred<FakeBlur>()
+      blurMocks.create
+        .mockImplementationOnce(() => first.promise)
+        .mockImplementationOnce(() => second.promise)
+      let entered = false
+      const entering = media.init().then((stream) => {
+        entered = true
+        return stream
+      })
+
+      await vi.waitFor(() => expect(blurMocks.create).toHaveBeenCalledOnce())
+      expect(entered).toBe(false)
+
+      const choosing = media.setBackgroundBlur("light")
+      const stale = fakeBlur("strong")
+      first.resolve(stale)
+      await vi.waitFor(() => expect(stale.track.readyState).toBe("ended"))
+      expect(entered).toBe(false)
+
+      const chosen = fakeBlur("light")
+      second.resolve(chosen)
+      const [stream] = await Promise.all([entering, choosing])
+
+      const pc = new MockRTCPeerConnection() as unknown as RTCPeerConnection
+      media.attachPC(pc)
+      expect(pc.addTrack).toHaveBeenCalledWith(chosen.track, stream)
+      expect(pc.addTrack).not.toHaveBeenCalledWith(mockVideoTrack, expect.anything())
+      expect(useCallStore.getState().backgroundBlur).toBe("light")
+    })
+
+    it("joins with the camera off when the saved blur fails to load", async () => {
+      localStorage.setItem("ripple.backgroundBlur", "strong")
+      blurMocks.create.mockRejectedValueOnce(new Error("CDN unavailable"))
+      const error = vi.spyOn(console, "error").mockImplementation(() => {})
+      let stream: MediaStream
+      try {
+        stream = await media.init()
+      } finally {
+        error.mockRestore()
+      }
+
+      expect(useCallStore.getState()).toMatchObject({
+        backgroundBlur: "off",
+        isCameraOff: true,
+        localPreviewStream: null,
+        notice: { kind: "error", messageKey: "room.toast.backgroundBlurFailed" },
+      })
+      expect(mockVideoTrack.enabled).toBe(false)
+      const pc = new MockRTCPeerConnection() as unknown as RTCPeerConnection
+      media.attachPC(pc)
+      expect(pc.addTrack).toHaveBeenCalledWith(mockVideoTrack, stream)
+    })
+
+    it("joins with the camera off when the saved blur takes too long", async () => {
+      localStorage.setItem("ripple.backgroundBlur", "strong")
+      const load = deferred<FakeBlur>()
+      blurMocks.create.mockImplementationOnce(() => load.promise)
+      const error = vi.spyOn(console, "error").mockImplementation(() => {})
+      vi.useFakeTimers()
+      try {
+        const entering = media.init()
+        await vi.waitFor(() => expect(blurMocks.create).toHaveBeenCalledOnce())
+        await vi.advanceTimersByTimeAsync(10_000)
+        await entering
+      } finally {
+        vi.useRealTimers()
+        error.mockRestore()
+      }
+
+      expect(useCallStore.getState()).toMatchObject({
+        backgroundBlur: "off",
+        isCameraOff: true,
+        localPreviewStream: null,
+        notice: { kind: "error", messageKey: "room.toast.backgroundBlurFailed" },
+      })
+      expect(mockVideoTrack.enabled).toBe(false)
+
+      const late = fakeBlur("strong")
+      load.resolve(late)
+      await vi.waitFor(() => expect(late.track.readyState).toBe("ended"))
+      expect(useCallStore.getState().localPreviewStream).toBeNull()
+    })
+
+    it("turns the new camera off when blur cannot restart on it", async () => {
+      const { sender } = await withVideoSender()
+      await media.setBackgroundBlur("strong")
+      const camera = createTrack("video")
+      vi.mocked(navigator.mediaDevices.getUserMedia).mockResolvedValueOnce(
+        createSingleTrackStream(camera)
+      )
+      blurMocks.create.mockRejectedValueOnce(new Error("CDN unavailable"))
+      const error = vi.spyOn(console, "error").mockImplementation(() => {})
+      try {
+        await media.replaceTrack("cam", "cam-2")
+      } finally {
+        error.mockRestore()
+      }
+
+      expect(sender.track).toBe(camera)
+      expect(camera.enabled).toBe(false)
+      expect(useCallStore.getState()).toMatchObject({
+        backgroundBlur: "off",
+        isCameraOff: true,
+        notice: { kind: "error", messageKey: "room.toast.backgroundBlurFailed" },
+      })
+    })
+
+    it("sends the unblurred camera once the user turns the camera back on", async () => {
+      const { sender } = await withVideoSender()
+      blurMocks.create.mockRejectedValueOnce(new Error("CDN unavailable"))
+      const error = vi.spyOn(console, "error").mockImplementation(() => {})
+      try {
+        await media.setBackgroundBlur("light")
+      } finally {
+        error.mockRestore()
+      }
+
+      media.toggleCamera()
+
+      expect(sender.track).toBe(mockVideoTrack)
+      expect(mockVideoTrack.enabled).toBe(true)
+      expect(useCallStore.getState()).toMatchObject({ isCameraOff: false, backgroundBlur: "off" })
     })
   })
 })

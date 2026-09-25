@@ -18,6 +18,7 @@ const writeText = vi.fn()
 
 const baseMock = {
   localStream: null as MediaStream | null,
+  localPreviewStream: null as MediaStream | null,
   remoteStream: null as MediaStream | null,
   remoteMediaMode: "unknown" as const,
   status: "waiting" as const,
@@ -27,6 +28,9 @@ const baseMock = {
   isScreenSharing: false,
   isMicMuted: false,
   isCameraOff: false,
+  backgroundBlur: "off" as const,
+  backgroundBlurSupported: true,
+  setBackgroundBlur: vi.fn(),
   startScreenShare: vi.fn(),
   stopScreenShare: vi.fn(),
   hangup: vi.fn(),
