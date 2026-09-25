@@ -1,13 +1,28 @@
 import { MoreVertical } from "lucide-react"
 import { useTranslation } from "react-i18next"
+import type { BackgroundBlurLevel } from "@/store/call"
 import { GlassMenu } from "./GlassMenu"
 
-export type SettingsItem = { id: string; label: string; onSelect: () => void }
+const BLUR_LEVELS: readonly BackgroundBlurLevel[] = ["off", "light", "strong"]
 
-export function SettingsMenu() {
+export type SettingsMenuProps = {
+  backgroundBlur: BackgroundBlurLevel
+  backgroundBlurSupported: boolean
+  onBackgroundBlurChange: (level: BackgroundBlurLevel) => void
+}
+
+export function SettingsMenu({
+  backgroundBlur,
+  backgroundBlurSupported,
+  onBackgroundBlurChange,
+}: SettingsMenuProps) {
   const { t } = useTranslation()
-  const items: SettingsItem[] = []
-
+  const items = backgroundBlurSupported
+    ? BLUR_LEVELS.map((level) => ({
+        id: level,
+        label: t(`room.settings.backgroundBlur.${level}`),
+      }))
+    : [{ id: "unsupported", label: t("room.settings.backgroundBlur.unsupported"), disabled: true }]
   return (
     <GlassMenu
       trigger={
@@ -21,15 +36,13 @@ export function SettingsMenu() {
       }
       sections={[
         {
-          label: t("room.settings.section"),
-          selectedId: "",
+          label: t("room.settings.backgroundBlur.section"),
+          selectedId: backgroundBlur,
+          items,
           onSelect: (id: string) => {
-            items.find((item) => item.id === id)?.onSelect()
+            const level = BLUR_LEVELS.find((candidate) => candidate === id)
+            if (level) onBackgroundBlurChange(level)
           },
-          items:
-            items.length > 0
-              ? items
-              : [{ id: "__placeholder__", label: t("room.settings.empty"), disabled: true }],
         },
       ]}
     />

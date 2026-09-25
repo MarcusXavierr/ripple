@@ -5,14 +5,17 @@ import type {
 } from "@shared/remoteInputProtocol"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useNavigate } from "react-router-dom"
+import { isBackgroundBlurSupported } from "@/lib/call/BackgroundBlurProcessor"
 import { CallSession } from "@/lib/call/CallSession"
+import { writeBackgroundBlurPref } from "@/lib/call/devicePreferences"
 import type { MediaController } from "@/lib/call/MediaController"
-import { useCallStore } from "@/store/call"
+import { type BackgroundBlurLevel, useCallStore } from "@/store/call"
 
 export function useCallSession(roomId: string) {
   const navigate = useNavigate()
   const sessionRef = useRef<CallSession | null>(null)
   const [mediaController, setMediaController] = useState<MediaController | null>(null)
+  const [backgroundBlurSupported] = useState(isBackgroundBlurSupported)
 
   useEffect(() => {
     const session = new CallSession(roomId, navigate)
@@ -26,6 +29,7 @@ export function useCallSession(roomId: string) {
   }, [roomId, navigate])
 
   const localStream = useCallStore((s) => s.localStream)
+  const localPreviewStream = useCallStore((s) => s.localPreviewStream)
   const remoteStream = useCallStore((s) => s.remoteStream)
   const remoteMediaMode = useCallStore((s) => s.remoteMediaMode)
   const status = useCallStore((s) => s.status)
@@ -34,6 +38,7 @@ export function useCallSession(roomId: string) {
   const isMicMuted = useCallStore((s) => s.isMicMuted)
   const isCameraOff = useCallStore((s) => s.isCameraOff)
   const isScreenSharing = useCallStore((s) => s.isScreenSharing)
+  const backgroundBlur = useCallStore((s) => s.backgroundBlur)
 
   const dismissError = useCallback(() => {
     const err = useCallStore.getState().error
@@ -58,6 +63,10 @@ export function useCallSession(roomId: string) {
 
   const toggleCamera = useCallback(() => {
     sessionRef.current?.media.toggleCamera()
+  }, [])
+  const setBackgroundBlur = useCallback((level: BackgroundBlurLevel) => {
+    writeBackgroundBlurPref(level)
+    void sessionRef.current?.media.setBackgroundBlur(level)
   }, [])
 
   const startScreenShare = useCallback(() => {
@@ -86,6 +95,7 @@ export function useCallSession(roomId: string) {
 
   return {
     localStream,
+    localPreviewStream,
     remoteStream,
     remoteMediaMode,
     status,
@@ -95,6 +105,9 @@ export function useCallSession(roomId: string) {
     isMicMuted,
     isCameraOff,
     isScreenSharing,
+    backgroundBlur,
+    backgroundBlurSupported,
+    setBackgroundBlur,
     toggleMic,
     toggleCamera,
     startScreenShare,

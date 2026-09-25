@@ -131,6 +131,26 @@ export class MockRTCPeerConnection {
 
 // ── Media mocks ───────────────────────────────────────────────────────────────
 
+export class MockMediaStream {
+  private readonly tracks: MediaStreamTrack[]
+
+  constructor(tracks: MediaStreamTrack[] = []) {
+    this.tracks = tracks
+  }
+
+  getTracks() {
+    return [...this.tracks]
+  }
+
+  getVideoTracks() {
+    return this.tracks.filter((track) => track.kind === "video")
+  }
+
+  getAudioTracks() {
+    return this.tracks.filter((track) => track.kind === "audio")
+  }
+}
+
 export const mockAudioTrack = {
   kind: "audio" as const,
   enabled: true,
@@ -230,6 +250,7 @@ export function resetMocks() {
 export function installGlobalMocks() {
   globalThis.WebSocket = MockWebSocket as unknown as typeof WebSocket
   globalThis.RTCPeerConnection = MockRTCPeerConnection as unknown as typeof RTCPeerConnection
+  globalThis.MediaStream = MockMediaStream as unknown as typeof MediaStream
 
   Object.defineProperty(navigator, "mediaDevices", {
     value: {

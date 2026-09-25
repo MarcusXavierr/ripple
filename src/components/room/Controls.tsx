@@ -1,6 +1,7 @@
 import { ChevronUp, Mic, MicOff, MonitorUp, PhoneOff, Video, VideoOff } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import type { DeviceKind, DevicesByKind, SelectedDevices } from "@/hooks/useDevices"
+import type { BackgroundBlurLevel } from "@/store/call"
 import { DeviceSplitButton } from "./DeviceSplitButton"
 import { SettingsMenu } from "./SettingsMenu"
 
@@ -8,6 +9,9 @@ export type ControlsProps = {
   isMicMuted: boolean
   isCameraOff: boolean
   isScreenSharing: boolean
+  backgroundBlur: BackgroundBlurLevel
+  backgroundBlurSupported: boolean
+  onBackgroundBlurChange: (level: BackgroundBlurLevel) => void
   toggleMic: () => void
   toggleCamera: () => void
   startScreenShare: () => void
@@ -27,6 +31,9 @@ export function Controls({
   isMicMuted,
   isCameraOff,
   isScreenSharing,
+  backgroundBlur,
+  backgroundBlurSupported,
+  onBackgroundBlurChange,
   toggleMic,
   toggleCamera,
   startScreenShare,
@@ -131,7 +138,11 @@ export function Controls({
         </button>
         <div data-testid="settings-cluster" className="hidden items-center gap-2 min-[370px]:flex">
           <span className="mx-1 hidden h-6 w-px bg-black/10 sm:inline-block" aria-hidden="true" />
-          <SettingsMenu />
+          <SettingsMenu
+            backgroundBlur={backgroundBlur}
+            backgroundBlurSupported={backgroundBlurSupported}
+            onBackgroundBlurChange={onBackgroundBlurChange}
+          />
           <span className="mx-1 hidden h-6 w-px bg-black/10 sm:inline-block" aria-hidden="true" />
         </div>
         <button
