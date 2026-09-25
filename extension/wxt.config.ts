@@ -22,6 +22,7 @@ export default defineConfig({
       optional_host_permissions: ["https://*/*", "http://*/*"],
       externally_connectable: {
         matches: [
+          "https://ripple.prinplup.dev/*",
           "https://marcus-ripple.netlify.app/*",
           ...(allowLocalhost ? ["http://localhost:5173/*"] : []),
         ],
