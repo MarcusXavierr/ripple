@@ -21,13 +21,13 @@
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
-    "@types/chrome": "latest",
+    "@types/chrome": "0.1.42",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
-    "@wxt-dev/module-react": "latest",
+    "@wxt-dev/module-react": "1.2.2",
     "jsdom": "^29.0.2",
     "typescript": "~6.0.2",
     "vitest": "^4.1.4",
-    "wxt": "latest"
+    "wxt": "0.20.26"
   }
 }
